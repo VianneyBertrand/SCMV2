@@ -1,0 +1,15 @@
+{
+  "name": "scm-test2",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "mon-app-analyse"
+  ],
+  "scripts": {
+    "prekill": "powershell -ExecutionPolicy Bypass -File ./kill-port.ps1",
+    "dev": "npm run prekill && cd mon-app-analyse && npm run dev",
+    "build": "cd mon-app-analyse && npm run build",
+    "start": "cd mon-app-analyse && npm start",
+    "lint": "cd mon-app-analyse && npm run lint"
+  }
+}
