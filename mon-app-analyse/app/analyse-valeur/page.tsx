@@ -27,6 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -57,6 +58,7 @@ import {
   ArrowUpDown,
   CalendarIcon,
   Check,
+  ChevronDown as ChevronDownIcon,
   Eye,
   Info,
   Search,
@@ -86,6 +88,12 @@ export default function AnalyseValeurPage() {
   const [openRecherche, setOpenRecherche] = useState(false);
   const [rechercheValue, setRechercheValue] = useState("");
   const [searchInputValue, setSearchInputValue] = useState("");
+
+  // States pour la multi-sélection des fournisseurs
+  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>([]);
+  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>([]);
+  const [openFournisseur, setOpenFournisseur] = useState(false);
+  const [fournisseurSearch, setFournisseurSearch] = useState("");
 
   // States pour les filtres dynamiques
   const [filters, setFilters] = useState<Record<string, string>>({
@@ -336,14 +344,25 @@ export default function AnalyseValeurPage() {
   }, [visibleFilters]);
 
   const otherFilters = useMemo(() => {
-    const others: FilterType[] = ["pays", "fournisseur", "portefeuille"];
+    const others: FilterType[] = ["pays", "portefeuille"];
     return visibleFilters.filter((f) => {
       // Exclure le filtre qui correspond au périmètre actuel
-      if (perimetre === "Fournisseur" && f === "fournisseur") return false;
       if (perimetre === "Portefeuille" && f === "portefeuille") return false;
       return others.includes(f);
     });
   }, [visibleFilters, perimetre]);
+
+  // Vérifier si le filtre fournisseur est visible
+  const showFournisseurFilter = useMemo(() => {
+    return visibleFilters.includes("fournisseur") && perimetre !== "Fournisseur";
+  }, [visibleFilters, perimetre]);
+
+  // Synchroniser les sélections temporaires quand on ouvre le popover
+  useEffect(() => {
+    if (openFournisseur) {
+      setTempFournisseurSelections(fournisseurSelections);
+    }
+  }, [openFournisseur, fournisseurSelections]);
 
   // Options de périmètre
   const perimetreOptions = [
@@ -452,6 +471,11 @@ export default function AnalyseValeurPage() {
       portefeuille: "tous",
     };
 
+    // Désactiver le mode comparaison si on passe au périmètre Marché
+    if (newPerimetre === "Marché") {
+      setComparisonMode(false);
+    }
+
     setPerimetre(newPerimetre);
     setFilters(newFilters);
     updateURL(newPerimetre, newFilters);
@@ -549,6 +573,15 @@ export default function AnalyseValeurPage() {
     return Array.from(uniqueValues);
   }, [perimetre]);
 
+  // Filtrer les fournisseurs selon la recherche
+  const filteredFournisseurs = useMemo(() => {
+    const allFournisseurs = getFilterOptions("fournisseur");
+    if (!fournisseurSearch) return allFournisseurs;
+    return allFournisseurs.filter((f) =>
+      f.toLowerCase().includes(fournisseurSearch.toLowerCase())
+    );
+  }, [fournisseurSearch, getFilterOptions]);
+
   // Vérifier si au moins un filtre est actif
   const hasActiveFilters = useMemo(() => {
     const filterKeys: FilterType[] = [
@@ -562,8 +595,8 @@ export default function AnalyseValeurPage() {
       "fournisseur",
       "portefeuille",
     ];
-    return filterKeys.some((key) => filters[key] && filters[key] !== "tous");
-  }, [filters]);
+    return filterKeys.some((key) => filters[key] && filters[key] !== "tous") || fournisseurSelections.length > 0;
+  }, [filters, fournisseurSelections]);
 
   // Réinitialiser tous les filtres (mémoïsé)
   const handleResetFilters = useCallback(() => {
@@ -579,6 +612,8 @@ export default function AnalyseValeurPage() {
       portefeuille: "tous",
     };
     setFilters(newFilters);
+    setFournisseurSelections([]);
+    setTempFournisseurSelections([]);
     updateURL(perimetre, newFilters);
   }, [perimetre, updateURL]);
 
@@ -620,15 +655,16 @@ export default function AnalyseValeurPage() {
       <div className="mb-8 flex items-center gap-8">
         <h1 className="text-[40px] font-bold">Analyse de la valeur</h1>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4" style={{ opacity: perimetre === "Marché" ? 0.6 : 1 }}>
           <Switch
             id="comparison-mode"
             checked={comparisonMode}
             onCheckedChange={setComparisonMode}
+            disabled={perimetre === "Marché"}
           />
           <Label
             htmlFor="comparison-mode"
-            className="cursor-pointer text-sm text-gray-600"
+            className={perimetre === "Marché" ? "text-sm text-gray-600" : "cursor-pointer text-sm text-gray-600"}
           >
             Mode comparaison
           </Label>
@@ -851,7 +887,7 @@ export default function AnalyseValeurPage() {
       )}
 
       {/* FILTRES - Ligne 2 : Filtres disponibles selon le périmètre */}
-      <div className="mb-8 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         {/* Filtres hiérarchiques (Marché, Catégorie, etc.) */}
         {hierarchyFilters.map((filterType) => (
           <Card
@@ -896,7 +932,7 @@ export default function AnalyseValeurPage() {
           </Card>
         ))}
 
-        {/* Autres filtres (Pays, Fournisseur, Portefeuille) */}
+        {/* Autres filtres (Pays, Portefeuille) */}
         {otherFilters.map((filterType) => (
           <Card
             key={filterType}
@@ -927,6 +963,123 @@ export default function AnalyseValeurPage() {
             </div>
           </Card>
         ))}
+
+        {/* Fournisseur avec multi-sélection */}
+        {showFournisseurFilter && (
+          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium text-gray-700 break-words">Fournisseur</Label>
+              <Popover open={openFournisseur} onOpenChange={setOpenFournisseur}>
+                <PopoverTrigger asChild>
+                  <div
+                    className={`flex h-auto min-h-[36px] w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer hover:bg-white focus:outline-none focus:ring-1 focus:ring-ring ${fournisseurSelections.length === 0 ? 'pl-3 py-2' : 'p-0.5'}`}
+                    onClick={() => setOpenFournisseur(true)}
+                  >
+                    {fournisseurSelections.length === 0 ? (
+                      <span className="text-muted-foreground">tous</span>
+                    ) : (
+                      <div className="flex items-center gap-1 flex-1 overflow-hidden flex-wrap">
+                        {fournisseurSelections.slice(0, 2).map((f, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
+                          >
+                            <span className="text-[14px] font-medium">{f}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFournisseurSelections(prev => prev.filter(item => item !== f));
+                                setTempFournisseurSelections(prev => prev.filter(item => item !== f));
+                              }}
+                              className="text-[#0970E6] hover:text-[#075bb3]"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {fournisseurSelections.length > 2 && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            +{fournisseurSelections.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <ChevronDownIcon className="h-4 w-4 text-[#0970E6] ml-2 mr-2 flex-shrink-0" />
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <div className="flex flex-col">
+                    {/* Champ de recherche */}
+                    <div className="p-3 border-b">
+                      <Input
+                        placeholder="Rechercher fournisseur..."
+                        value={fournisseurSearch}
+                        onChange={(e) => setFournisseurSearch(e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
+
+                    {/* Bouton Tout désélectionner */}
+                    {tempFournisseurSelections.length > 0 && (
+                      <div className="px-3 pt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs text-gray-600 hover:text-gray-900"
+                          onClick={() => setTempFournisseurSelections([])}
+                        >
+                          Tout désélectionner
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Liste avec checkboxes */}
+                    <div className="max-h-[300px] overflow-y-auto p-2">
+                      {filteredFournisseurs.map((f) => (
+                        <div
+                          key={f}
+                          className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded cursor-pointer"
+                          onClick={() => {
+                            setTempFournisseurSelections(prev =>
+                              prev.includes(f)
+                                ? prev.filter(item => item !== f)
+                                : [...prev, f]
+                            );
+                          }}
+                        >
+                          <Checkbox
+                            checked={tempFournisseurSelections.includes(f)}
+                            onCheckedChange={(checked) => {
+                              setTempFournisseurSelections(prev =>
+                                checked
+                                  ? [...prev, f]
+                                  : prev.filter(item => item !== f)
+                              );
+                            }}
+                          />
+                          <span className="text-sm">{f}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bouton Valider */}
+                    <div className="p-3 border-t">
+                      <Button
+                        className="w-full bg-[#0970E6] hover:bg-[#075bb3] text-white"
+                        onClick={() => {
+                          setFournisseurSelections(tempFournisseurSelections);
+                          setOpenFournisseur(false);
+                        }}
+                      >
+                        Valider
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </Card>
+        )}
 
         {/* Bouton Réinitialiser */}
         {hasActiveFilters && (
@@ -1139,7 +1292,8 @@ export default function AnalyseValeurPage() {
                                 return (
                                   <button
                                     key={subLevel}
-                                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                                    className="text-sm hover:underline font-medium"
+                                    style={{ color: '#0970E6' }}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleSubLevelNavigation(

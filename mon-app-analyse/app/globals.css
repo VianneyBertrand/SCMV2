@@ -56,4 +56,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  a:not(.app-header *) {
+    color: #0970E6 !important;
+  }
+  a:not(.app-header *):hover {
+    color: #075bb3 !important;
+  }
 }

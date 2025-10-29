@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -43,7 +45,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Download, Search, X, CalendarIcon, Check } from "lucide-react";
+import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIcon } from "lucide-react";
 import {
   Line,
   LineChart,
@@ -377,7 +379,8 @@ export default function CoursMatieresPremieres() {
   const [groupeFamille, setGroupeFamille] = useState("tous");
   const [famille, setFamille] = useState("tous");
   const [sousFamille, setSousFamille] = useState("tous");
-  const [fournisseur, setFournisseur] = useState("tous");
+  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>([]);
+  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>([]);
   const [portefeuille, setPortefeuille] = useState("tous");
 
   // État recherche fournisseur
@@ -448,7 +451,7 @@ export default function CoursMatieresPremieres() {
       const matchGroupeFamille = groupeFamille === "tous" || m.groupeFamille === groupeFamille;
       const matchFamille = famille === "tous" || m.famille === famille;
       const matchSousFamille = sousFamille === "tous" || m.sousFamille === sousFamille;
-      const matchFournisseur = fournisseur === "tous" || m.fournisseur === fournisseur;
+      const matchFournisseur = fournisseurSelections.length === 0 || fournisseurSelections.includes(m.fournisseur);
       const matchPortefeuille = portefeuille === "tous" || m.portefeuille === portefeuille;
 
       return (
@@ -462,7 +465,7 @@ export default function CoursMatieresPremieres() {
         matchPortefeuille
       );
     });
-  }, [searchTerm, paysDestination, categorie, groupeFamille, famille, sousFamille, fournisseur, portefeuille]);
+  }, [searchTerm, paysDestination, categorie, groupeFamille, famille, sousFamille, fournisseurSelections, portefeuille]);
 
   const handleSelectMatiere = useCallback(
     (matiere: MatierePremiere) => {
@@ -497,6 +500,13 @@ export default function CoursMatieresPremieres() {
     setSelectedYears([]);
   }, []);
 
+  // Synchroniser les sélections temporaires quand on ouvre le popover
+  useEffect(() => {
+    if (openFournisseur) {
+      setTempFournisseurSelections(fournisseurSelections);
+    }
+  }, [openFournisseur, fournisseurSelections]);
+
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = useMemo(() => {
     return (
@@ -506,10 +516,10 @@ export default function CoursMatieresPremieres() {
       groupeFamille !== "tous" ||
       famille !== "tous" ||
       sousFamille !== "tous" ||
-      fournisseur !== "tous" ||
+      fournisseurSelections.length > 0 ||
       portefeuille !== "tous"
     );
-  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseur, portefeuille]);
+  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseurSelections, portefeuille]);
 
   const handleResetFilters = useCallback(() => {
     setPaysDestination("tous");
@@ -518,7 +528,8 @@ export default function CoursMatieresPremieres() {
     setGroupeFamille("tous");
     setFamille("tous");
     setSousFamille("tous");
-    setFournisseur("tous");
+    setFournisseurSelections([]);
+    setTempFournisseurSelections([]);
     setPortefeuille("tous");
   }, []);
 
@@ -563,7 +574,7 @@ export default function CoursMatieresPremieres() {
             <Label className="text-sm font-medium text-gray-700 break-words">Période</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-auto justify-between border-gray-200 bg-white font-normal shadow-none">
+                <Button variant="outline" className="w-auto justify-between border-gray-200 bg-white text-[16px] font-medium font-ubuntu shadow-none">
                   11/12/2024 - 14/12/2024
                   <CalendarIcon className="h-4 w-4 text-blue" />
                 </Button>
@@ -692,29 +703,118 @@ export default function CoursMatieresPremieres() {
           </div>
         </Card>
 
-        {/* Fournisseur avec recherche */}
+        {/* Fournisseur avec multi-sélection */}
         <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
           <div className="flex items-center gap-2">
             <Label className="text-sm font-medium text-gray-700 break-words">Fournisseur</Label>
-            <Select value={fournisseur} onValueChange={setFournisseur}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="px-2 py-2">
-                  <Input
-                    placeholder="Rechercher fournisseur..."
-                    value={fournisseurSearch}
-                    onChange={(e) => setFournisseurSearch(e.target.value)}
-                    className="h-8"
-                  />
+            <Popover open={openFournisseur} onOpenChange={setOpenFournisseur}>
+              <PopoverTrigger asChild>
+                <div
+                  className={`flex h-auto min-h-[36px] w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer hover:bg-white focus:outline-none focus:ring-1 focus:ring-ring ${fournisseurSelections.length === 0 ? 'pl-3 py-2' : 'p-0.5'}`}
+                  onClick={() => setOpenFournisseur(true)}
+                >
+                  {fournisseurSelections.length === 0 ? (
+                    <span className="text-muted-foreground">tous</span>
+                  ) : (
+                    <div className="flex items-center gap-1 flex-1 overflow-hidden flex-wrap">
+                      {fournisseurSelections.slice(0, 2).map((f, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
+                        >
+                          <span className="text-[14px] font-medium">{f}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFournisseurSelections(prev => prev.filter(item => item !== f));
+                              setTempFournisseurSelections(prev => prev.filter(item => item !== f));
+                            }}
+                            className="text-[#0970E6] hover:text-[#075bb3]"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {fournisseurSelections.length > 2 && (
+                        <span className="text-xs text-gray-500 ml-1">
+                          +{fournisseurSelections.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <ChevronDownIcon className="h-4 w-4 text-[#0970E6] ml-2 mr-2 flex-shrink-0" />
                 </div>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                {filteredFournisseurs.map((f) => (
-                  <SelectItem key={f} value={f} className="py-3">{f}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="flex flex-col">
+                  {/* Champ de recherche */}
+                  <div className="p-3 border-b">
+                    <Input
+                      placeholder="Rechercher fournisseur..."
+                      value={fournisseurSearch}
+                      onChange={(e) => setFournisseurSearch(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+
+                  {/* Bouton Tout désélectionner */}
+                  {tempFournisseurSelections.length > 0 && (
+                    <div className="px-3 pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-gray-600 hover:text-gray-900"
+                        onClick={() => setTempFournisseurSelections([])}
+                      >
+                        Tout désélectionner
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Liste avec checkboxes */}
+                  <div className="max-h-[300px] overflow-y-auto p-2">
+                    {filteredFournisseurs.map((f) => (
+                      <div
+                        key={f}
+                        className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded cursor-pointer"
+                        onClick={() => {
+                          setTempFournisseurSelections(prev =>
+                            prev.includes(f)
+                              ? prev.filter(item => item !== f)
+                              : [...prev, f]
+                          );
+                        }}
+                      >
+                        <Checkbox
+                          checked={tempFournisseurSelections.includes(f)}
+                          onCheckedChange={(checked) => {
+                            setTempFournisseurSelections(prev =>
+                              checked
+                                ? [...prev, f]
+                                : prev.filter(item => item !== f)
+                            );
+                          }}
+                        />
+                        <span className="text-sm">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bouton Valider */}
+                  <div className="p-3 border-t">
+                    <Button
+                      className="w-full bg-[#0970E6] hover:bg-[#075bb3] text-white"
+                      onClick={() => {
+                        setFournisseurSelections(tempFournisseurSelections);
+                        setOpenFournisseur(false);
+                      }}
+                    >
+                      Valider
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </Card>
 

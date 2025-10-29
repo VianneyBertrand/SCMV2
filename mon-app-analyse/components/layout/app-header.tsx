@@ -23,7 +23,7 @@ export function AppHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="app-header sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-[50px]">
         <div className="flex items-center gap-6">
           <Link href="/accueil" className="flex items-center gap-2">
@@ -39,7 +39,7 @@ export function AppHeader() {
                       href={item.href}
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        "bg-transparent hover:bg-transparent focus:bg-transparent",
+                        "bg-transparent hover:bg-transparent focus:bg-transparent hover:text-[#0970E6] active:text-[#0970E6] focus:text-[#0970E6]",
                         pathname === item.href
                           ? "font-bold text-[#0970E6]"
                           : "font-medium text-black"
@@ -56,7 +56,7 @@ export function AppHeader() {
                     href="/cours-matieres-premieres"
                     className={cn(
                       navigationMenuTriggerStyle(),
-                      "bg-transparent hover:bg-transparent focus:bg-transparent",
+                      "bg-transparent hover:bg-transparent focus:bg-transparent hover:text-[#0970E6] active:text-[#0970E6] focus:text-[#0970E6]",
                       pathname === "/cours-matieres-premieres"
                         ? "font-bold text-[#0970E6]"
                         : "font-medium text-black"
