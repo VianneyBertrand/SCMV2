@@ -16,6 +16,7 @@ import {
 import { Info } from "lucide-react"
 import { ElementCostStructure } from "@/components/comparaison/element-cost-structure"
 import { ElementRecette } from "@/components/comparaison/element-recette"
+import { ElementEvolutionPrix } from "@/components/comparaison/element-evolution-prix"
 import { getPerimetreData, type PerimetreType } from "@/lib/data/perimetre-data"
 
 export default function ComparaisonPage() {
@@ -40,6 +41,16 @@ export default function ComparaisonPage() {
 
   // État partagé pour synchroniser le bouton "Afficher plus/moins" de recette entre tous les éléments
   const [showAllRecette, setShowAllRecette] = useState(false)
+
+  // États partagés pour synchroniser l'évolution prix entre tous les éléments
+  const [evolutionLegendOpacity, setEvolutionLegendOpacity] = useState<Record<string, boolean>>({
+    PA: true,
+    'cout-theorique': true,
+  })
+  const [evolutionPeriod, setEvolutionPeriod] = useState<'mois' | 'semaine' | 'jour'>('mois')
+  const [evolutionBase100, setEvolutionBase100] = useState(false)
+  const [evolutionDateRange, setEvolutionDateRange] = useState([0, 100])
+  const [showEvolutionTable, setShowEvolutionTable] = useState(false)
 
   useEffect(() => {
     const elementsParam = searchParams.get('elements')
@@ -385,7 +396,77 @@ export default function ComparaisonPage() {
         </TabsContent>
 
         <TabsContent value="evolution-prix" className="mt-6">
-          <p className="text-muted-foreground">Contenu à venir...</p>
+          <h2 className="text-[16px] font-bold mb-6">Évolution des prix de vos {perimetre || 'éléments'}</h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Colonne gauche: Élément 1 et 3 */}
+            <div className="space-y-6">
+              {elements[0] && (
+                <ElementEvolutionPrix
+                  element={elements[0]}
+                  evolutionLegendOpacity={evolutionLegendOpacity}
+                  setEvolutionLegendOpacity={setEvolutionLegendOpacity}
+                  evolutionPeriod={evolutionPeriod}
+                  setEvolutionPeriod={setEvolutionPeriod}
+                  evolutionBase100={evolutionBase100}
+                  setEvolutionBase100={setEvolutionBase100}
+                  evolutionDateRange={evolutionDateRange}
+                  setEvolutionDateRange={setEvolutionDateRange}
+                  showEvolutionTable={showEvolutionTable}
+                  setShowEvolutionTable={setShowEvolutionTable}
+                />
+              )}
+              {elements[2] && (
+                <ElementEvolutionPrix
+                  element={elements[2]}
+                  evolutionLegendOpacity={evolutionLegendOpacity}
+                  setEvolutionLegendOpacity={setEvolutionLegendOpacity}
+                  evolutionPeriod={evolutionPeriod}
+                  setEvolutionPeriod={setEvolutionPeriod}
+                  evolutionBase100={evolutionBase100}
+                  setEvolutionBase100={setEvolutionBase100}
+                  evolutionDateRange={evolutionDateRange}
+                  setEvolutionDateRange={setEvolutionDateRange}
+                  showEvolutionTable={showEvolutionTable}
+                  setShowEvolutionTable={setShowEvolutionTable}
+                />
+              )}
+            </div>
+
+            {/* Colonne droite: Élément 2 et 4 */}
+            <div className="space-y-6">
+              {elements[1] && (
+                <ElementEvolutionPrix
+                  element={elements[1]}
+                  evolutionLegendOpacity={evolutionLegendOpacity}
+                  setEvolutionLegendOpacity={setEvolutionLegendOpacity}
+                  evolutionPeriod={evolutionPeriod}
+                  setEvolutionPeriod={setEvolutionPeriod}
+                  evolutionBase100={evolutionBase100}
+                  setEvolutionBase100={setEvolutionBase100}
+                  evolutionDateRange={evolutionDateRange}
+                  setEvolutionDateRange={setEvolutionDateRange}
+                  showEvolutionTable={showEvolutionTable}
+                  setShowEvolutionTable={setShowEvolutionTable}
+                />
+              )}
+              {elements[3] && (
+                <ElementEvolutionPrix
+                  element={elements[3]}
+                  evolutionLegendOpacity={evolutionLegendOpacity}
+                  setEvolutionLegendOpacity={setEvolutionLegendOpacity}
+                  evolutionPeriod={evolutionPeriod}
+                  setEvolutionPeriod={setEvolutionPeriod}
+                  evolutionBase100={evolutionBase100}
+                  setEvolutionBase100={setEvolutionBase100}
+                  evolutionDateRange={evolutionDateRange}
+                  setEvolutionDateRange={setEvolutionDateRange}
+                  showEvolutionTable={showEvolutionTable}
+                  setShowEvolutionTable={setShowEvolutionTable}
+                />
+              )}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </main>

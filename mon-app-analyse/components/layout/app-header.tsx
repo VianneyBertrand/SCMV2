@@ -51,9 +51,20 @@ export function AppHeader() {
                 </NavigationMenuItem>
               ))}
               <NavigationMenuItem>
-                <Button variant="ghost" className={cn(navigationMenuTriggerStyle(), "font-medium text-black bg-transparent hover:bg-transparent focus:bg-transparent")}>
-                  Cours des matières premières
-                </Button>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href="/cours-matieres-premieres"
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      "bg-transparent hover:bg-transparent focus:bg-transparent",
+                      pathname === "/cours-matieres-premieres"
+                        ? "font-bold text-[#0970E6]"
+                        : "font-medium text-black"
+                    )}
+                  >
+                    Cours des matières premières
+                  </Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
