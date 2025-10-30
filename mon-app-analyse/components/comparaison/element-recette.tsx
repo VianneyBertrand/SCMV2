@@ -5,6 +5,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Download, ChevronDown, ChevronUp } from "lucide-react"
 
+// Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
+const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {
+  const allowedKeys = ['pays', 'fournisseur', 'fournisseurs', 'portefeuille']
+  const filtered = Object.entries(filters)
+    .filter(([key]) => allowedKeys.includes(key.toLowerCase()))
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+  console.log('[ElementRecette] Original filters:', filters)
+  console.log('[ElementRecette] Filtered filters:', filtered)
+  return filtered
+}
+
 interface ElementRecetteProps {
   element: {
     id: string
@@ -15,6 +26,7 @@ interface ElementRecetteProps {
   setRecetteSubTab?: (value: 'mpa' | 'mpi') => void
   showAllRecette?: boolean
   setShowAllRecette?: (value: boolean) => void
+  hasPairedElementTags?: boolean
 }
 
 export function ElementRecette({
@@ -22,7 +34,8 @@ export function ElementRecette({
   recetteSubTab: recetteSubTabProp,
   setRecetteSubTab: setRecetteSubTabProp,
   showAllRecette: showAllRecetteProp,
-  setShowAllRecette: setShowAllRecetteProp
+  setShowAllRecette: setShowAllRecetteProp,
+  hasPairedElementTags = false,
 }: ElementRecetteProps) {
   // État local comme fallback si les props ne sont pas fournies
   const [recetteSubTabLocal, setRecetteSubTabLocal] = useState<'mpa' | 'mpi'>('mpa')
@@ -76,14 +89,17 @@ export function ElementRecette({
   const recetteData = getRecetteData()
   const displayedData = showAllRecette ? recetteData : recetteData.slice(0, 6)
 
+  const hasOwnTags = Object.entries(filterDisplayableFilters(element.filters)).length > 0
+  const shouldAddSpacing = !hasOwnTags && hasPairedElementTags
+
   return (
     <div className="space-y-6 border border-[#D9D9D9] rounded-lg p-6">
       {/* En-tête avec nom et filtres */}
-      <div>
+      <div className={shouldAddSpacing ? "min-h-[60px]" : ""}>
         <h3 className="text-lg font-bold mb-2">{element.name}</h3>
-        {Object.entries(element.filters).length > 0 && (
+        {hasOwnTags && (
           <div className="flex flex-wrap gap-1">
-            {Object.entries(element.filters).map(([key, value]) => (
+            {Object.entries(filterDisplayableFilters(element.filters)).map(([key, value]) => (
               <Badge key={key} variant="secondary" className="text-xs">
                 {value}
               </Badge>
@@ -92,40 +108,37 @@ export function ElementRecette({
         )}
       </div>
 
-      {/* Sous-tabs MPA / MPI */}
-      <div className="flex gap-0 w-fit">
-        <button
-          onClick={() => setRecetteSubTab('mpa')}
-          className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${
-            recetteSubTab === 'mpa'
-              ? 'bg-[#0970E6] text-white font-bold'
-              : 'bg-[#F2F2F2] text-black font-medium'
-          }`}
-        >
-          MPA
-        </button>
-        <button
-          onClick={() => setRecetteSubTab('mpi')}
-          className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${
-            recetteSubTab === 'mpi'
-              ? 'bg-[#0970E6] text-white font-bold'
-              : 'bg-[#F2F2F2] text-black font-medium'
-          }`}
-        >
-          MPI
-        </button>
+      {/* Sous-tabs MPA / MPI avec icône download */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex gap-0 w-fit">
+          <button
+            onClick={() => setRecetteSubTab('mpa')}
+            className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${
+              recetteSubTab === 'mpa'
+                ? 'bg-[#0970E6] text-white font-bold'
+                : 'bg-[#F2F2F2] text-black font-medium'
+            }`}
+          >
+            MPA
+          </button>
+          <button
+            onClick={() => setRecetteSubTab('mpi')}
+            className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${
+              recetteSubTab === 'mpi'
+                ? 'bg-[#0970E6] text-white font-bold'
+                : 'bg-[#F2F2F2] text-black font-medium'
+            }`}
+          >
+            MPI
+          </button>
+        </div>
+        <Button variant="ghost" size="icon" className="p-0">
+          <Download className="text-[#0970E6]" width={24} height={24} />
+        </Button>
       </div>
 
       {/* Liste avec bar charts */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h4 className="text-lg font-semibold">
-            {recetteSubTab === 'mpa' ? 'Liste des MPA' : 'Liste des MPI'}
-          </h4>
-          <Button variant="ghost" size="icon">
-            <Download className="w-4 h-4" />
-          </Button>
-        </div>
 
         <div className="space-y-3">
           {displayedData.map((item, index) => (

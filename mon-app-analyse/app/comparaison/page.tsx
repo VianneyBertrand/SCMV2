@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import { BackButton } from "@/components/shared/back-button"
+import { useSearchParams, useRouter } from "next/navigation"
+import { ArrowLeft } from "lucide-react"
 import { PeriodFilter } from "@/components/shared/period-filter"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -19,8 +19,20 @@ import { ElementRecette } from "@/components/comparaison/element-recette"
 import { ElementEvolutionPrix } from "@/components/comparaison/element-evolution-prix"
 import { getPerimetreData, type PerimetreType } from "@/lib/data/perimetre-data"
 
+// Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
+const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {
+  const allowedKeys = ['pays', 'fournisseur', 'fournisseurs', 'portefeuille']
+  const filtered = Object.entries(filters)
+    .filter(([key]) => allowedKeys.includes(key.toLowerCase()))
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+  console.log('Original filters:', filters)
+  console.log('Filtered filters:', filtered)
+  return filtered
+}
+
 export default function ComparaisonPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
 
   const [elements, setElements] = useState<{
     id: string
@@ -129,7 +141,7 @@ export default function ComparaisonPage() {
         { label: 'Marge PV', key: 'margePv' },
         { label: 'Marge PV LCL', key: 'margePvLcl' },
         { label: 'PA', key: 'pa' },
-        { label: 'Coût théorique', key: 'coutTheorique' },
+        { label: 'PA théorique', key: 'coutTheorique' },
         { label: 'Opportunité', key: 'opportunite' },
       ]
     }
@@ -140,15 +152,27 @@ export default function ComparaisonPage() {
       { label: 'MPA', key: 'mpa' },
       { label: 'MPI', key: 'mpi' },
       { label: 'PA', key: 'pa' },
-      { label: 'Coût théorique', key: 'coutTheorique' },
+      { label: 'PA théorique', key: 'coutTheorique' },
       { label: 'Opportunité', key: 'opportunite' },
     ]
+  }
+
+  const handleBack = () => {
+    // Construire l'URL de retour avec les éléments et le mode comparaison
+    const encodedElements = encodeURIComponent(JSON.stringify(elements))
+    router.push(`/analyse-valeur?perimetre=${perimetre}&comparisonMode=true&elements=${encodedElements}`)
   }
 
   return (
     <main className="w-full px-[50px] py-4">
       {/* Bouton Retour */}
-      <BackButton />
+      <button
+        onClick={handleBack}
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Retour
+      </button>
 
       {/* Titre + Période */}
       <div className="flex items-center justify-between mb-6">
@@ -162,52 +186,52 @@ export default function ComparaisonPage() {
         <TabsList className="flex w-auto justify-start bg-transparent p-0 h-auto gap-0">
           <TabsTrigger
             value="resume"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-blue pb-2 px-4"
+            className="px-4 pb-2 text-[14px] border-b-2 border-[#D9D9D9] font-medium text-[#121212] bg-transparent rounded-none transition-none data-[state=active]:border-b-2 data-[state=active]:border-blue data-[state=active]:font-bold data-[state=active]:text-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:bg-transparent focus-visible:outline-none focus-visible:ring-0"
           >
-            Résumé
+            Vue d&apos;ensemble
           </TabsTrigger>
           <TabsTrigger
             value="structure-cout"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-blue pb-2 px-4"
+            className="px-4 pb-2 text-[14px] border-b-2 border-[#D9D9D9] font-medium text-[#121212] bg-transparent rounded-none transition-none data-[state=active]:border-b-2 data-[state=active]:border-blue data-[state=active]:font-bold data-[state=active]:text-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:bg-transparent focus-visible:outline-none focus-visible:ring-0"
           >
             Structure de coût
           </TabsTrigger>
           <TabsTrigger
             value="recette"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-blue pb-2 px-4"
+            className="px-4 pb-2 text-[14px] border-b-2 border-[#D9D9D9] font-medium text-[#121212] bg-transparent rounded-none transition-none data-[state=active]:border-b-2 data-[state=active]:border-blue data-[state=active]:font-bold data-[state=active]:text-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:bg-transparent focus-visible:outline-none focus-visible:ring-0"
           >
             Recette
           </TabsTrigger>
           <TabsTrigger
             value="evolution-prix"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-blue pb-2 px-4"
+            className="px-4 pb-2 text-[14px] border-b-2 border-[#D9D9D9] font-medium text-[#121212] bg-transparent rounded-none transition-none data-[state=active]:border-b-2 data-[state=active]:border-blue data-[state=active]:font-bold data-[state=active]:text-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:bg-transparent focus-visible:outline-none focus-visible:ring-0"
           >
             Evolution prix
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="resume" className="space-y-6 mt-6">
-          <h2 className="text-xl font-semibold">
-            Les principales métriques de vos {perimetre || 'éléments'}
-          </h2>
-
-          <h3 className="text-lg font-medium text-gray-600">Vue d'ensemble</h3>
+        <TabsContent value="resume" className="mt-10">
+          <div className="flex items-center gap-2 mb-6">
+            <h2 className="text-[20px] font-medium">
+              Les principales métriques de vos {perimetre || 'éléments'}
+            </h2>
+          </div>
 
           <TooltipProvider>
             <div className="border border-[#D9D9D9] rounded-lg overflow-x-auto">
-              <Table>
+              <Table style={{ tableLayout: 'fixed', width: '100%' }}>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-bold w-48 align-top">
+                    <TableHead className="font-bold align-top" style={{ width: '192px' }}>
                       <div className="py-2">Metrics</div>
                     </TableHead>
                     {elements.map((element) => (
-                      <TableHead key={element.id} className="text-center min-w-[200px] align-top">
+                      <TableHead key={element.id} className="text-center align-top">
                         <div className="flex flex-col items-center gap-2 py-2">
                           <span className="font-bold text-base">{element.name}</span>
-                          {Object.entries(element.filters).length > 0 && (
+                          {Object.entries(filterDisplayableFilters(element.filters)).length > 0 && (
                             <div className="flex flex-wrap gap-1 justify-center">
-                              {Object.entries(element.filters).map(([key, value]) => (
+                              {Object.entries(filterDisplayableFilters(element.filters)).map(([key, value]) => (
                                 <Badge
                                   key={key}
                                   variant="secondary"
@@ -231,7 +255,7 @@ export default function ComparaisonPage() {
                           {metric.label}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                              <Info className="h-4 w-4 text-[#121212] cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>{metric.label}</p>
@@ -271,8 +295,20 @@ export default function ComparaisonPage() {
           </TooltipProvider>
         </TabsContent>
 
-        <TabsContent value="structure-cout" className="mt-6">
-          <h2 className="text-[16px] font-bold mb-6">Répartition en valeur des matières premières</h2>
+        <TabsContent value="structure-cout" className="mt-10">
+          <div className="flex items-center gap-2 mb-6">
+            <h2 className="text-[20px] font-medium">Répartition en valeur des matières premières</h2>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-[#121212]" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Visualisation de la répartition des coûts en valeur</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Colonne gauche: Élément 1 et 3 */}
@@ -290,6 +326,8 @@ export default function ComparaisonPage() {
                   setCostSubTab={setCostSubTab}
                   showTable={showTable}
                   setShowTable={setShowTable}
+                  totalPA={getElementData(elements[0].name, elements[0].filters)?.pa}
+                  hasPairedElementTags={elements[1] ? Object.entries(filterDisplayableFilters(elements[1].filters)).length > 0 : false}
                 />
               )}
               {elements[2] && (
@@ -305,6 +343,8 @@ export default function ComparaisonPage() {
                   setCostSubTab={setCostSubTab}
                   showTable={showTable}
                   setShowTable={setShowTable}
+                  totalPA={getElementData(elements[2].name, elements[2].filters)?.pa}
+                  hasPairedElementTags={elements[3] ? Object.entries(filterDisplayableFilters(elements[3].filters)).length > 0 : false}
                 />
               )}
             </div>
@@ -324,6 +364,8 @@ export default function ComparaisonPage() {
                   setCostSubTab={setCostSubTab}
                   showTable={showTable}
                   setShowTable={setShowTable}
+                  totalPA={getElementData(elements[1].name, elements[1].filters)?.pa}
+                  hasPairedElementTags={elements[0] ? Object.entries(filterDisplayableFilters(elements[0].filters)).length > 0 : false}
                 />
               )}
               {elements[3] && (
@@ -339,14 +381,18 @@ export default function ComparaisonPage() {
                   setCostSubTab={setCostSubTab}
                   showTable={showTable}
                   setShowTable={setShowTable}
+                  totalPA={getElementData(elements[3].name, elements[3].filters)?.pa}
+                  hasPairedElementTags={elements[2] ? Object.entries(filterDisplayableFilters(elements[2].filters)).length > 0 : false}
                 />
               )}
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="recette" className="mt-6">
-          <h2 className="text-[16px] font-bold mb-6">Répartition en volume des matières premières</h2>
+        <TabsContent value="recette" className="mt-10">
+          <div className="flex items-center gap-2 mb-6">
+            <h2 className="text-[20px] font-medium">Répartition en volume des matières premières</h2>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Colonne gauche: Élément 1 et 3 */}
@@ -358,6 +404,7 @@ export default function ComparaisonPage() {
                   setRecetteSubTab={setRecetteSubTab}
                   showAllRecette={showAllRecette}
                   setShowAllRecette={setShowAllRecette}
+                  hasPairedElementTags={elements[1] ? Object.entries(filterDisplayableFilters(elements[1].filters)).length > 0 : false}
                 />
               )}
               {elements[2] && (
@@ -367,6 +414,7 @@ export default function ComparaisonPage() {
                   setRecetteSubTab={setRecetteSubTab}
                   showAllRecette={showAllRecette}
                   setShowAllRecette={setShowAllRecette}
+                  hasPairedElementTags={elements[3] ? Object.entries(filterDisplayableFilters(elements[3].filters)).length > 0 : false}
                 />
               )}
             </div>
@@ -380,6 +428,7 @@ export default function ComparaisonPage() {
                   setRecetteSubTab={setRecetteSubTab}
                   showAllRecette={showAllRecette}
                   setShowAllRecette={setShowAllRecette}
+                  hasPairedElementTags={elements[0] ? Object.entries(filterDisplayableFilters(elements[0].filters)).length > 0 : false}
                 />
               )}
               {elements[3] && (
@@ -389,14 +438,17 @@ export default function ComparaisonPage() {
                   setRecetteSubTab={setRecetteSubTab}
                   showAllRecette={showAllRecette}
                   setShowAllRecette={setShowAllRecette}
+                  hasPairedElementTags={elements[2] ? Object.entries(filterDisplayableFilters(elements[2].filters)).length > 0 : false}
                 />
               )}
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="evolution-prix" className="mt-6">
-          <h2 className="text-[16px] font-bold mb-6">Évolution des prix de vos {perimetre || 'éléments'}</h2>
+        <TabsContent value="evolution-prix" className="mt-10">
+          <div className="flex items-center gap-2 mb-6">
+            <h2 className="text-[20px] font-medium">Évolution des prix de vos {perimetre || 'éléments'}</h2>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Colonne gauche: Élément 1 et 3 */}
@@ -414,6 +466,7 @@ export default function ComparaisonPage() {
                   setEvolutionDateRange={setEvolutionDateRange}
                   showEvolutionTable={showEvolutionTable}
                   setShowEvolutionTable={setShowEvolutionTable}
+                  hasPairedElementTags={elements[1] ? Object.entries(filterDisplayableFilters(elements[1].filters)).length > 0 : false}
                 />
               )}
               {elements[2] && (
@@ -429,6 +482,7 @@ export default function ComparaisonPage() {
                   setEvolutionDateRange={setEvolutionDateRange}
                   showEvolutionTable={showEvolutionTable}
                   setShowEvolutionTable={setShowEvolutionTable}
+                  hasPairedElementTags={elements[3] ? Object.entries(filterDisplayableFilters(elements[3].filters)).length > 0 : false}
                 />
               )}
             </div>
@@ -448,6 +502,7 @@ export default function ComparaisonPage() {
                   setEvolutionDateRange={setEvolutionDateRange}
                   showEvolutionTable={showEvolutionTable}
                   setShowEvolutionTable={setShowEvolutionTable}
+                  hasPairedElementTags={elements[0] ? Object.entries(filterDisplayableFilters(elements[0].filters)).length > 0 : false}
                 />
               )}
               {elements[3] && (
@@ -463,6 +518,7 @@ export default function ComparaisonPage() {
                   setEvolutionDateRange={setEvolutionDateRange}
                   showEvolutionTable={showEvolutionTable}
                   setShowEvolutionTable={setShowEvolutionTable}
+                  hasPairedElementTags={elements[2] ? Object.entries(filterDisplayableFilters(elements[2].filters)).length > 0 : false}
                 />
               )}
             </div>

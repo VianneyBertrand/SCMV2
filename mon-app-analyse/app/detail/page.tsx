@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
+import { CurveIcon } from "@/components/ui/curve-icon"
 import {
   Select,
   SelectContent,
@@ -30,7 +31,8 @@ import {
   type PerimetreItem,
   type PerimetreType
 } from "@/lib/data/perimetre-data"
-import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download } from "lucide-react"
+import { calculateValorisation } from "@/lib/utils"
+import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download, ChevronsUpDown, RotateCcw } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -43,26 +45,47 @@ interface HeatmapRectProps {
   evolution: string
   color: string
   className?: string
-  href: string
+  href?: string
   type: 'total' | 'mpa' | 'mpi'
   categoryPercentage?: string
+  totalPA?: string // PA total pour calculer la valorisation
 }
 
-function HeatmapRect({ label, percentage, evolution, color, className, href, type, categoryPercentage }: HeatmapRectProps) {
+function HeatmapRect({ label, percentage, evolution, color, className, href, type, categoryPercentage, totalPA }: HeatmapRectProps) {
+  // Calculer la valorisation en euros
+  const valorisation = useMemo(() => {
+    if (!totalPA) return null
+    return calculateValorisation(percentage, totalPA)
+  }, [percentage, totalPA])
+
+  const content = (
+    <>
+      <span className="text-[14px] font-bold text-center text-black line-clamp-3 break-words w-full px-1">{label}</span>
+      <span className="text-[14px] font-medium text-black mt-1">{percentage}</span>
+      <span className="text-[14px] font-medium text-black">
+        {evolution}
+      </span>
+    </>
+  )
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link
-            href={href}
-            className={`${color} ${className} p-2 flex flex-col items-center justify-center hover:opacity-90 transition-opacity cursor-pointer overflow-hidden`}
-          >
-            <span className="text-[14px] font-bold text-center text-black line-clamp-3 break-words w-full px-1">{label}</span>
-            <span className="text-[14px] font-medium text-black mt-1">{percentage}</span>
-            <span className="text-[14px] font-medium text-black">
-              {evolution}
-            </span>
-          </Link>
+          {href ? (
+            <Link
+              href={href}
+              className={`${color} ${className} p-2 flex flex-col items-center justify-center hover:opacity-90 transition-opacity cursor-pointer overflow-hidden`}
+            >
+              {content}
+            </Link>
+          ) : (
+            <div
+              className={`${color} ${className} p-2 flex flex-col items-center justify-center overflow-hidden`}
+            >
+              {content}
+            </div>
+          )}
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-2">
@@ -74,6 +97,12 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
                 <>
                   <span className="text-sm">% du total {type === 'mpa' ? 'MPA' : 'MPI'}</span>
                   <span className="text-sm font-medium">{categoryPercentage}</span>
+                </>
+              )}
+              {valorisation && (
+                <>
+                  <span className="text-sm">Valorisation</span>
+                  <span className="text-sm font-medium">{valorisation}</span>
                 </>
               )}
               <span className="text-sm">% d&apos;évolution</span>
@@ -101,6 +130,34 @@ const getColorFromEvolution = (evolution: string): string => {
   return "bg-[#F25056]" // Red ---
 }
 
+// Helper pour générer le titre avec la bonne préposition
+const getVueEnsembleTitle = (perimetre: string, label: string): string => {
+  const perimetreMap: Record<string, string> = {
+    "Marché": "du marché",
+    "Marché détaillé": "du marché détaillé",
+    "Famille": "de la famille",
+    "Sous famille": "de la sous famille",
+    "Code Mintech": "du code Mintech",
+  }
+
+  const preposition = perimetreMap[perimetre] || `de ${perimetre.toLowerCase()}`
+  return `Vue d'ensemble ${preposition} ${label || perimetre}`
+}
+
+// Helper pour générer le titre "Évolution des prix"
+const getEvolutionPrixTitle = (perimetre: string, label: string): string => {
+  const perimetreMap: Record<string, string> = {
+    "Marché": "du marché",
+    "Marché détaillé": "du marché détaillé",
+    "Famille": "de la famille",
+    "Sous famille": "de la sous famille",
+    "Code Mintech": "du code Mintech",
+  }
+
+  const preposition = perimetreMap[perimetre] || `de ${perimetre.toLowerCase()}`
+  return `Évolution des prix ${preposition} ${label || perimetre}`
+}
+
 export default function DetailPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -123,14 +180,29 @@ export default function DetailPage() {
     'beurre': true,
     'huile': true,
     'oeufs': true,
-    // MPI
+    'levure': true,
+    'amidon-mais': true,
+    'gelatine': true,
+    'presure': true,
+    'ferments-lactiques': true,
+    'creme-fraiche': true,
+    // MPI - moyennes
     'energie': true,
     'transport': true,
     'emballage': true,
     'main-oeuvre': true,
-    'gas': true,
+    // MPI - Transport
+    'transport-routier': true,
+    'transport-maritime': true,
+    // MPI - Energie
     'electricite': true,
-    'petrole': true,
+    'gaz': true,
+    // MPI - Main d'oeuvre
+    'salaires-production': true,
+    'salaires-logistique': true,
+    // MPI - Emballage
+    'carton-ondule': true,
+    'plastique-emballage': true,
   })
   const [legendOpacity, setLegendOpacity] = useState<Record<string, boolean>>({
     MPA: true,
@@ -142,13 +214,59 @@ export default function DetailPage() {
     'beurre': true,
     'huile': true,
     'oeufs': true,
+    'levure': true,
+    'amidon-mais': true,
+    'gelatine': true,
+    'presure': true,
+    'ferments-lactiques': true,
+    'creme-fraiche': true,
+    // MPI - moyennes
     'energie': true,
     'transport': true,
     'emballage': true,
     'main-oeuvre': true,
-    'gas': true,
+    // MPI - Transport
+    'transport-routier': true,
+    'transport-maritime': true,
+    // MPI - Energie
     'electricite': true,
-    'petrole': true,
+    'gaz': true,
+    // MPI - Main d'oeuvre
+    'salaires-production': true,
+    'salaires-logistique': true,
+    // MPI - Emballage
+    'carton-ondule': true,
+    'plastique-emballage': true,
+  })
+  // État pour contrôler l'affichage des légendes via checkboxes
+  const [showInLegend, setShowInLegend] = useState<Record<string, boolean>>({
+    // MPA - 6 premiers
+    'farine-ble': true,
+    'sucre': true,
+    'sel': true,
+    'lait': true,
+    'beurre': true,
+    'huile': true,
+    'oeufs': false,
+    'levure': false,
+    'amidon-mais': false,
+    'gelatine': false,
+    'presure': false,
+    'ferments-lactiques': false,
+    'creme-fraiche': false,
+    // MPI - moyennes + 2 par catégorie
+    'transport': true,
+    'energie': true,
+    'main-oeuvre': true,
+    'emballage': true,
+    'transport-routier': true,
+    'transport-maritime': true,
+    'electricite': true,
+    'gaz': true,
+    'salaires-production': true,
+    'salaires-logistique': true,
+    'carton-ondule': true,
+    'plastique-emballage': true,
   })
   const [base100, setBase100] = useState(false)
   const [dateRange, setDateRange] = useState([0, 100])
@@ -191,7 +309,7 @@ export default function DetailPage() {
       }))
   }, [currentItem, perimetre])
 
-  // Données KPI (7 cards + 2 pour les produits + 3 marges pour produit)
+  // Données KPI (7 cards de base + cartes produit séparées)
   const kpiCards = useMemo(() => {
     if (!currentItem) return []
 
@@ -220,79 +338,118 @@ export default function DetailPage() {
         evolution: currentItem.mpi.evolution,
         tooltip: "Marge en pourcentage des ventes (indice)"
       },
-    ]
-
-    // Ajouter les 3 nouvelles cartes de marge uniquement pour les produits
-    if (perimetre === "Produit") {
-      if (currentItem.margePvc) {
-        baseCards.push({
-          label: "Marge PVC",
-          value: currentItem.margePvc.valeur,
-          evolution: currentItem.margePvc.evolution,
-          tooltip: "Marge entre PV Carrefour et PA unitaire"
-        })
-      }
-      if (currentItem.margePvLcl) {
-        baseCards.push({
-          label: "Marge PV LCL",
-          value: currentItem.margePvLcl.valeur,
-          evolution: currentItem.margePvLcl.evolution,
-          tooltip: "Marge entre PV Leclerc et PA unitaire"
-        })
-      }
-      if (currentItem.margeMoyenneCategorielle) {
-        baseCards.push({
-          label: "Marge moyenne catégorielle",
-          value: currentItem.margeMoyenneCategorielle,
-          evolution: undefined, // Pas d'évolution pour cette carte
-          tooltip: "Marge moyenne de la catégorie"
-        })
-      }
-    }
-
-    // Ajouter PA et Coût théorique
-    baseCards.push(
       {
-        label: "PA",
+        label: "PA total",
         value: currentItem.evoPa.valeur,
         evolution: currentItem.evoPa.evolution,
         tooltip: "Prix d'achat total"
       },
       {
-        label: "Coût théorique",
+        label: "PA total théorique",
         value: currentItem.coutTheorique.valeur,
         evolution: currentItem.coutTheorique.evolution,
-        tooltip: "Coût théorique calculé"
+        tooltip: "Prix d'achat théorique total calculé"
+      },
+      {
+        label: "Opportunité totale",
+        value: currentItem.opportunites.valeur,
+        evolution: currentItem.opportunites.evolution,
+        tooltip: "Opportunité totale d'optimisation identifiée"
       }
-    )
-
-    // Ajouter PV et PV Leclerc uniquement pour les produits
-    if (perimetre === "Produit" && currentItem.pv && currentItem.pvLeclerc) {
-      baseCards.push(
-        {
-          label: "PV",
-          value: currentItem.pv.valeur,
-          evolution: currentItem.pv.evolution,
-          tooltip: "Prix de vente Carrefour"
-        },
-        {
-          label: "PV Leclerc",
-          value: currentItem.pvLeclerc.valeur,
-          evolution: currentItem.pvLeclerc.evolution,
-          tooltip: "Prix de vente Leclerc"
-        }
-      )
-    }
-
-    // Ajouter Opportunité à la fin
-    baseCards.push({
-      label: "Opportunité",
-      value: currentItem.opportunites.valeur,
-      evolution: currentItem.opportunites.evolution,
-      tooltip: "Opportunité d'optimisation identifiée"
-    })
+    ]
 
     return baseCards
+  }, [currentItem, perimetre])
+
+  // Cartes spécifiques au produit (PA unitaire, PV, marges)
+  const productCards = useMemo(() => {
+    if (perimetre !== "Produit" || !currentItem) return []
+
+    const cards = []
+
+    // PA unitaire
+    if (currentItem.paUnitaire) {
+      cards.push({
+        label: "PA",
+        value: currentItem.paUnitaire.valeur,
+        evolution: currentItem.paUnitaire.evolution,
+        tooltip: "Prix d'achat unitaire du produit"
+      })
+    }
+
+    // PA théorique unitaire
+    if (currentItem.coutTheoriqueUnitaire) {
+      cards.push({
+        label: "PA théorique",
+        value: currentItem.coutTheoriqueUnitaire.valeur,
+        evolution: currentItem.coutTheoriqueUnitaire.evolution,
+        tooltip: "Prix d'achat théorique unitaire - Si inférieur au PA, il y a une opportunité"
+      })
+    }
+
+    // Opportunité = PA théorique - PA
+    if (currentItem.paUnitaire && currentItem.coutTheoriqueUnitaire) {
+      const paTheorique = parseFloat(currentItem.coutTheoriqueUnitaire.valeur.replace(/[^0-9.-]/g, ''));
+      const pa = parseFloat(currentItem.paUnitaire.valeur.replace(/[^0-9.-]/g, ''));
+      const opportunite = paTheorique - pa;
+
+      const paTheoriqueEvol = parseFloat(currentItem.coutTheoriqueUnitaire.evolution.replace(/[^0-9.-]/g, ''));
+      const paEvol = parseFloat(currentItem.paUnitaire.evolution.replace(/[^0-9.-]/g, ''));
+      const opportuniteEvol = paTheoriqueEvol - paEvol;
+
+      cards.push({
+        label: "Opportunité",
+        value: `${opportunite.toFixed(2)}€`,
+        evolution: `${opportuniteEvol >= 0 ? '+' : ''}${opportuniteEvol.toFixed(2)}%`,
+        tooltip: "Opportunité d'économie (PA théorique - PA)"
+      })
+    }
+
+    // PV et Marge PV
+    if (currentItem.pv) {
+      cards.push({
+        label: "PV",
+        value: currentItem.pv.valeur,
+        evolution: currentItem.pv.evolution,
+        tooltip: "Prix de vente Carrefour"
+      })
+    }
+    if (currentItem.margePvc) {
+      cards.push({
+        label: "Marge PV",
+        value: currentItem.margePvc.valeur,
+        evolution: currentItem.margePvc.evolution,
+        tooltip: "Marge entre PV Carrefour et PA unitaire"
+      })
+    }
+
+    // PV LCL et Marge PV LCL
+    if (currentItem.pvLeclerc) {
+      cards.push({
+        label: "PV LCL",
+        value: currentItem.pvLeclerc.valeur,
+        evolution: currentItem.pvLeclerc.evolution,
+        tooltip: "Prix de vente Leclerc"
+      })
+    }
+    if (currentItem.margePvLcl) {
+      cards.push({
+        label: "Marge PV LCL",
+        value: currentItem.margePvLcl.valeur,
+        evolution: currentItem.margePvLcl.evolution,
+        tooltip: "Marge entre PV Leclerc et PA unitaire"
+      })
+    }
+    if (currentItem.margeMoyenneCategorielle) {
+      cards.push({
+        label: "Marge moyenne catégorielle",
+        value: currentItem.margeMoyenneCategorielle,
+        evolution: undefined,
+        tooltip: "Marge moyenne de la catégorie"
+      })
+    }
+
+    return cards
   }, [currentItem, perimetre])
 
   // Titre dynamique
@@ -392,15 +549,15 @@ export default function DetailPage() {
   // Données graphique
   const getChartData = () => {
     const baseData = [
-      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'energie': 210, 'transport': 430, 'emballage': 250, 'main-oeuvre': 290, 'gas': 200, 'electricite': 215, 'petrole': 205 },
-      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'energie': 205, 'transport': 410, 'emballage': 240, 'main-oeuvre': 280, 'gas': 195, 'electricite': 210, 'petrole': 200 },
-      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'energie': 210, 'transport': 405, 'emballage': 235, 'main-oeuvre': 275, 'gas': 205, 'electricite': 212, 'petrole': 203 },
-      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'energie': 230, 'transport': 450, 'emballage': 280, 'main-oeuvre': 310, 'gas': 220, 'electricite': 235, 'petrole': 225 },
-      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'energie': 250, 'transport': 470, 'emballage': 310, 'main-oeuvre': 340, 'gas': 240, 'electricite': 255, 'petrole': 245 },
-      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'energie': 260, 'transport': 480, 'emballage': 320, 'main-oeuvre': 350, 'gas': 250, 'electricite': 265, 'petrole': 255 },
-      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'energie': 245, 'transport': 465, 'emballage': 305, 'main-oeuvre': 335, 'gas': 235, 'electricite': 250, 'petrole': 240 },
-      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'energie': 235, 'transport': 475, 'emballage': 315, 'main-oeuvre': 345, 'gas': 225, 'electricite': 240, 'petrole': 230 },
-      { date: '2025-04', MPA: 430, MPI: 310, 'farine-ble': 405, 'sucre': 395, 'sel': 445, 'lait': 415, 'beurre': 325, 'huile': 335, 'oeufs': 315, 'energie': 255, 'transport': 485, 'emballage': 325, 'main-oeuvre': 355, 'gas': 245, 'electricite': 260, 'petrole': 250 },
+      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'energie': 210, 'transport': 430, 'emballage': 250, 'main-oeuvre': 290, 'transport-routier': 425, 'transport-maritime': 435, 'electricite': 215, 'gaz': 205, 'salaires-production': 295, 'salaires-logistique': 285, 'carton-ondule': 255, 'plastique-emballage': 245 },
+      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 210, 'amidon-mais': 215, 'gelatine': 208, 'presure': 212, 'ferments-lactiques': 218, 'creme-fraiche': 222, 'energie': 205, 'transport': 410, 'emballage': 240, 'main-oeuvre': 280, 'transport-routier': 405, 'transport-maritime': 415, 'electricite': 210, 'gaz': 200, 'salaires-production': 285, 'salaires-logistique': 275, 'carton-ondule': 245, 'plastique-emballage': 235 },
+      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'levure': 205, 'amidon-mais': 210, 'gelatine': 203, 'presure': 207, 'ferments-lactiques': 213, 'creme-fraiche': 217, 'energie': 210, 'transport': 405, 'emballage': 235, 'main-oeuvre': 275, 'transport-routier': 400, 'transport-maritime': 410, 'electricite': 212, 'gaz': 208, 'salaires-production': 280, 'salaires-logistique': 270, 'carton-ondule': 240, 'plastique-emballage': 230 },
+      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'levure': 250, 'amidon-mais': 255, 'gelatine': 248, 'presure': 252, 'ferments-lactiques': 258, 'creme-fraiche': 262, 'energie': 230, 'transport': 450, 'emballage': 280, 'main-oeuvre': 310, 'transport-routier': 445, 'transport-maritime': 455, 'electricite': 235, 'gaz': 225, 'salaires-production': 315, 'salaires-logistique': 305, 'carton-ondule': 285, 'plastique-emballage': 275 },
+      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'levure': 280, 'amidon-mais': 285, 'gelatine': 278, 'presure': 282, 'ferments-lactiques': 288, 'creme-fraiche': 292, 'energie': 250, 'transport': 470, 'emballage': 310, 'main-oeuvre': 340, 'transport-routier': 465, 'transport-maritime': 475, 'electricite': 255, 'gaz': 245, 'salaires-production': 345, 'salaires-logistique': 335, 'carton-ondule': 315, 'plastique-emballage': 305 },
+      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'levure': 290, 'amidon-mais': 295, 'gelatine': 288, 'presure': 292, 'ferments-lactiques': 298, 'creme-fraiche': 302, 'energie': 260, 'transport': 480, 'emballage': 320, 'main-oeuvre': 350, 'transport-routier': 475, 'transport-maritime': 485, 'electricite': 265, 'gaz': 255, 'salaires-production': 355, 'salaires-logistique': 345, 'carton-ondule': 325, 'plastique-emballage': 315 },
+      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'energie': 245, 'transport': 465, 'emballage': 305, 'main-oeuvre': 335, 'transport-routier': 460, 'transport-maritime': 470, 'electricite': 250, 'gaz': 240, 'salaires-production': 340, 'salaires-logistique': 330, 'carton-ondule': 310, 'plastique-emballage': 300 },
+      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'energie': 235, 'transport': 475, 'emballage': 315, 'main-oeuvre': 345, 'transport-routier': 470, 'transport-maritime': 480, 'electricite': 240, 'gaz': 230, 'salaires-production': 350, 'salaires-logistique': 340, 'carton-ondule': 320, 'plastique-emballage': 310 },
+      { date: '2025-04', MPA: 430, MPI: 310, 'farine-ble': 405, 'sucre': 395, 'sel': 445, 'lait': 415, 'beurre': 325, 'huile': 335, 'oeufs': 315, 'levure': 305, 'amidon-mais': 310, 'gelatine': 303, 'presure': 307, 'ferments-lactiques': 313, 'creme-fraiche': 317, 'energie': 255, 'transport': 485, 'emballage': 325, 'main-oeuvre': 355, 'transport-routier': 480, 'transport-maritime': 490, 'electricite': 260, 'gaz': 250, 'salaires-production': 360, 'salaires-logistique': 350, 'carton-ondule': 330, 'plastique-emballage': 320 },
     ]
 
     if (base100) {
@@ -453,6 +610,18 @@ export default function DetailPage() {
             evolution: '-1.80%',
             impact: '-0.80%',
             color: '#00BCD4'
+          },
+          {
+            id: 'Autre',
+            name: 'Autre',
+            volume: '',
+            volumeUVC: '',
+            partVolume: '',
+            cost: '0.049M€',
+            partCost: '24.34%',
+            evolution: '+0.00%',
+            impact: '',
+            color: '#4CAF50'
           },
         ]
       case 'mpa':
@@ -555,81 +724,225 @@ export default function DetailPage() {
             impactTotal: '+0.21%',
             color: '#795548'
           },
+          {
+            id: 'levure',
+            name: 'Levure',
+            subLabel: 'FR34',
+            volume: '7023.42T',
+            volumeUVC: '258 UVC',
+            partVolume: '5.46%',
+            cost: '0.035M€',
+            partCostTotal: '5.46%',
+            partCostMPA: '5.46%',
+            evolution: '+0.91%',
+            impactTotal: '+0.05%',
+            color: '#FFEB3B'
+          },
+          {
+            id: 'amidon-mais',
+            name: 'Amidon de maïs',
+            subLabel: 'FR34',
+            volume: '7023.42T',
+            volumeUVC: '258 UVC',
+            partVolume: '5.46%',
+            cost: '0.035M€',
+            partCostTotal: '5.46%',
+            partCostMPA: '5.46%',
+            evolution: '+0.91%',
+            impactTotal: '+0.05%',
+            color: '#FFC107'
+          },
+          {
+            id: 'gelatine',
+            name: 'Gélatine',
+            subLabel: 'FR34',
+            volume: '7023.42T',
+            volumeUVC: '258 UVC',
+            partVolume: '5.46%',
+            cost: '0.035M€',
+            partCostTotal: '5.46%',
+            partCostMPA: '5.46%',
+            evolution: '+0.91%',
+            impactTotal: '+0.05%',
+            color: '#FF5722'
+          },
+          {
+            id: 'presure',
+            name: 'Présure',
+            subLabel: 'FR34',
+            volume: '7023.42T',
+            volumeUVC: '258 UVC',
+            partVolume: '5.46%',
+            cost: '0.035M€',
+            partCostTotal: '5.46%',
+            partCostMPA: '5.46%',
+            evolution: '+0.91%',
+            impactTotal: '+0.05%',
+            color: '#3F51B5'
+          },
+          {
+            id: 'ferments-lactiques',
+            name: 'Ferments lactiques',
+            subLabel: 'FR34',
+            volume: '7023.42T',
+            volumeUVC: '258 UVC',
+            partVolume: '5.46%',
+            cost: '0.035M€',
+            partCostTotal: '5.46%',
+            partCostMPA: '5.46%',
+            evolution: '+0.91%',
+            impactTotal: '+0.05%',
+            color: '#009688'
+          },
+          {
+            id: 'creme-fraiche',
+            name: 'Crème fraîche',
+            subLabel: 'FR34',
+            volume: '7023.42T',
+            volumeUVC: '258 UVC',
+            partVolume: '5.46%',
+            cost: '0.035M€',
+            partCostTotal: '5.46%',
+            partCostMPA: '5.46%',
+            evolution: '+0.91%',
+            impactTotal: '+0.05%',
+            color: '#8BC34A'
+          },
         ]
       case 'mpi':
         return [
+          // Moyennes
           {
             id: 'transport',
             name: 'Moyenne transport',
             cost: '0.035M€',
-            partCost: '48%',
+            partCost: '25%',
             evolution: '+3.35%',
             color: '#E91E63',
-            isMain: true
+            isMain: true,
+            category: 'transport'
           },
           {
             id: 'energie',
             name: 'Moyenne energie',
-            cost: '0.035M€',
-            partCost: '48%',
-            evolution: '+3.35%',
+            cost: '0.028M€',
+            partCost: '20%',
+            evolution: '+2.15%',
             color: '#00BCD4',
-            isMain: true
+            isMain: true,
+            category: 'energie'
           },
           {
             id: 'main-oeuvre',
             name: "Moyenne main d'oeuvre",
-            cost: '0.035M€',
-            partCost: '48%',
-            evolution: '+3.35%',
+            cost: '0.042M€',
+            partCost: '30%',
+            evolution: '+1.85%',
             color: '#4CAF50',
-            isMain: true
+            isMain: true,
+            category: 'main-oeuvre'
           },
           {
             id: 'emballage',
             name: 'Moyenne emballage',
             cost: '0.035M€',
-            partCost: '48%',
-            evolution: '+3.35%',
+            partCost: '25%',
+            evolution: '+2.75%',
             color: '#FF9800',
-            isMain: true
+            isMain: true,
+            category: 'emballage'
+          },
+          // Transport
+          {
+            id: 'transport-routier',
+            name: 'Transport routier',
+            subLabel: 'TRA01',
+            cost: '0.020M€',
+            partCost: '14.3%',
+            evolution: '+3.20%',
+            color: '#F48FB1',
+            isMain: true,
+            category: 'transport'
           },
           {
-            id: 'gas',
-            name: 'Gas',
-            subLabel: 'HDCGEZ',
-            cost: '0.035M€',
-            partCost: '48%',
-            evolution: '+3.35%',
-            color: '#9C27B0',
-            isMain: false,
-            indent: true
+            id: 'transport-maritime',
+            name: 'Transport maritime',
+            subLabel: 'TRA02',
+            cost: '0.015M€',
+            partCost: '10.7%',
+            evolution: '+3.50%',
+            color: '#F06292',
+            isMain: true,
+            category: 'transport'
           },
+          // Energie
           {
             id: 'electricite',
-            name: 'Electricité',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '22.25%',
-            cost: '0.035M€',
-            partCost: '48%',
-            evolution: '+3.35%',
-            color: '#795548',
-            isMain: false,
-            indent: false
+            name: 'Électricité',
+            subLabel: 'ENE01',
+            cost: '0.016M€',
+            partCost: '11.4%',
+            evolution: '+2.10%',
+            color: '#80DEEA',
+            isMain: true,
+            category: 'energie'
           },
           {
-            id: 'petrole',
-            name: 'Pétrole',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '22.25%',
-            cost: '0.035M€',
-            partCost: '48%',
-            evolution: '+3.35%',
-            color: '#607D8B',
-            isMain: false,
-            indent: false
+            id: 'gaz',
+            name: 'Gaz naturel',
+            subLabel: 'ENE02',
+            cost: '0.012M€',
+            partCost: '8.6%',
+            evolution: '+2.20%',
+            color: '#4DD0E1',
+            isMain: true,
+            category: 'energie'
+          },
+          // Main d'oeuvre
+          {
+            id: 'salaires-production',
+            name: 'Salaires production',
+            subLabel: 'MO01',
+            cost: '0.025M€',
+            partCost: '17.9%',
+            evolution: '+1.80%',
+            color: '#A5D6A7',
+            isMain: true,
+            category: 'main-oeuvre'
+          },
+          {
+            id: 'salaires-logistique',
+            name: 'Salaires logistique',
+            subLabel: 'MO02',
+            cost: '0.017M€',
+            partCost: '12.1%',
+            evolution: '+1.90%',
+            color: '#81C784',
+            isMain: true,
+            category: 'main-oeuvre'
+          },
+          // Emballage
+          {
+            id: 'carton-ondule',
+            name: 'Carton ondulé',
+            subLabel: 'EMB01',
+            cost: '0.020M€',
+            partCost: '14.3%',
+            evolution: '+2.80%',
+            color: '#FFCC80',
+            isMain: true,
+            category: 'emballage'
+          },
+          {
+            id: 'plastique-emballage',
+            name: 'Film plastique',
+            subLabel: 'EMB02',
+            cost: '0.015M€',
+            partCost: '10.7%',
+            evolution: '+2.70%',
+            color: '#FFB74D',
+            isMain: true,
+            category: 'emballage'
           },
         ]
       default:
@@ -649,6 +962,17 @@ export default function DetailPage() {
 
   const toggleLegendOpacity = (itemId: string) => {
     setLegendOpacity(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
+
+  const toggleShowInLegend = (itemId: string) => {
+    setShowInLegend(prev => {
+      const newValue = !prev[itemId]
+      // Si on coche la checkbox, activer automatiquement la légende
+      if (newValue) {
+        setLegendOpacity(prevOpacity => ({ ...prevOpacity, [itemId]: true }))
+      }
+      return { ...prev, [itemId]: newValue }
+    })
   }
 
   const unselectAll = () => {
@@ -757,11 +1081,11 @@ export default function DetailPage() {
       }),
       rows: [
         {
-          label: "Prix d'achat",
+          label: "PA total",
           values: baseData.map(d => evolutionBase100 ? d.PA.toFixed(1) : d.PA.toString())
         },
         {
-          label: 'Coût théorique',
+          label: 'PA total théorique',
           values: baseData.map(d => evolutionBase100 ? d['cout-theorique'].toFixed(1) : d['cout-theorique'].toString())
         }
       ]
@@ -816,8 +1140,8 @@ export default function DetailPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <h1 className="text-[40px] font-bold">{label}</h1>
-          <Button variant="ghost" size="sm" className="text-blue-600 gap-2 hover:text-blue-800 text-[16px] font-bold">
-            <Pencil className="w-5 h-5" />
+          <Button variant="ghost" size="sm" className="!text-[#0970E6] gap-2 hover:!text-[#075bb3] text-[16px] font-bold">
+            <Pencil className="w-5 h-5 text-[#0970E6]" />
             Simuler
           </Button>
         </div>
@@ -841,53 +1165,55 @@ export default function DetailPage() {
         <TabsList className="flex w-auto justify-start bg-transparent p-0 h-auto gap-0">
           <TabsTrigger
             value="vue-ensemble"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4"
+            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
           >
             Vue d&apos;ensemble
           </TabsTrigger>
           <TabsTrigger
             value="structure-cout"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4"
+            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
           >
             Structure de coût
           </TabsTrigger>
           <TabsTrigger
             value="recette"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4"
+            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
           >
             Recette
           </TabsTrigger>
           <TabsTrigger
             value="evolution-prix"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4"
+            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
           >
             Évolution prix
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="vue-ensemble" className="space-y-2 mt-6">
-          {/* Sous-titre dynamique */}
-          <h2 className="text-[16px] font-bold">{pageTitle}</h2>
+        <TabsContent value="vue-ensemble" className="space-y-6 mt-10">
+          {/* Titre et liens navigation */}
+          <div className="flex items-start justify-between mb-4">
+            <h2 className="text-[20px] font-medium">
+              {getVueEnsembleTitle(perimetre, label)}
+            </h2>
+            {navigationLinks.length > 0 && (
+              <div className="flex flex-wrap gap-3 justify-end">
+                {navigationLinks.map((link) => (
+                  <Link key={link.perimetre} href={link.href}>
+                    <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                      {link.count} {perimetreAbbreviations[link.perimetre]}
+                    </button>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
-          {/* Liens navigation */}
-          {navigationLinks.length > 0 && (
-            <div className="flex flex-wrap gap-3 mt-4">
-              {navigationLinks.map((link) => (
-                <Link key={link.perimetre} href={link.href}>
-                  <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                    {link.count} {perimetreAbbreviations[link.perimetre]}
-                  </button>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* 7 Cards KPI */}
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 !mt-4">
+          {/* 7 Cards KPI de base */}
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             {kpiCards.map((card) => {
               const isPositive = card.evolution?.startsWith('+')
               // Logique inversée pour certaines métriques
-              const isInversed = ["MPA", "MPI", "PA", "Coût théorique", "Opportunité"].includes(card.label)
+              const isInversed = ["MPA", "MPI", "PA total", "PA total théorique", "Opportunité totale"].includes(card.label)
               const color = isInversed
                 ? (isPositive ? 'text-red-600' : 'text-green-600')
                 : (isPositive ? 'text-green-600' : 'text-red-600')
@@ -899,7 +1225,7 @@ export default function DetailPage() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Info className="w-4 h-4 text-muted-foreground" />
+                          <Info className="w-4 h-4 text-[#121212]" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{card.tooltip}</p>
@@ -918,18 +1244,69 @@ export default function DetailPage() {
             })}
           </div>
 
-          {/* 2 Blocs Heatmap côte à côte */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 !mt-6">
+          {/* Cards KPI produit (PA, PA théorique, Opportunité, PV, PV Leclerc, marges) */}
+          {perimetre === "Produit" && productCards.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+              {productCards.map((card) => {
+                const isPositive = card.evolution?.startsWith('+')
+                // Opportunité toujours en vert
+                const isOpportunity = card.label === "Opportunité"
+                // Logique inversée pour PA, PA théorique et marges
+                const isInversed = ["PA", "PA théorique", "Marge PV", "Marge PV LCL", "Marge moyenne catégorielle"].includes(card.label)
 
-            {/* Bloc Gauche - Répartition CA par pays (conditionnel) */}
+                let color = 'text-green-600'
+                if (isOpportunity) {
+                  color = 'text-green-600'
+                } else if (isInversed) {
+                  color = isPositive ? 'text-red-600' : 'text-green-600'
+                } else {
+                  color = isPositive ? 'text-green-600' : 'text-red-600'
+                }
+
+                return (
+                  <Card key={card.label} className="p-4 rounded shadow-none">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-sm font-medium">{card.label}</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-4 h-4 text-[#121212]" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{card.tooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="text-2xl font-bold">{card.value}</div>
+                      {card.label === "Marge moyenne catégorielle" && (
+                        <Pencil className="w-4 h-4 text-[#0970E6]" />
+                      )}
+                    </div>
+                    {card.evolution && (
+                      <p className={`text-[16px] ${color}`}>
+                        {card.evolution}
+                      </p>
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+
+          {/* 2 Blocs Heatmap côte à côte */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Bloc Gauche - Répartition PA par pays (conditionnel) */}
             {shouldShowPaysHeatmap && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[16px] font-medium">Répartition CA par pays</h2>
+                  <h2 className="text-[16px] font-medium">Répartition PA par pays</h2>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
+                        <Info className="w-4 h-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Répartition du chiffre d&apos;affaires par pays</p>
@@ -945,8 +1322,8 @@ export default function DetailPage() {
                       evolution={paysHeatmapData[0].evolution}
                       color={getColorFromEvolution(paysHeatmapData[0].evolution)}
                       className="flex-[34] h-full"
-                      href={paysHeatmapData[0].href}
                       type="total"
+                      totalPA={currentItem.evoPa.valeur}
                     />
                     <HeatmapRect
                       label={paysHeatmapData[1].label}
@@ -954,8 +1331,8 @@ export default function DetailPage() {
                       evolution={paysHeatmapData[1].evolution}
                       color={getColorFromEvolution(paysHeatmapData[1].evolution)}
                       className="flex-[25] h-full"
-                      href={paysHeatmapData[1].href}
                       type="total"
+                      totalPA={currentItem.evoPa.valeur}
                     />
                     <div className="flex-[41] flex flex-col gap-1">
                       <HeatmapRect
@@ -964,7 +1341,6 @@ export default function DetailPage() {
                         evolution={paysHeatmapData[2].evolution}
                         color={getColorFromEvolution(paysHeatmapData[2].evolution)}
                         className="flex-[14] w-full"
-                        href={paysHeatmapData[2].href}
                         type="total"
                       />
                       <div className="flex-[27] flex gap-1">
@@ -974,7 +1350,6 @@ export default function DetailPage() {
                           evolution={paysHeatmapData[3].evolution}
                           color={getColorFromEvolution(paysHeatmapData[3].evolution)}
                           className="flex-[8] h-full"
-                          href={paysHeatmapData[3].href}
                           type="total"
                         />
                         <HeatmapRect
@@ -983,7 +1358,6 @@ export default function DetailPage() {
                           evolution={paysHeatmapData[4].evolution}
                           color={getColorFromEvolution(paysHeatmapData[4].evolution)}
                           className="flex-[4] h-full"
-                          href={paysHeatmapData[4].href}
                           type="total"
                         />
                         <HeatmapRect
@@ -992,7 +1366,6 @@ export default function DetailPage() {
                           evolution={paysHeatmapData[5].evolution}
                           color={getColorFromEvolution(paysHeatmapData[5].evolution)}
                           className="flex-[2] h-full"
-                          href={paysHeatmapData[5].href}
                           type="total"
                         />
                       </div>
@@ -1002,15 +1375,15 @@ export default function DetailPage() {
               </div>
             )}
 
-            {/* Bloc Droite - Répartition CA par fournisseur (conditionnel) */}
+            {/* Bloc Droite - Répartition PA par fournisseur (conditionnel) */}
             {shouldShowFournisseurHeatmap && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[16px] font-medium">Répartition CA par fournisseur</h2>
+                  <h2 className="text-[16px] font-medium">Répartition PA par fournisseur</h2>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
+                        <Info className="w-4 h-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Répartition du CA par fournisseur</p>
@@ -1026,8 +1399,8 @@ export default function DetailPage() {
                       evolution={fournisseurHeatmapData[0].evolution}
                       color={getColorFromEvolution(fournisseurHeatmapData[0].evolution)}
                       className="flex-[21] h-full"
-                      href={fournisseurHeatmapData[0].href}
                       type="total"
+                      totalPA={currentItem.evoPa.valeur}
                     />
                     <HeatmapRect
                       label={fournisseurHeatmapData[1].label}
@@ -1035,8 +1408,8 @@ export default function DetailPage() {
                       evolution={fournisseurHeatmapData[1].evolution}
                       color={getColorFromEvolution(fournisseurHeatmapData[1].evolution)}
                       className="flex-[19] h-full"
-                      href={fournisseurHeatmapData[1].href}
                       type="total"
+                      totalPA={currentItem.evoPa.valeur}
                     />
                     <HeatmapRect
                       label={fournisseurHeatmapData[2].label}
@@ -1044,8 +1417,8 @@ export default function DetailPage() {
                       evolution={fournisseurHeatmapData[2].evolution}
                       color={getColorFromEvolution(fournisseurHeatmapData[2].evolution)}
                       className="flex-[8.5] h-full"
-                      href={fournisseurHeatmapData[2].href}
                       type="total"
+                      totalPA={currentItem.evoPa.valeur}
                     />
                   </div>
                 </div>
@@ -1056,8 +1429,20 @@ export default function DetailPage() {
         </TabsContent>
 
         {/* Tab Structure de coût */}
-        <TabsContent value="structure-cout" className="space-y-6 mt-6">
-          <h2 className="text-[16px] font-bold">Répartition en valeur des matières premières</h2>
+        <TabsContent value="structure-cout" className="space-y-6 mt-10">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-[20px] font-medium">Répartition en valeur des matières premières</h2>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-[#121212]" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Visualisation de la répartition des coûts en valeur</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
 
           <div className="flex gap-0 w-fit">
             <button
@@ -1080,26 +1465,9 @@ export default function DetailPage() {
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-12 !mt-4">
               {/* Heatmap */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[16px] font-medium">
-                    {costSubTab === 'total' && 'Répartition de la structure de coût'}
-                    {costSubTab === 'mpa' && 'Répartition des Matières Premières et Achats'}
-                    {costSubTab === 'mpi' && 'Répartition des Moyens de Production et Infrastructure'}
-                  </h2>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Visualisation de la répartition des coûts</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
                 <div className="rounded overflow-hidden">
                   {(() => {
                     const heatmapData = getCostHeatmapData()
@@ -1269,195 +1637,348 @@ export default function DetailPage() {
 
               {/* Graphique avec légendes */}
               <div>
-                {/* Titre */}
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[16px] font-medium">{getChartTitle()}</h2>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Évolution temporelle des coûts</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
                 {/* Frame avec border */}
-                <div className="p-6 border-2 border-gray-300 rounded">
-                  {/* Contrôles en haut à droite */}
+                <div>
+                  {/* Titre et contrôles alignés */}
                   <div className="flex justify-between items-center mb-6">
-                    <div className="flex-1"></div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-[20px] font-medium">{getChartTitle()}</h2>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-4 h-4 text-[#121212]" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Évolution temporelle des coûts</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
                         <Switch checked={base100} onCheckedChange={setBase100} />
                         <Label>Base 100</Label>
                       </div>
-                      <Button variant="ghost" size="sm" className="p-2">
-                        <Download className="w-5 h-5" />
+                      <Button variant="ghost" size="sm" className="p-0">
+                        <Download className="text-[#0970E6]" width={24} height={24} />
                       </Button>
                     </div>
                   </div>
 
                   {/* Légendes centrées avec bouton "Tout désélectionner" */}
-                  <div className="mb-6 flex items-center justify-center gap-6">
-                    <div className="flex flex-wrap gap-3 justify-center items-center">
+                  <div className="mb-2 flex items-center justify-center gap-6">
+                    <div className="flex flex-wrap gap-4 justify-center items-center">
                     {costSubTab === 'total' && (
                       <>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.MPA}
-                            onCheckedChange={() => toggleLegendOpacity('MPA')}
-                          />
-                          <div className="w-4 h-4 bg-[#E91E63] rounded"></div>
-                          <span className="text-sm">MPA</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.MPI}
-                            onCheckedChange={() => toggleLegendOpacity('MPI')}
-                          />
-                          <div className="w-4 h-4 bg-[#00BCD4] rounded"></div>
-                          <span className="text-sm">MPI</span>
-                        </label>
+                        <div
+                          className="flex items-center gap-2 cursor-pointer"
+                          style={{ opacity: legendOpacity.MPA ? 1 : 0.4 }}
+                          onClick={() => toggleLegendOpacity('MPA')}
+                        >
+                          <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
+                          <span className="text-sm select-none">MPA</span>
+                        </div>
+                        <div
+                          className="flex items-center gap-2 cursor-pointer"
+                          style={{ opacity: legendOpacity.MPI ? 1 : 0.4 }}
+                          onClick={() => toggleLegendOpacity('MPI')}
+                        >
+                          <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
+                          <span className="text-sm select-none">MPI</span>
+                        </div>
                       </>
                     )}
 
                     {costSubTab === 'mpa' && (
                       <>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity['farine-ble']}
-                            onCheckedChange={() => toggleLegendOpacity('farine-ble')}
-                          />
-                          <div className="w-4 h-4 bg-[#E91E63] rounded"></div>
-                          <span className="text-sm">Farine de blé</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.sucre}
-                            onCheckedChange={() => toggleLegendOpacity('sucre')}
-                          />
-                          <div className="w-4 h-4 bg-[#00BCD4] rounded"></div>
-                          <span className="text-sm">Sucre</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.sel}
-                            onCheckedChange={() => toggleLegendOpacity('sel')}
-                          />
-                          <div className="w-4 h-4 bg-[#4CAF50] rounded"></div>
-                          <span className="text-sm">Sel</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.lait}
-                            onCheckedChange={() => toggleLegendOpacity('lait')}
-                          />
-                          <div className="w-4 h-4 bg-[#FF9800] rounded"></div>
-                          <span className="text-sm">Lait en poudre</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.beurre}
-                            onCheckedChange={() => toggleLegendOpacity('beurre')}
-                          />
-                          <div className="w-4 h-4 bg-[#9C27B0] rounded"></div>
-                          <span className="text-sm">Beurre</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.huile}
-                            onCheckedChange={() => toggleLegendOpacity('huile')}
-                          />
-                          <div className="w-4 h-4 bg-[#607D8B] rounded"></div>
-                          <span className="text-sm">Huile végétale</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.oeufs}
-                            onCheckedChange={() => toggleLegendOpacity('oeufs')}
-                          />
-                          <div className="w-4 h-4 bg-[#795548] rounded"></div>
-                          <span className="text-sm">Oeufs</span>
-                        </label>
+                        {showInLegend['farine-ble'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['farine-ble'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('farine-ble')}
+                          >
+                            <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Farine de blé</span>
+                          </div>
+                        )}
+                        {showInLegend.sucre && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.sucre ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('sucre')}
+                          >
+                            <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Sucre</span>
+                          </div>
+                        )}
+                        {showInLegend.sel && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.sel ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('sel')}
+                          >
+                            <CurveIcon color="#4CAF50" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Sel</span>
+                          </div>
+                        )}
+                        {showInLegend.lait && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.lait ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('lait')}
+                          >
+                            <CurveIcon color="#FF9800" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Lait en poudre</span>
+                          </div>
+                        )}
+                        {showInLegend.beurre && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.beurre ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('beurre')}
+                          >
+                            <CurveIcon color="#9C27B0" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Beurre</span>
+                          </div>
+                        )}
+                        {showInLegend.huile && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.huile ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('huile')}
+                          >
+                            <CurveIcon color="#607D8B" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Huile végétale</span>
+                          </div>
+                        )}
+                        {showInLegend.oeufs && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.oeufs ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('oeufs')}
+                          >
+                            <CurveIcon color="#795548" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Oeufs</span>
+                          </div>
+                        )}
+                        {showInLegend.levure && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.levure ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('levure')}
+                          >
+                            <CurveIcon color="#FFEB3B" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Levure</span>
+                          </div>
+                        )}
+                        {showInLegend['amidon-mais'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['amidon-mais'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('amidon-mais')}
+                          >
+                            <CurveIcon color="#FFC107" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Amidon de maïs</span>
+                          </div>
+                        )}
+                        {showInLegend.gelatine && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.gelatine ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('gelatine')}
+                          >
+                            <CurveIcon color="#FF5722" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Gélatine</span>
+                          </div>
+                        )}
+                        {showInLegend.presure && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.presure ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('presure')}
+                          >
+                            <CurveIcon color="#3F51B5" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Présure</span>
+                          </div>
+                        )}
+                        {showInLegend['ferments-lactiques'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['ferments-lactiques'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('ferments-lactiques')}
+                          >
+                            <CurveIcon color="#009688" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Ferments lactiques</span>
+                          </div>
+                        )}
+                        {showInLegend['creme-fraiche'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['creme-fraiche'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('creme-fraiche')}
+                          >
+                            <CurveIcon color="#8BC34A" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Crème fraîche</span>
+                          </div>
+                        )}
                       </>
                     )}
 
                     {costSubTab === 'mpi' && (
                       <>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.transport}
-                            onCheckedChange={() => toggleLegendOpacity('transport')}
-                          />
-                          <div className="w-4 h-4 bg-[#E91E63] rounded"></div>
-                          <span className="text-sm font-semibold">Moyenne transport</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.energie}
-                            onCheckedChange={() => toggleLegendOpacity('energie')}
-                          />
-                          <div className="w-4 h-4 bg-[#00BCD4] rounded"></div>
-                          <span className="text-sm font-semibold">Moyenne energie</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity['main-oeuvre']}
-                            onCheckedChange={() => toggleLegendOpacity('main-oeuvre')}
-                          />
-                          <div className="w-4 h-4 bg-[#4CAF50] rounded"></div>
-                          <span className="text-sm font-semibold">Moyenne main d&apos;oeuvre</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.emballage}
-                            onCheckedChange={() => toggleLegendOpacity('emballage')}
-                          />
-                          <div className="w-4 h-4 bg-[#FF9800] rounded"></div>
-                          <span className="text-sm font-semibold">Moyenne emballage</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.gas}
-                            onCheckedChange={() => toggleLegendOpacity('gas')}
-                          />
-                          <div className="w-4 h-4 bg-[#9C27B0] rounded"></div>
-                          <span className="text-sm">Gas</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.electricite}
-                            onCheckedChange={() => toggleLegendOpacity('electricite')}
-                          />
-                          <div className="w-4 h-4 bg-[#795548] rounded"></div>
-                          <span className="text-sm">Electricité</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={legendOpacity.petrole}
-                            onCheckedChange={() => toggleLegendOpacity('petrole')}
-                          />
-                          <div className="w-4 h-4 bg-[#607D8B] rounded"></div>
-                          <span className="text-sm">Pétrole</span>
-                        </label>
+                        {/* Moyennes */}
+                        {showInLegend.transport && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.transport ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('transport')}
+                          >
+                            <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-semibold select-none">Moyenne transport</span>
+                          </div>
+                        )}
+                        {showInLegend.energie && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.energie ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('energie')}
+                          >
+                            <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-semibold select-none">Moyenne energie</span>
+                          </div>
+                        )}
+                        {showInLegend['main-oeuvre'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['main-oeuvre'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('main-oeuvre')}
+                          >
+                            <CurveIcon color="#4CAF50" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-semibold select-none">Moyenne main d&apos;oeuvre</span>
+                          </div>
+                        )}
+                        {showInLegend.emballage && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.emballage ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('emballage')}
+                          >
+                            <CurveIcon color="#FF9800" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-semibold select-none">Moyenne emballage</span>
+                          </div>
+                        )}
+
+                        {/* Transport items */}
+                        {showInLegend['transport-routier'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['transport-routier'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('transport-routier')}
+                          >
+                            <CurveIcon color="#F48FB1" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Transport routier</span>
+                          </div>
+                        )}
+                        {showInLegend['transport-maritime'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['transport-maritime'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('transport-maritime')}
+                          >
+                            <CurveIcon color="#F06292" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Transport maritime</span>
+                          </div>
+                        )}
+
+                        {/* Energie items */}
+                        {showInLegend.electricite && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.electricite ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('electricite')}
+                          >
+                            <CurveIcon color="#80DEEA" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Électricité</span>
+                          </div>
+                        )}
+                        {showInLegend.gaz && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity.gaz ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('gaz')}
+                          >
+                            <CurveIcon color="#4DD0E1" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Gaz naturel</span>
+                          </div>
+                        )}
+
+                        {/* Main d'oeuvre items */}
+                        {showInLegend['salaires-production'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['salaires-production'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('salaires-production')}
+                          >
+                            <CurveIcon color="#81C784" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Salaires production</span>
+                          </div>
+                        )}
+                        {showInLegend['salaires-logistique'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['salaires-logistique'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('salaires-logistique')}
+                          >
+                            <CurveIcon color="#66BB6A" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Salaires logistique</span>
+                          </div>
+                        )}
+
+                        {/* Emballage items */}
+                        {showInLegend['carton-ondule'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['carton-ondule'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('carton-ondule')}
+                          >
+                            <CurveIcon color="#FFB74D" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Carton ondulé</span>
+                          </div>
+                        )}
+                        {showInLegend['plastique-emballage'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['plastique-emballage'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('plastique-emballage')}
+                          >
+                            <CurveIcon color="#FFA726" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Film plastique</span>
+                          </div>
+                        )}
                       </>
                     )}
                     </div>
-                    <Button variant="ghost" size="sm" className="text-[14px]" onClick={unselectAll}>
-                      Tout désélectionner
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="p-2" onClick={unselectAll}>
+                            <RotateCcw className="w-4 h-4 text-[#0970E6]" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Tout désélectionner</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
 
                   {/* Graphique */}
                   <div className="mb-6">
                     <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={getChartData()}>
+                    <LineChart data={getChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
                       <RechartsTooltip
                         formatter={(value: number) => value.toFixed(3)}
                       />
@@ -1492,47 +2013,54 @@ export default function DetailPage() {
                           <Line type="monotone" dataKey="beurre" stroke="#9C27B0" strokeWidth={2} dot={false} hide={!legendOpacity.beurre} />
                           <Line type="monotone" dataKey="huile" stroke="#607D8B" strokeWidth={2} dot={false} hide={!legendOpacity.huile} />
                           <Line type="monotone" dataKey="oeufs" stroke="#795548" strokeWidth={2} dot={false} hide={!legendOpacity.oeufs} />
+                          <Line type="monotone" dataKey="levure" stroke="#FFEB3B" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.levure} />
+                          <Line type="monotone" dataKey="amidon-mais" stroke="#FFC107" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['amidon-mais']} />
+                          <Line type="monotone" dataKey="gelatine" stroke="#FF5722" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.gelatine} />
+                          <Line type="monotone" dataKey="presure" stroke="#3F51B5" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.presure} />
+                          <Line type="monotone" dataKey="ferments-lactiques" stroke="#009688" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['ferments-lactiques']} />
+                          <Line type="monotone" dataKey="creme-fraiche" stroke="#8BC34A" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['creme-fraiche']} />
                         </>
                       )}
 
                       {costSubTab === 'mpi' && (
                         <>
+                          {/* Moyennes */}
                           <Line type="monotone" dataKey="transport" stroke="#E91E63" strokeWidth={2} dot={false} hide={!legendOpacity.transport} />
                           <Line type="monotone" dataKey="energie" stroke="#00BCD4" strokeWidth={2} dot={false} hide={!legendOpacity.energie} />
                           <Line type="monotone" dataKey="main-oeuvre" stroke="#4CAF50" strokeWidth={2} dot={false} hide={!legendOpacity['main-oeuvre']} />
                           <Line type="monotone" dataKey="emballage" stroke="#FF9800" strokeWidth={2} dot={false} hide={!legendOpacity.emballage} />
-                          <Line type="monotone" dataKey="gas" stroke="#9C27B0" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.gas} />
-                          <Line type="monotone" dataKey="electricite" stroke="#795548" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.electricite} />
-                          <Line type="monotone" dataKey="petrole" stroke="#607D8B" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.petrole} />
+
+                          {/* Transport items */}
+                          <Line type="monotone" dataKey="transport-routier" stroke="#F48FB1" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['transport-routier']} />
+                          <Line type="monotone" dataKey="transport-maritime" stroke="#F06292" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['transport-maritime']} />
+
+                          {/* Energie items */}
+                          <Line type="monotone" dataKey="electricite" stroke="#80DEEA" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.electricite} />
+                          <Line type="monotone" dataKey="gaz" stroke="#4DD0E1" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.gaz} />
+
+                          {/* Main d'oeuvre items */}
+                          <Line type="monotone" dataKey="salaires-production" stroke="#81C784" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['salaires-production']} />
+                          <Line type="monotone" dataKey="salaires-logistique" stroke="#66BB6A" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['salaires-logistique']} />
+
+                          {/* Emballage items */}
+                          <Line type="monotone" dataKey="carton-ondule" stroke="#FFB74D" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['carton-ondule']} />
+                          <Line type="monotone" dataKey="plastique-emballage" stroke="#FFA726" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['plastique-emballage']} />
                         </>
                       )}
                     </LineChart>
                     </ResponsiveContainer>
-                  </div>
-
-                  {/* Sélecteur de plage de dates */}
-                  <div className="flex items-center gap-4">
-                    <Label className="text-sm font-medium whitespace-nowrap">Plage de dates</Label>
-                    <Slider
-                      value={dateRange}
-                      onValueChange={setDateRange}
-                      min={0}
-                      max={100}
-                      step={1}
-                      className="flex-1"
-                    />
                   </div>
                 </div>
               </div>
 
               {/* Tableau */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[16px] font-medium">Détail de la structure de coût</h2>
+                <div className="flex items-center gap-2 mb-4">
+                  <h2 className="text-[20px] font-medium">Détail de la structure de coût</h2>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
+                        <Info className="w-4 h-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Tableau détaillé des coûts</p>
@@ -1542,77 +2070,57 @@ export default function DetailPage() {
                 </div>
 
                 <div className="overflow-hidden rounded-lg border">
-                  <Table>
+                  <Table className="table-fixed">
                     <TableHeader>
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableHead className="font-semibold w-[40px]"></TableHead>
                         <TableHead
-                          className="font-semibold cursor-pointer hover:bg-gray-100"
+                          className="font-semibold cursor-pointer hover:bg-gray-100 w-[300px] pl-4"
                           onClick={() => handleSort('name')}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             Nom
-                            {sortConfig?.key === 'name' && (
-                              <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                            )}
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Info className="w-3 h-3 text-muted-foreground ml-1" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Nom de l&apos;élément de coût</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                           </div>
                         </TableHead>
-                        {costSubTab !== 'total' && costSubTab !== 'mpi' && (
-                          <TableHead
-                            className="font-semibold cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('subLabel')}
-                          >
-                            <div className="flex items-center gap-1">
-                              Code
-                              {sortConfig?.key === 'subLabel' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Info className="w-3 h-3 text-muted-foreground ml-1" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Code de l&apos;élément</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          </TableHead>
-                        )}
-                        {(costSubTab === 'total' || costSubTab === 'mpi') && (
+                        {costSubTab === 'total' && (
                           <TableHead
                             className="font-semibold cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('volume')}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               Volume
-                              {sortConfig?.key === 'volume' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Volume de l&apos;élément</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                             </div>
                           </TableHead>
                         )}
-                        {(costSubTab === 'total' || costSubTab === 'mpi') && (
+                        {costSubTab === 'total' && (
                           <TableHead
                             className="font-semibold cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('volumeUVC')}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               Volume (UVC)
-                              {sortConfig?.key === 'volumeUVC' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Volume en UVC (Unité de Vente Consommateur)</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                             </div>
                           </TableHead>
                         )}
@@ -1621,11 +2129,19 @@ export default function DetailPage() {
                             className="font-semibold cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('partVolume')}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               Part Volume
-                              {sortConfig?.key === 'partVolume' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Part du volume dans le total</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                             </div>
                           </TableHead>
                         )}
@@ -1635,33 +2151,57 @@ export default function DetailPage() {
                               className="font-semibold cursor-pointer hover:bg-gray-100"
                               onClick={() => handleSort('volume')}
                             >
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
                                 Volume
-                                {sortConfig?.key === 'volume' && (
-                                  <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Volume de l&apos;élément</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                               </div>
                             </TableHead>
                             <TableHead
                               className="font-semibold cursor-pointer hover:bg-gray-100"
                               onClick={() => handleSort('volumeUVC')}
                             >
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
                                 Volume (UVC)
-                                {sortConfig?.key === 'volumeUVC' && (
-                                  <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Volume en UVC (Unité de Vente Consommateur)</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                               </div>
                             </TableHead>
                             <TableHead
                               className="font-semibold cursor-pointer hover:bg-gray-100"
                               onClick={() => handleSort('partVolume')}
                             >
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
                                 Part Volume
-                                {sortConfig?.key === 'partVolume' && (
-                                  <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Part du volume dans le total</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                               </div>
                             </TableHead>
                           </>
@@ -1670,21 +2210,19 @@ export default function DetailPage() {
                           className="font-semibold cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort('cost')}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             Coût
-                            {sortConfig?.key === 'cost' && (
-                              <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                            )}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Info className="w-3 h-3 text-muted-foreground ml-1" />
+                                  <Info className="h-4 w-4 text-[#121212]" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Coût total de l&apos;élément</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                           </div>
                         </TableHead>
                         {costSubTab === 'total' && (
@@ -1692,11 +2230,19 @@ export default function DetailPage() {
                             className="font-semibold cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('partCost')}
                           >
-                            <div className="flex items-center gap-1">
-                              Part Coût
-                              {sortConfig?.key === 'partCost' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
+                            <div className="flex items-center gap-2">
+                              Part coût total
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Part du coût dans le total</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                             </div>
                           </TableHead>
                         )}
@@ -1706,22 +2252,38 @@ export default function DetailPage() {
                               className="font-semibold cursor-pointer hover:bg-gray-100"
                               onClick={() => handleSort('partCostTotal')}
                             >
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
                                 Part coût total
-                                {sortConfig?.key === 'partCostTotal' && (
-                                  <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Part du coût dans le total</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                               </div>
                             </TableHead>
                             <TableHead
                               className="font-semibold cursor-pointer hover:bg-gray-100"
                               onClick={() => handleSort('partCostMPA')}
                             >
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
                                 Part coût MPA
-                                {sortConfig?.key === 'partCostMPA' && (
-                                  <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Part du coût dans les MPA</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                               </div>
                             </TableHead>
                           </>
@@ -1731,11 +2293,19 @@ export default function DetailPage() {
                             className="font-semibold cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('partCost')}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               Part Coût
-                              {sortConfig?.key === 'partCost' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Part du coût dans le total</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                             </div>
                           </TableHead>
                         )}
@@ -1743,21 +2313,19 @@ export default function DetailPage() {
                           className="font-semibold cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort('evolution')}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             Évolution
-                            {sortConfig?.key === 'evolution' && (
-                              <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                            )}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Info className="w-3 h-3 text-muted-foreground ml-1" />
+                                  <Info className="h-4 w-4 text-[#121212]" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Évolution du coût par rapport à la période précédente</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                           </div>
                         </TableHead>
                         {costSubTab === 'total' && (
@@ -1765,11 +2333,19 @@ export default function DetailPage() {
                             className="font-semibold cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('impact')}
                           >
-                            <div className="flex items-center gap-1">
-                              Impact
-                              {sortConfig?.key === 'impact' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
+                            <div className="flex items-center gap-2">
+                              Impact sur coût total
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Impact de l&apos;évolution sur le coût total</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                             </div>
                           </TableHead>
                         )}
@@ -1778,11 +2354,19 @@ export default function DetailPage() {
                             className="font-semibold cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('impactTotal')}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               Impact sur coût total
-                              {sortConfig?.key === 'impactTotal' && (
-                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                              )}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Impact de l&apos;évolution sur le coût total</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
                             </div>
                           </TableHead>
                         )}
@@ -1791,24 +2375,27 @@ export default function DetailPage() {
                     <TableBody>
                       {getSortedTableData().map((row: any, idx) => (
                         <TableRow key={row.id} className={row.indent ? 'bg-gray-50 hover:bg-gray-100' : 'hover:bg-gray-50'}>
-                          <TableCell>
-                            <Checkbox
-                              checked={visibleItems[row.id] !== false}
-                              onCheckedChange={(checked) => {
-                                setVisibleItems(prev => ({ ...prev, [row.id]: checked as boolean }))
-                                setLegendOpacity(prev => ({ ...prev, [row.id]: checked as boolean }))
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className={row.isMain === false && !row.indent ? 'pl-8' : ''}>
-                            <div>
-                              <span className={row.isMain === true ? 'font-semibold' : ''}>{row.name}</span>
-                              {row.subLabel && <span className="text-xs text-gray-500 ml-2">({row.subLabel})</span>}
+                          <TableCell className={`w-[300px] pl-4 ${row.isMain === false && !row.indent ? 'pl-12' : ''}`}>
+                            <div className="flex items-center gap-3">
+                              {(costSubTab === 'mpa' || costSubTab === 'mpi') && (
+                                <Checkbox
+                                  checked={showInLegend[row.id] || false}
+                                  onCheckedChange={() => toggleShowInLegend(row.id)}
+                                />
+                              )}
+                              <div>
+                                <span className="font-bold">{row.name}</span>
+                                {(costSubTab === 'mpa' || costSubTab === 'mpi') && row.subLabel && (
+                                  <div className="text-[16px] font-medium text-[#696969]">{row.subLabel}</div>
+                                )}
+                                {costSubTab !== 'mpa' && costSubTab !== 'mpi' && row.subLabel && (
+                                  <span className="text-xs text-gray-500 ml-2">({row.subLabel})</span>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
-                          {costSubTab === 'mpa' && <TableCell>{row.subLabel}</TableCell>}
-                          {(costSubTab === 'total' || costSubTab === 'mpi') && <TableCell>{row.volume}</TableCell>}
-                          {(costSubTab === 'total' || costSubTab === 'mpi') && <TableCell>{row.volumeUVC}</TableCell>}
+                          {costSubTab === 'total' && <TableCell>{row.volume}</TableCell>}
+                          {costSubTab === 'total' && <TableCell>{row.volumeUVC}</TableCell>}
                           {costSubTab === 'total' && <TableCell>{row.partVolume}</TableCell>}
                           {costSubTab === 'mpa' && (
                             <>
@@ -1848,66 +2435,32 @@ export default function DetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="recette" className="space-y-6 mt-6">
-
-          {/* Sous-titre */}
-          <h2 className="text-[16px] font-bold">Répartition en volume des matières premières</h2>
-
-          {/* Sous-tabs MPA / MPI */}
-          <div className="flex gap-0 w-fit">
-            <button
-              onClick={() => setRecetteSubTab('mpa')}
-              className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${
-                recetteSubTab === 'mpa'
-                  ? 'bg-[#0970E6] text-white font-bold'
-                  : 'bg-[#F2F2F2] text-black font-medium'
-              }`}
-            >
-              MPA
-            </button>
-            <button
-              onClick={() => setRecetteSubTab('mpi')}
-              className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${
-                recetteSubTab === 'mpi'
-                  ? 'bg-[#0970E6] text-white font-bold'
-                  : 'bg-[#F2F2F2] text-black font-medium'
-              }`}
-            >
-              MPI
-            </button>
+        <TabsContent value="recette" className="space-y-6 mt-10">
+          <h2 className="text-[20px] font-medium mb-4">Répartition en volume des matières premières</h2>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex gap-0 w-fit">
+              <button onClick={() => setRecetteSubTab('mpa')} className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${recetteSubTab === 'mpa' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}>
+                MPA
+              </button>
+              <button onClick={() => setRecetteSubTab('mpi')} className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${recetteSubTab === 'mpi' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}>
+                MPI
+              </button>
+            </div>
+            <Button variant="ghost" size="icon" className="p-0">
+              <Download className="text-[#0970E6]" width={24} height={24} />
+            </Button>
           </div>
-
-          {/* Card Liste avec bar charts */}
-          <Card className="border rounded-lg">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">
-                  {recetteSubTab === 'mpa' ? 'Liste des MPA' : 'Liste des MPI'}
-                </h3>
-                <Button variant="ghost" size="icon">
-                  <Download className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-3">
+          <Card className="border-0 shadow-none">
+            <CardContent className="space-y-3 p-0">
               {getRecetteData().map((item, index) => (
                 <div key={index} className="flex items-center gap-4">
-                  {/* Nom + Code Mintech */}
                   <div className="w-48 flex-shrink-0">
                     <div className="font-bold text-base">{item.name}</div>
                     <div className="font-medium text-gray-500 text-sm">{item.code}</div>
                   </div>
-
-                  {/* Barre de progression horizontale */}
                   <div className="flex-1 bg-gray-100 rounded-md h-8 relative overflow-hidden">
-                    <div
-                      className="bg-blue-600 h-full rounded-md transition-all duration-300"
-                      style={{ width: `${item.percentage}%` }}
-                    />
+                    <div className="h-full rounded-md transition-all duration-300" style={{ width: `${item.percentage}%`, backgroundColor: '#0970E6' }} />
                   </div>
-
-                  {/* Pourcentage à droite */}
                   <div className="w-20 text-right font-bold text-base">
                     {item.percentage}%
                   </div>
@@ -1915,61 +2468,18 @@ export default function DetailPage() {
               ))}
             </CardContent>
           </Card>
-
         </TabsContent>
 
-        <TabsContent value="evolution-prix" className="mt-6">
+        <TabsContent value="evolution-prix" className="mt-10">
           <div className="space-y-6">
-            {/* Titre principal */}
-            <h2 className="text-[16px] font-bold">
-              Évolution des prix de votre {label || perimetre}
-            </h2>
-
-            {/* Sous-titre */}
-            <h3 className="text-[16px] font-medium">Graphique de l&apos;évolution des prix</h3>
-
             {/* Card graphique */}
-            <Card className="border rounded-lg">
-              <CardContent className="p-6">
-                {/* Header avec controls */}
-                <div className="flex items-center justify-between mb-4">
-                  {/* Gauche: Légendes cliquables + bouton désélectionner */}
-                  <div className="flex items-center gap-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <div
-                        className="w-4 h-4 bg-[#E91E63] rounded"
-                        style={{ opacity: evolutionLegendOpacity.PA ? 1 : 0.3 }}
-                      />
-                      <span
-                        className="text-sm"
-                        onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, PA: !evolutionLegendOpacity.PA })}
-                      >
-                        PA
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <div
-                        className="w-4 h-4 bg-[#607D8B] rounded"
-                        style={{ opacity: evolutionLegendOpacity['cout-theorique'] ? 1 : 0.3 }}
-                      />
-                      <span
-                        className="text-sm"
-                        onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'cout-theorique': !evolutionLegendOpacity['cout-theorique'] })}
-                      >
-                        Coût théorique
-                      </span>
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-[14px]"
-                      onClick={() => setEvolutionLegendOpacity({ PA: false, 'cout-theorique': false })}
-                    >
-                      Tout désélectionner
-                    </Button>
-                  </div>
-
-                  {/* Droite: Select période + Base 100 + Export */}
+            <Card className="border-0 shadow-none">
+              <CardContent className="p-0">
+                {/* Titre et Contrôles sur la même ligne */}
+                <div className="flex items-start justify-between mb-4">
+                  <h2 className="text-[20px] font-medium">
+                    {getEvolutionPrixTitle(perimetre, label)}
+                  </h2>
                   <div className="flex items-center gap-4">
                     <Select value={evolutionPeriod} onValueChange={(v: 'mois' | 'semaine' | 'jour') => setEvolutionPeriod(v)}>
                       <SelectTrigger className="w-[150px]">
@@ -1989,21 +2499,55 @@ export default function DetailPage() {
                         onCheckedChange={setEvolutionBase100}
                       />
                     </div>
-                    <Button variant="ghost" size="icon">
-                      <Download className="w-4 h-4" />
+                    <Button variant="ghost" size="icon" className="p-0">
+                      <Download className="text-[#0970E6]" width={24} height={24} />
                     </Button>
                   </div>
                 </div>
 
-                {/* Separator */}
-                <div className="border-t my-4" />
+                {/* Légendes centrées */}
+                <div className="flex items-center justify-center gap-4 mb-2">
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: evolutionLegendOpacity.PA ? 1 : 0.4 }}
+                    onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, PA: !evolutionLegendOpacity.PA })}
+                  >
+                    <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">PA</span>
+                  </div>
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: evolutionLegendOpacity['cout-theorique'] ? 1 : 0.4 }}
+                    onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'cout-theorique': !evolutionLegendOpacity['cout-theorique'] })}
+                  >
+                    <CurveIcon color="#607D8B" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">PA total théorique</span>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-2"
+                          onClick={() => setEvolutionLegendOpacity({ PA: false, 'cout-theorique': false })}
+                        >
+                          <RotateCcw className="w-4 h-4 text-[#0970E6]" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Tout désélectionner</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
 
                 {/* Graphique */}
                 <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={getEvolutionChartData()}>
+                  <LineChart data={getEvolutionChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
                     <RechartsTooltip
                       formatter={(value: number) => value.toFixed(1)}
                     />
@@ -2043,13 +2587,13 @@ export default function DetailPage() {
 
             {/* Cards KPI */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="border rounded-lg p-6">
+              <Card className="border rounded-lg p-6 shadow-none">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm font-medium">Evo PA</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
+                        <Info className="w-4 h-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Évolution du prix d&apos;achat</p>
@@ -2060,16 +2604,16 @@ export default function DetailPage() {
                 <p className="text-3xl font-bold text-green-600">+3.6%</p>
               </Card>
 
-              <Card className="border rounded-lg p-6">
+              <Card className="border rounded-lg p-6 shadow-none">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium">Coût théorique</span>
+                  <span className="text-sm font-medium">PA total théorique</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
+                        <Info className="w-4 h-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Évolution du coût théorique</p>
+                        <p>Évolution du coût théorique total</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -2081,13 +2625,13 @@ export default function DetailPage() {
             {/* Tableau Détail */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Détail</h3>
-              <Card className="border rounded-lg">
+              <Card className="border rounded-lg shadow-none">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead className="sticky left-0 bg-white z-10 min-w-[150px]">Période</TableHead>
+                        <TableRow className="bg-gray-50 hover:bg-gray-50">
+                          <TableHead className="sticky left-0 bg-gray-50 z-10 min-w-[150px]">Période</TableHead>
                           {getEvolutionTableData().headers.map((header, idx) => (
                             <TableHead key={idx} className="text-center min-w-[100px]">
                               {header}
@@ -2098,7 +2642,7 @@ export default function DetailPage() {
                       <TableBody>
                         {getEvolutionTableData().rows.map((row, rowIdx) => (
                           <TableRow key={rowIdx}>
-                            <TableCell className="sticky left-0 bg-white z-10 font-medium">
+                            <TableCell className="sticky left-0 bg-white z-10 font-bold">
                               {row.label}
                             </TableCell>
                             {row.values.map((value, colIdx) => (

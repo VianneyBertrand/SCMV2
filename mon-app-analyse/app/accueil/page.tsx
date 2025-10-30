@@ -38,7 +38,7 @@ import {
   type PerimetreItem,
   type PerimetreType
 } from "@/lib/data/perimetre-data"
-import { cn } from "@/lib/utils"
+import { cn, calculateValorisation } from "@/lib/utils"
 import { CalendarIcon, Check, ChevronsUpDown, Eye, Info } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -52,9 +52,16 @@ interface HeatmapRectProps {
   color: string
   className?: string
   href: string
+  totalPA?: string // PA total pour calculer la valorisation
 }
 
-function HeatmapRect({ label, percentage, evolution, color, className, href }: HeatmapRectProps) {
+function HeatmapRect({ label, percentage, evolution, color, className, href, totalPA }: HeatmapRectProps) {
+  // Calculer la valorisation en euros
+  const valorisation = useMemo(() => {
+    if (!totalPA) return null
+    return calculateValorisation(percentage, totalPA)
+  }, [percentage, totalPA])
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -73,7 +80,8 @@ function HeatmapRect({ label, percentage, evolution, color, className, href }: H
         <TooltipContent side="top" sideOffset={-50} className="max-w-xs">
           <div className="space-y-1">
             <p className="font-semibold">{label}</p>
-            <p>Répartition : {percentage} du CA total</p>
+            <p>Répartition : {percentage} du PA total</p>
+            {valorisation && <p>Valorisation : {valorisation}</p>}
             <p>Évolution : {evolution}</p>
             <p className="text-xs text-muted-foreground">Source : Mintech</p>
           </div>
@@ -285,7 +293,7 @@ export default function AccueilPage() {
 
     return [
       {
-        label: "CA Total",
+        label: "CA",
         value: categorieData.ca.valeur,
         evolution: categorieData.ca.evolution,
         tooltip: "Chiffre d'affaires total de la période"
@@ -315,10 +323,10 @@ export default function AccueilPage() {
         tooltip: "Prix d'achat total"
       },
       {
-        label: "Coût théorique",
+        label: "PA théorique",
         value: categorieData.coutTheorique.valeur,
         evolution: categorieData.coutTheorique.evolution,
-        tooltip: "Coût théorique calculé"
+        tooltip: "Prix d'achat théorique calculé"
       },
       {
         label: "Opportunité",
@@ -468,15 +476,25 @@ export default function AccueilPage() {
         </div>
       </div>
 
-      {/* Liens de navigation */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        {navigationLinks.map((link) => (
-          <Link key={link.perimetre} href={createAnalyseValeurLink(link.perimetre)}>
-            <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
-              {link.count} {perimetreAbbreviations[link.perimetre]}
-            </button>
-          </Link>
-        ))}
+      {/* Titre et liens de navigation */}
+      <div className="flex items-start justify-between mb-6">
+        <h2 className="text-[20px] font-medium">
+          {selectedPortefeuille === "tous"
+            ? "Vue d'ensemble de votre portefeuille"
+            : `Vue d'ensemble du portefeuille de ${selectedPortefeuille}`
+          }
+        </h2>
+        {navigationLinks.length > 0 && (
+          <div className="flex flex-wrap gap-3 justify-end">
+            {navigationLinks.map((link) => (
+              <Link key={link.perimetre} href={createAnalyseValeurLink(link.perimetre)}>
+                <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                  {link.count} {perimetreAbbreviations[link.perimetre]}
+                </button>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 7 Cards KPI */}
@@ -485,6 +503,18 @@ export default function AccueilPage() {
           const isPositive = card.evolution?.startsWith('+')
           // Pour la card Opportunité, toujours afficher en vert (c'est le % de baisse du prix à demander)
           const isOpportunity = card.label === "Opportunité"
+          // Logique inversée pour MPA, MPI, PA, PA théorique
+          const isInversed = ["MPA", "MPI", "PA", "PA théorique"].includes(card.label)
+
+          let color = 'text-green-600'
+          if (isOpportunity) {
+            color = 'text-green-600'
+          } else if (isInversed) {
+            color = isPositive ? 'text-red-600' : 'text-green-600'
+          } else {
+            color = isPositive ? 'text-green-600' : 'text-red-600'
+          }
+
           return (
             <Card key={card.label} className="p-4 rounded shadow-none">
               <div className="flex items-center gap-2 mb-3">
@@ -492,7 +522,7 @@ export default function AccueilPage() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
+                      <Info className="w-4 h-4 text-[#121212]" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{card.tooltip}</p>
@@ -502,7 +532,7 @@ export default function AccueilPage() {
               </div>
               <div className="text-2xl font-bold mb-1">{card.value}</div>
               {card.evolution && (
-                <p className={`text-[16px] ${isOpportunity ? 'text-green-600' : (isPositive ? 'text-green-600' : 'text-red-600')}`}>
+                <p className={`text-[16px] ${color}`}>
                   {card.evolution}
                 </p>
               )}
@@ -514,14 +544,14 @@ export default function AccueilPage() {
       {/* 4 Blocs Heatmap - Grid 2x2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ marginBottom: '56px' }}>
 
-        {/* Bloc A - Répartition CA par pays */}
+        {/* Bloc A - Répartition PA par pays */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">Répartition CA par pays</h2>
+            <h2 className="text-[16px] font-medium">Répartition PA par pays</h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <Info className="w-4 h-4 text-[#121212]" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Répartition du chiffre d&apos;affaires par pays</p>
@@ -539,6 +569,7 @@ export default function AccueilPage() {
                 color="bg-[#F0FAF6]"
                 className="flex-[34] h-full"
                 href="/detail?perimetre=Pays&label=France"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* Belgique - deuxième plus gros */}
               <HeatmapRect
@@ -548,6 +579,7 @@ export default function AccueilPage() {
                 color="bg-[#FFEFEF]"
                 className="flex-[25] h-full"
                 href="/detail?perimetre=Pays&label=Belgique"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* Colonne droite avec les 4 petits */}
               <div className="flex-[41] flex flex-col gap-1">
@@ -559,6 +591,7 @@ export default function AccueilPage() {
                   color="bg-[#8EE2BF]"
                   className="flex-[14] w-full"
                   href="/detail?perimetre=Pays&label=Espagne"
+                  totalPA={categorieData.evoPa.valeur}
                 />
                 {/* Ligne avec Roumanie, Italie, Pologne */}
                 <div className="flex-[27] flex gap-1">
@@ -569,6 +602,7 @@ export default function AccueilPage() {
                     color="bg-[#F0FAF6]"
                     className="flex-[8] h-full"
                     href="/detail?perimetre=Pays&label=Roumanie"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                   <HeatmapRect
                     label="Italie"
@@ -577,6 +611,7 @@ export default function AccueilPage() {
                     color="bg-[#F57A7E]"
                     className="flex-[4] h-full"
                     href="/detail?perimetre=Pays&label=Italie"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                   <HeatmapRect
                     label="Pologne"
@@ -585,6 +620,7 @@ export default function AccueilPage() {
                     color="bg-[#2FB67E]"
                     className="flex-[2] h-full"
                     href="/detail?perimetre=Pays&label=Pologne"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                 </div>
               </div>
@@ -599,7 +635,7 @@ export default function AccueilPage() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <Info className="w-4 h-4 text-[#121212]" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Répartition des coûts</p>
@@ -617,6 +653,7 @@ export default function AccueilPage() {
                 color="bg-[#F25056]"
                 className="flex-[42] h-full"
                 href="/detail/mpa"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* MPI - deuxième */}
               <HeatmapRect
@@ -626,6 +663,7 @@ export default function AccueilPage() {
                 color="bg-[#FFEFEF]"
                 className="flex-[37] h-full"
                 href="/detail/mpi"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* Autre - le plus petit */}
               <HeatmapRect
@@ -635,21 +673,22 @@ export default function AccueilPage() {
                 color="bg-gray-400"
                 className="flex-[3] h-full"
                 href="/detail/autre"
+                totalPA={categorieData.evoPa.valeur}
               />
             </div>
           </div>
         </div>
 
-        {/* Bloc C - Répartition CA par catégorie/famille */}
+        {/* Bloc C - Répartition PA par catégorie/famille */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-[16px] font-medium">
-              {selectedPortefeuille === "tous" ? "Répartition CA par catégorie" : "Répartition CA par famille"}
+              {selectedPortefeuille === "tous" ? "Répartition PA par catégorie" : "Répartition PA par famille"}
             </h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <Info className="w-4 h-4 text-[#121212]" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{selectedPortefeuille === "tous" ? "Répartition du CA par catégorie de produits" : "Répartition du CA par famille de produits"}</p>
@@ -670,6 +709,7 @@ export default function AccueilPage() {
                 color="bg-[#8EE2BF]"
                 className="flex-[7.5] h-full"
                 href="/detail?perimetre=Catégorie&label=SURGELE VIANDES LEGUMES"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* SURGELES GLACES PPI */}
               <HeatmapRect
@@ -679,6 +719,7 @@ export default function AccueilPage() {
                 color="bg-[#F57A7E]"
                 className="flex-[6.3] h-full"
                 href="/detail?perimetre=Catégorie&label=SURGELES GLACES PPI"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* LAIT BEURRE CREME */}
               <HeatmapRect
@@ -688,6 +729,7 @@ export default function AccueilPage() {
                 color="bg-[#F25056]"
                 className="flex-[6] h-full"
                 href="/detail?perimetre=Catégorie&label=LAIT BEURRE CREME"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* Colonne droite avec les 6 petits */}
               <div className="flex-[18] flex flex-col gap-1">
@@ -699,6 +741,7 @@ export default function AccueilPage() {
                   color="bg-[#F57A7E]"
                   className="flex-[5.5] w-full"
                   href="/detail?perimetre=Catégorie&label=SURGELE POISSON PLATS CUIS POT"
+                  totalPA={categorieData.evoPa.valeur}
                 />
                 {/* Ligne avec TRAITEUR et ULTRAFAIS */}
                 <div className="flex-[6.5] flex gap-1">
@@ -709,6 +752,7 @@ export default function AccueilPage() {
                     color="bg-[#FFEFEF]"
                     className="flex-[3.9] h-full"
                     href="/detail?perimetre=Catégorie&label=TRAITEUR"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                   <HeatmapRect
                     label="ULTRAFAIS"
@@ -717,6 +761,7 @@ export default function AccueilPage() {
                     color="bg-[#FFEFEF]"
                     className="flex-[3.7] h-full"
                     href="/detail?perimetre=Catégorie&label=ULTRAFAIS"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                 </div>
                 {/* Ligne du bas avec FROMAGES, SAUCISSERIE, VOLAILLE */}
@@ -728,6 +773,7 @@ export default function AccueilPage() {
                     color="bg-[#FFEFEF]"
                     className="flex-[3.3] h-full"
                     href="/detail?perimetre=Catégorie&label=FROMAGES"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                   <HeatmapRect
                     label="SAUCISSERIE"
@@ -736,6 +782,7 @@ export default function AccueilPage() {
                     color="bg-[#F57A7E]"
                     className="flex-[2.6] h-full"
                     href="/detail?perimetre=Catégorie&label=SAUCISSERIE"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                   <HeatmapRect
                     label="VOLAILLE CHARCUTERIE"
@@ -744,6 +791,7 @@ export default function AccueilPage() {
                     color="bg-[#FFEFEF]"
                     className="flex-[2] h-full"
                     href="/detail?perimetre=Catégorie&label=VOLAILLE CHARCUTERIE"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                 </div>
               </div>
@@ -762,6 +810,7 @@ export default function AccueilPage() {
                         color={colors[index] || 'bg-gray-200'}
                         className="flex-1 h-full"
                         href={`/detail?perimetre=Famille&label=${encodeURIComponent(item.label)}`}
+                        totalPA={categorieData.evoPa.valeur}
                       />
                     )
                   })}
@@ -771,14 +820,14 @@ export default function AccueilPage() {
           </div>
         </div>
 
-        {/* Bloc D - Répartition CA par fournisseur */}
+        {/* Bloc D - Répartition PA par fournisseur */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">Répartition CA par fournisseur</h2>
+            <h2 className="text-[16px] font-medium">Répartition PA par fournisseur</h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <Info className="w-4 h-4 text-[#121212]" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Répartition du CA par fournisseur</p>
@@ -796,6 +845,7 @@ export default function AccueilPage() {
                 color="bg-[#FFEFEF]"
                 className="flex-[21] h-full"
                 href="/detail?perimetre=Fournisseur&label=Lactalis"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* Savencia - deuxième */}
               <HeatmapRect
@@ -805,6 +855,7 @@ export default function AccueilPage() {
                 color="bg-[#FFEFEF]"
                 className="flex-[19] h-full"
                 href="/detail?perimetre=Fournisseur&label=Savencia"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* Bel */}
               <HeatmapRect
@@ -814,6 +865,7 @@ export default function AccueilPage() {
                 color="bg-[#F0FAF6]"
                 className="flex-[8.5] h-full"
                 href="/detail?perimetre=Fournisseur&label=Bel"
+                totalPA={categorieData.evoPa.valeur}
               />
               {/* Colonne droite avec les 5 petits */}
               <div className="flex-[24] flex flex-col gap-1">
@@ -825,6 +877,7 @@ export default function AccueilPage() {
                   color="bg-[#8EE2BF]"
                   className="flex-[8] w-full"
                   href="/detail?perimetre=Fournisseur&label=Fromageries BEL"
+                  totalPA={categorieData.evoPa.valeur}
                 />
                 {/* Agrial */}
                 <HeatmapRect
@@ -834,6 +887,7 @@ export default function AccueilPage() {
                   color="bg-[#FFEFEF]"
                   className="flex-[7] w-full"
                   href="/detail?perimetre=Fournisseur&label=Agrial"
+                  totalPA={categorieData.evoPa.valeur}
                 />
                 {/* Ligne du bas avec Sodaal, Eurial, Triballat Noyal */}
                 <div className="flex-[9.4] flex gap-1">
@@ -844,6 +898,7 @@ export default function AccueilPage() {
                     color="bg-[#FFEFEF]"
                     className="flex-[4] h-full"
                     href="/detail?perimetre=Fournisseur&label=Sodaal"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                   <HeatmapRect
                     label="Eurial"
@@ -852,6 +907,7 @@ export default function AccueilPage() {
                     color="bg-[#FFEFEF]"
                     className="flex-[3] h-full"
                     href="/detail?perimetre=Fournisseur&label=Eurial"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                   <HeatmapRect
                     label="Triballat Noyal"
@@ -860,6 +916,7 @@ export default function AccueilPage() {
                     color="bg-[#F25056]"
                     className="flex-[2.4] h-full"
                     href="/detail?perimetre=Fournisseur&label=Triballat Noyal"
+                    totalPA={categorieData.evoPa.valeur}
                   />
                 </div>
               </div>
@@ -873,11 +930,11 @@ export default function AccueilPage() {
       <div className="mt-16">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <h2 className="text-[32px] font-semibold">Opportunités</h2>
+            <h2 className="text-[20px] font-medium">Opportunités</h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <Info className="w-4 h-4 text-[#121212]" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Opportunités d&apos;optimisation identifiées</p>

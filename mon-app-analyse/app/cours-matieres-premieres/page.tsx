@@ -45,7 +45,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIcon } from "lucide-react";
+import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIcon, Info, ChevronsUpDown, RotateCcw } from "lucide-react";
+import { CurveIcon } from "@/components/ui/curve-icon";
 import {
   Line,
   LineChart,
@@ -399,12 +400,26 @@ export default function CoursMatieresPremieres() {
   const [periodeGraphique, setPeriodeGraphique] = useState<"mois" | "semaine" | "jour">("mois");
   const [base100, setBase100] = useState(false);
   const [evolutionDateRange, setEvolutionDateRange] = useState([0, 100]);
+  const [legendOpacityEvolution, setLegendOpacityEvolution] = useState<Record<string, boolean>>({});
 
   const [periodeAnnuelle, setPeriodeAnnuelle] = useState("mois");
   const [base100Annuel, setBase100Annuel] = useState(false);
   const [matiereSelectionneeAnnuelle, setMatiereSelectionneeAnnuelle] = useState("FAR01");
   const [selectedYears, setSelectedYears] = useState(["2019", "2020", "2021", "2022", "2023", "2024", "2025"]);
   const [annuelDateRange, setAnnuelDateRange] = useState([0, 100]);
+  const [legendOpacityAnnual, setLegendOpacityAnnual] = useState<Record<string, boolean>>({});
+
+  // État de tri du tableau
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  // Fonction de tri
+  const handleSort = (key: string) => {
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      setSortConfig({ key, direction: 'desc' });
+    } else {
+      setSortConfig({ key, direction: 'asc' });
+    }
+  };
 
   // Obtenir les données graphique selon la période
   const getEvolutionData = () => {
@@ -487,18 +502,39 @@ export default function CoursMatieresPremieres() {
 
   const toggleYear = useCallback(
     (year: string) => {
-      if (selectedYears.includes(year)) {
-        setSelectedYears(selectedYears.filter((y) => y !== year));
-      } else {
-        setSelectedYears([...selectedYears, year]);
-      }
+      setLegendOpacityAnnual(prev => ({
+        ...prev,
+        [year]: !prev[year]
+      }));
     },
-    [selectedYears]
+    []
   );
 
   const unselectAllYears = useCallback(() => {
-    setSelectedYears([]);
+    const allFalse: Record<string, boolean> = {};
+    years.forEach(y => {
+      allFalse[y.year] = false;
+    });
+    setLegendOpacityAnnual(allFalse);
   }, []);
+
+  const toggleMatiere = useCallback(
+    (code: string) => {
+      setLegendOpacityEvolution(prev => ({
+        ...prev,
+        [code]: !prev[code]
+      }));
+    },
+    []
+  );
+
+  const unselectAllMatieres = useCallback(() => {
+    const allFalse: Record<string, boolean> = {};
+    selectedMatieres.forEach(m => {
+      allFalse[m.code] = false;
+    });
+    setLegendOpacityEvolution(allFalse);
+  }, [selectedMatieres]);
 
   // Synchroniser les sélections temporaires quand on ouvre le popover
   useEffect(() => {
@@ -506,6 +542,16 @@ export default function CoursMatieresPremieres() {
       setTempFournisseurSelections(fournisseurSelections);
     }
   }, [openFournisseur, fournisseurSelections]);
+
+  // S'assurer que la matière sélectionnée pour le graphique annuel est valide
+  useEffect(() => {
+    if (selectedMatieres.length > 0) {
+      const matiereExiste = selectedMatieres.find(m => m.code === matiereSelectionneeAnnuelle);
+      if (!matiereExiste) {
+        setMatiereSelectionneeAnnuelle(selectedMatieres[0].code);
+      }
+    }
+  }, [selectedMatieres, matiereSelectionneeAnnuelle]);
 
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = useMemo(() => {
@@ -554,6 +600,38 @@ export default function CoursMatieresPremieres() {
     });
 
     return Array.from(uniqueValues).sort();
+  };
+
+  // Fonction pour trier les matières premières
+  const getSortedMatieres = () => {
+    if (!sortConfig) return selectedMatieres;
+
+    const sorted = [...selectedMatieres].sort((a, b) => {
+      const { key, direction } = sortConfig;
+
+      let aValue: any = a[key as keyof MatierePremiere];
+      let bValue: any = b[key as keyof MatierePremiere];
+
+      // Gérer les objets de variation
+      if (key === 'variationSemaine' || key === 'variationMois' || key === 'variationTrimestre' || key === 'variationAnnee' || key === 'variationPeriode') {
+        aValue = (a[key as keyof MatierePremiere] as any).pct;
+        bValue = (b[key as keyof MatierePremiere] as any).pct;
+      }
+
+      if (typeof aValue === 'string') {
+        return direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      if (typeof aValue === 'number') {
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      return 0;
+    });
+
+    return sorted;
   };
 
   const fournisseurs = ["Labeyrie Fine Foods", "Picard Surgelés", "Lactalis Foodservice", "Fleury Michon", "Danone Professionnel", "Nestlé Professional", "Sysco France", "Transgourmet", "Metro Cash & Carry", "Brake France"];
@@ -716,11 +794,11 @@ export default function CoursMatieresPremieres() {
                   {fournisseurSelections.length === 0 ? (
                     <span className="text-muted-foreground">tous</span>
                   ) : (
-                    <div className="flex items-center gap-1 flex-1 overflow-hidden flex-wrap">
+                    <div className="flex items-center gap-2 flex-1 overflow-hidden flex-wrap">
                       {fournisseurSelections.slice(0, 2).map((f, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
+                          className="flex items-center gap-2.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
                         >
                           <span className="text-[14px] font-medium">{f}</span>
                           <button
@@ -909,7 +987,7 @@ export default function CoursMatieresPremieres() {
 
       {/* Tags matières sélectionnées */}
       {selectedMatieres.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6 pb-6 border-b border-[#D9D9D9]">
           {selectedMatieres.map((matiere) => (
             <TooltipProvider key={matiere.id}>
               <Tooltip>
@@ -932,10 +1010,15 @@ export default function CoursMatieresPremieres() {
       )}
 
       {/* Section Evolution de cours */}
-      <div className="mb-6">
-        <h2 className="text-[16px] font-ubuntu font-medium text-gray-900 mb-4">Evolution de cours</h2>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-end gap-3 mb-4">
+      <div className="mb-12">
+        <div className="bg-white">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h2 className="text-[20px] font-medium text-gray-900">Evolution de cours</h2>
+            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="base100-evolution">Base 100</Label>
+              <Switch id="base100-evolution" checked={base100} onCheckedChange={setBase100} />
+            </div>
             <Select value={periodeGraphique} onValueChange={(v: "mois" | "semaine" | "jour") => setPeriodeGraphique(v)}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue />
@@ -946,36 +1029,58 @@ export default function CoursMatieresPremieres() {
                 <SelectItem value="jour" className="py-3">Jour</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="base100-evolution">Base 100</Label>
-              <Switch id="base100-evolution" checked={base100} onCheckedChange={setBase100} />
-            </div>
-            <Button variant="ghost" size="icon">
-              <Download className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="p-0">
+              <Download className="text-[#0970E6]" width={24} height={24} />
             </Button>
+            </div>
           </div>
 
           {/* Légendes centrées */}
-          <div className="flex justify-center items-center gap-4 mb-3">
-          <div className="flex flex-wrap gap-4 justify-center">
+          <div className="flex justify-center items-center gap-6 mb-2">
+          <div className="flex flex-wrap gap-4 justify-center items-center">
             {selectedMatieres.map((matiere, index) => (
-              <div key={matiere.id} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: matiereColors[index % matiereColors.length] }} />
-                <span className="text-sm text-gray-600">{matiere.code} - {matiere.nom}</span>
+              <div
+                key={matiere.id}
+                className="flex items-center gap-2 cursor-pointer"
+                style={{ opacity: legendOpacityEvolution[matiere.code] === false ? 0.4 : 1 }}
+                onClick={() => toggleMatiere(matiere.code)}
+              >
+                <CurveIcon color={matiereColors[index % matiereColors.length]} className="w-[30px] h-[14px]" />
+                <span className="text-sm select-none">{matiere.code} - {matiere.nom}</span>
               </div>
             ))}
           </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-2" onClick={unselectAllMatieres}>
+                  <RotateCcw className="w-4 h-4 text-[#0970E6]" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Tout désélectionner</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Graphique */}
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={getEvolutionData()} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+          <LineChart data={getEvolutionData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
             <RechartsTooltip />
             {selectedMatieres.map((matiere, index) => (
-              <Line key={matiere.code} type="monotone" dataKey={matiere.code} stroke={matiereColors[index % matiereColors.length]} strokeWidth={2} dot={false} />
+              <Line
+                key={matiere.code}
+                type="monotone"
+                dataKey={matiere.code}
+                stroke={matiereColors[index % matiereColors.length]}
+                strokeWidth={2}
+                dot={false}
+                hide={legendOpacityEvolution[matiere.code] === false}
+              />
             ))}
           </LineChart>
         </ResponsiveContainer>
@@ -988,20 +1093,130 @@ export default function CoursMatieresPremieres() {
       </div>
 
       {/* Tableau Variation des prix */}
-      <div className="mb-6">
-        <h2 className="text-[16px] font-ubuntu font-medium text-gray-900 mb-4">Variation des prix</h2>
+      <div className="mb-12">
+        <h2 className="text-[20px] font-medium text-gray-900 mb-4">Variation des prix</h2>
         <div className="overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="w-64 font-semibold">Matières premières</TableHead>
-                <TableHead className="font-semibold">Unité</TableHead>
-                <TableHead className="font-semibold">Prix actuel</TableHead>
-                <TableHead className="font-semibold">Dernière semaine</TableHead>
-                <TableHead className="font-semibold">Dernier mois</TableHead>
-                <TableHead className="font-semibold">Dernier trimestre</TableHead>
-                <TableHead className="font-semibold">Dernière année</TableHead>
-                <TableHead className="font-semibold">Sur la période</TableHead>
+                <TableHead className="w-64 font-semibold cursor-pointer hover:bg-gray-100 pl-4" onClick={() => handleSort('nom')}>
+                  <div className="flex items-center gap-2">
+                    Matières premières
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('unite')}>
+                  <div className="flex items-center gap-2">
+                    Unité
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Unité de mesure du prix</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('prixActuel')}>
+                  <div className="flex items-center gap-2">
+                    Prix actuel
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Prix actuel de la matière première</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('variationSemaine')}>
+                  <div className="flex items-center gap-2">
+                    Dernière semaine
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Variation du prix sur la dernière semaine</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('variationMois')}>
+                  <div className="flex items-center gap-2">
+                    Dernier mois
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Variation du prix sur le dernier mois</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('variationTrimestre')}>
+                  <div className="flex items-center gap-2">
+                    Dernier trimestre
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Variation du prix sur le dernier trimestre</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('variationAnnee')}>
+                  <div className="flex items-center gap-2">
+                    Dernière année
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Variation du prix sur la dernière année</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('variationPeriode')}>
+                  <div className="flex items-center gap-2">
+                    Sur la période
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Variation du prix sur la période sélectionnée</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1010,9 +1225,9 @@ export default function CoursMatieresPremieres() {
                   <TableCell colSpan={8} className="text-center text-gray-500">Aucune matière première sélectionnée</TableCell>
                 </TableRow>
               ) : (
-                selectedMatieres.map((matiere) => (
+                getSortedMatieres().map((matiere) => (
                   <TableRow key={matiere.id} className="hover:bg-gray-50">
-                    <TableCell>
+                    <TableCell className="pl-4">
                       <div className="text-[16px] font-bold text-gray-900">{matiere.nom}</div>
                       <div className="text-xs text-gray-500">{matiere.code}</div>
                     </TableCell>
@@ -1058,42 +1273,94 @@ export default function CoursMatieresPremieres() {
 
       {/* Section Evolution du cours par année */}
       <div>
-        <h2 className="text-[16px] font-ubuntu font-medium text-gray-900 mb-4">Evolution du cours par année</h2>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-end mb-4">
-            <Button variant="ghost" size="icon">
-              <Download className="w-4 h-4" />
-            </Button>
+        <div className="bg-white">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[20px] font-medium text-gray-900">Evolution du cours par année</h2>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="base100-annuel">Base 100</Label>
+                <Switch id="base100-annuel" checked={base100Annuel} onCheckedChange={setBase100Annuel} />
+              </div>
+              <Select value={matiereSelectionneeAnnuelle} onValueChange={setMatiereSelectionneeAnnuelle}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedMatieres.map((matiere) => (
+                    <SelectItem key={matiere.code} value={matiere.code} className="py-3">
+                      {matiere.code} - {matiere.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="icon" className="p-0">
+                <Download className="text-[#0970E6]" width={24} height={24} />
+              </Button>
+            </div>
           </div>
 
           {/* Légendes années centrées avec bouton unselect à droite */}
-          <div className="flex justify-between items-center mb-3">
-          <div className="flex-1 flex justify-center">
-            <div className="flex items-center gap-3 flex-wrap justify-center">
-              {years.map((item) => (
-                <button key={item.year} onClick={() => toggleYear(item.year)} className={`flex items-center gap-2 ${selectedYears.includes(item.year) ? "opacity-100" : "opacity-40"}`}>
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-sm text-gray-600">{item.year}</span>
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center justify-center gap-6 mb-2">
+          <div className="flex flex-wrap gap-4 justify-center items-center">
+            {years.map((item) => (
+              <div
+                key={item.year}
+                className="flex items-center gap-2 cursor-pointer"
+                style={{ opacity: legendOpacityAnnual[item.year] === false ? 0.4 : 1 }}
+                onClick={() => toggleYear(item.year)}
+              >
+                <CurveIcon color={item.color} className="w-[30px] h-[14px]" />
+                <span className="text-sm select-none">{item.year}</span>
+              </div>
+            ))}
           </div>
-          <Button variant="ghost" size="sm" onClick={unselectAllYears} className="text-xs">
-            Tout désélectionner
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-2" onClick={unselectAllYears}>
+                  <RotateCcw className="w-4 h-4 text-[#0970E6]" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Tout désélectionner</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Graphique annuel */}
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={annualData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+          <LineChart data={base100Annuel ? annualData.map((item, index) => {
+            if (index === 0) return item;
+            const newItem: any = { mois: item.mois };
+            years.forEach((y) => {
+              const year = y.year;
+              const firstValue = annualData[0][year as keyof typeof annualData[0]];
+              const currentValue = item[year as keyof typeof item];
+              if (firstValue && currentValue && typeof firstValue === 'number' && typeof currentValue === 'number') {
+                newItem[year] = (currentValue / firstValue) * 100;
+              } else {
+                newItem[year] = currentValue;
+              }
+            });
+            return newItem;
+          }) : annualData} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="mois" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
             <RechartsTooltip />
-            {selectedYears.map((year) => {
-              const yearData = years.find((y) => y.year === year);
-              return <Line key={year} type="monotone" dataKey={year} stroke={yearData?.color} strokeWidth={2} dot={false} connectNulls={false} />;
-            })}
+            {years.map((item) => (
+              <Line
+                key={item.year}
+                type="monotone"
+                dataKey={item.year}
+                stroke={item.color}
+                strokeWidth={2}
+                dot={false}
+                connectNulls={false}
+                hide={legendOpacityAnnual[item.year] === false}
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
 

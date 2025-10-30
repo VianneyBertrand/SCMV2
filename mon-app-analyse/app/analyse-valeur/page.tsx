@@ -55,7 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
-  ArrowUpDown,
+  ChevronsUpDown,
   CalendarIcon,
   Check,
   ChevronDown as ChevronDownIcon,
@@ -71,6 +71,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 interface NavigationHistoryItem {
   perimetre: PerimetreType;
   filters: Record<string, string>;
+}
+
+// Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
+const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {
+  const allowedKeys = ['pays', 'fournisseur', 'fournisseurs', 'portefeuille']
+  return Object.entries(filters)
+    .filter(([key]) => allowedKeys.includes(key.toLowerCase()))
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+}
+
+// Helper pour vérifier si des filtres non-affichables sont actifs
+const hasNonDisplayableFilters = (filters: Record<string, string>): boolean => {
+  const allowedKeys = ['pays', 'fournisseur', 'fournisseurs', 'portefeuille']
+  return Object.keys(filters).some(key => !allowedKeys.includes(key.toLowerCase()))
 }
 
 export default function AnalyseValeurPage() {
@@ -148,22 +162,37 @@ export default function AnalyseValeurPage() {
         activeFilters[key] = value
       }
     })
+    // Ajouter les fournisseurs sélectionnés
+    if (fournisseurSelections.length > 0) {
+      activeFilters.fournisseurs = fournisseurSelections.join(' + ')
+    }
     return activeFilters
   }
 
   const isElementSelected = (name: string) => {
+    // Vérifier si l'élément avec ces filtres précis existe déjà
     const currentFilters = getActiveFilters()
-    const id = generateElementId(name, currentFilters)
+    const displayableFilters = filterDisplayableFilters(currentFilters)
+    const id = generateElementId(name, displayableFilters)
     return comparedElements.some(el => el.id === id)
   }
 
   const addToComparison = (name: string) => {
     if (comparedElements.length >= 4) return
+
+    // Ne garder que les filtres affichables pour la comparaison
     const currentFilters = getActiveFilters()
-    const id = generateElementId(name, currentFilters)
+    const displayableFilters = filterDisplayableFilters(currentFilters)
+
+    const id = generateElementId(name, displayableFilters)
+    // Vérifier si cet élément avec ces filtres précis existe déjà
     if (comparedElements.some(el => el.id === id)) return
 
-    const newElement = { id, name, filters: currentFilters }
+    console.log('fournisseurSelections:', fournisseurSelections)
+    console.log('currentFilters:', currentFilters)
+    console.log('displayableFilters:', displayableFilters)
+
+    const newElement = { id, name, filters: displayableFilters }
     setComparedElements([...comparedElements, newElement])
   }
 
@@ -282,7 +311,26 @@ export default function AnalyseValeurPage() {
     if (hasFilters) {
       setFilters(newFilters);
     }
-  }, [searchParams]); // S'exécuter à chaque changement des paramètres URL
+
+    // Restaurer le mode comparaison si on revient de la page comparaison
+    const comparisonModeParam = searchParams.get('comparisonMode');
+    const elementsParam = searchParams.get('elements');
+
+    if (comparisonModeParam === 'true' && elementsParam) {
+      try {
+        const decodedElements = JSON.parse(decodeURIComponent(elementsParam));
+        setComparisonMode(true);
+        setComparedElements(decodedElements);
+        // Mettre à jour comparisonByPerimeter pour éviter qu'il soit écrasé
+        setComparisonByPerimeter(prev => ({
+          ...prev,
+          [perimetreParam || perimetre]: decodedElements
+        }));
+      } catch (e) {
+        console.error('Error parsing elements from URL:', e);
+      }
+    }
+  }, [searchParams, perimetre]); // S'exécuter à chaque changement des paramètres URL
 
   // States pour le tri
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -843,9 +891,9 @@ export default function AnalyseValeurPage() {
                           {element.name}
                         </div>
 
-                        {Object.entries(element.filters).length > 0 && (
+                        {Object.entries(filterDisplayableFilters(element.filters)).length > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {Object.entries(element.filters).map(([key, value]) => (
+                            {Object.entries(filterDisplayableFilters(element.filters)).map(([key, value]) => (
                               <Badge
                                 key={key}
                                 variant="secondary"
@@ -1099,12 +1147,12 @@ export default function AnalyseValeurPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="w-[300px] font-semibold">
+                <TableHead className="w-[300px] font-semibold pl-4">
                   <div className="flex items-center gap-2">
                     {perimetreOptions.find((p) => p.value === perimetre)
                       ?.label || ""} ({dataWithSubLevelCounts.length})
-                    <ArrowUpDown
-                      className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
                       onClick={() => handleSort("label")}
                     />
                   </div>
@@ -1114,12 +1162,12 @@ export default function AnalyseValeurPage() {
                     CA
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="h-4 w-4 text-gray-400" />
+                        <Info className="h-4 w-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>Chiffre d&apos;affaires</TooltipContent>
                     </Tooltip>
-                    <ArrowUpDown
-                      className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
                       onClick={() => handleSort("ca")}
                     />
                   </div>
@@ -1129,12 +1177,12 @@ export default function AnalyseValeurPage() {
                     MPA
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="h-4 w-4 text-gray-400" />
+                        <Info className="h-4 w-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>Marge Prix Achat</TooltipContent>
                     </Tooltip>
-                    <ArrowUpDown
-                      className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
                       onClick={() => handleSort("mpa")}
                     />
                   </div>
@@ -1144,13 +1192,47 @@ export default function AnalyseValeurPage() {
                     MPI
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="h-4 w-4 text-gray-400" />
+                        <Info className="h-4 w-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>Marge Prix Industriel</TooltipContent>
                     </Tooltip>
-                    <ArrowUpDown
-                      className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
                       onClick={() => handleSort("mpi")}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    PA
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-[#121212]" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {perimetre === "Produit" ? "Prix Achat unitaire" : "Prix Achat total"}
+                      </TooltipContent>
+                    </Tooltip>
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
+                      onClick={() => handleSort(perimetre === "Produit" ? "paUnitaire" : "evoPa")}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    PA théorique
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-[#121212]" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {perimetre === "Produit" ? "PA théorique unitaire" : "PA théorique total"}
+                      </TooltipContent>
+                    </Tooltip>
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
+                      onClick={() => handleSort(perimetre === "Produit" ? "coutTheoriqueUnitaire" : "coutTheorique")}
                     />
                   </div>
                 </TableHead>
@@ -1161,12 +1243,12 @@ export default function AnalyseValeurPage() {
                         PV
                         <Tooltip>
                           <TooltipTrigger>
-                            <Info className="h-4 w-4 text-gray-400" />
+                            <Info className="h-4 w-4 text-[#121212]" />
                           </TooltipTrigger>
                           <TooltipContent>Prix de vente Carrefour</TooltipContent>
                         </Tooltip>
-                        <ArrowUpDown
-                          className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                        <ChevronsUpDown
+                          className="h-4 w-4 cursor-pointer text-[#121212]"
                           onClick={() => handleSort("pv")}
                         />
                       </div>
@@ -1176,12 +1258,12 @@ export default function AnalyseValeurPage() {
                         PV LCL
                         <Tooltip>
                           <TooltipTrigger>
-                            <Info className="h-4 w-4 text-gray-400" />
+                            <Info className="h-4 w-4 text-[#121212]" />
                           </TooltipTrigger>
                           <TooltipContent>Prix de vente Leclerc</TooltipContent>
                         </Tooltip>
-                        <ArrowUpDown
-                          className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                        <ChevronsUpDown
+                          className="h-4 w-4 cursor-pointer text-[#121212]"
                           onClick={() => handleSort("pvLeclerc")}
                         />
                       </div>
@@ -1191,12 +1273,12 @@ export default function AnalyseValeurPage() {
                         Marge PV LCL
                         <Tooltip>
                           <TooltipTrigger>
-                            <Info className="h-4 w-4 text-gray-400" />
+                            <Info className="h-4 w-4 text-[#121212]" />
                           </TooltipTrigger>
                           <TooltipContent>Marge entre PA et PV LCL</TooltipContent>
                         </Tooltip>
-                        <ArrowUpDown
-                          className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                        <ChevronsUpDown
+                          className="h-4 w-4 cursor-pointer text-[#121212]"
                           onClick={() => handleSort("margePvLcl")}
                         />
                       </div>
@@ -1205,47 +1287,17 @@ export default function AnalyseValeurPage() {
                 )}
                 <TableHead className="w-[180px]">
                   <div className="flex items-center gap-2">
-                    PA
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>Prix Achat</TooltipContent>
-                    </Tooltip>
-                    <ArrowUpDown
-                      className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
-                      onClick={() => handleSort("evoPa")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead className="w-[180px]">
-                  <div className="flex items-center gap-2">
-                    Coût théorique
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>Coût théorique</TooltipContent>
-                    </Tooltip>
-                    <ArrowUpDown
-                      className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
-                      onClick={() => handleSort("coutTheorique")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead className="w-[180px]">
-                  <div className="flex items-center gap-2">
                     Opportunité
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="h-4 w-4 text-gray-400" />
+                        <Info className="h-4 w-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
                         Opportunité d&apos;économie
                       </TooltipContent>
                     </Tooltip>
-                    <ArrowUpDown
-                      className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
                       onClick={() => handleSort("opportunites")}
                     />
                   </div>
@@ -1277,7 +1329,7 @@ export default function AnalyseValeurPage() {
                       }}
                     >
                       {/* Nom + Liens des sous-niveaux */}
-                      <TableCell>
+                      <TableCell className="pl-4">
                         <div className="flex flex-col gap-2">
                           {/* Titre en haut */}
                           <div className="font-bold">{row.label}</div>
@@ -1362,6 +1414,58 @@ export default function AnalyseValeurPage() {
                         </div>
                       </TableCell>
 
+                      {/* PA */}
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="font-medium">
+                            {perimetre === "Produit" && row.paUnitaire
+                              ? row.paUnitaire.valeur
+                              : row.evoPa.valeur}
+                          </div>
+                          <div
+                            className={cn(
+                              "font-medium",
+                              (perimetre === "Produit" && row.paUnitaire
+                                ? row.paUnitaire.evolution
+                                : row.evoPa.evolution
+                              ).startsWith("+")
+                                ? "text-red-600"
+                                : "text-green-600"
+                            )}
+                          >
+                            {perimetre === "Produit" && row.paUnitaire
+                              ? row.paUnitaire.evolution
+                              : row.evoPa.evolution}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* PA théorique */}
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="font-medium">
+                            {perimetre === "Produit" && row.coutTheoriqueUnitaire
+                              ? row.coutTheoriqueUnitaire.valeur
+                              : row.coutTheorique.valeur}
+                          </div>
+                          <div
+                            className={cn(
+                              "font-medium",
+                              (perimetre === "Produit" && row.coutTheoriqueUnitaire
+                                ? row.coutTheoriqueUnitaire.evolution
+                                : row.coutTheorique.evolution
+                              ).startsWith("+")
+                                ? "text-red-600"
+                                : "text-green-600"
+                            )}
+                          >
+                            {perimetre === "Produit" && row.coutTheoriqueUnitaire
+                              ? row.coutTheoriqueUnitaire.evolution
+                              : row.coutTheorique.evolution}
+                          </div>
+                        </div>
+                      </TableCell>
+
                       {/* PV */}
                       {perimetre === "Produit" && row.pv && (
                         <TableCell>
@@ -1418,42 +1522,6 @@ export default function AnalyseValeurPage() {
                           </div>
                         </TableCell>
                       )}
-
-                      {/* PA */}
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <div className="font-medium">{row.evoPa.valeur}</div>
-                          <div
-                            className={cn(
-                              "font-medium",
-                              row.evoPa.evolution.startsWith("+")
-                                ? "text-red-600"
-                                : "text-green-600"
-                            )}
-                          >
-                            {row.evoPa.evolution}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* Coût théorique */}
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <div className="font-medium">
-                            {row.coutTheorique.valeur}
-                          </div>
-                          <div
-                            className={cn(
-                              "font-medium",
-                              row.coutTheorique.evolution.startsWith("+")
-                                ? "text-red-600"
-                                : "text-green-600"
-                            )}
-                          >
-                            {row.coutTheorique.evolution}
-                          </div>
-                        </div>
-                      </TableCell>
 
                       {/* Opportunités */}
                       <TableCell>

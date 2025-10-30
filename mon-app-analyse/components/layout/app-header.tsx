@@ -41,7 +41,7 @@ export function AppHeader() {
                         navigationMenuTriggerStyle(),
                         "bg-transparent hover:bg-transparent focus:bg-transparent hover:text-[#0970E6] active:text-[#0970E6] focus:text-[#0970E6]",
                         pathname === item.href
-                          ? "font-bold text-[#0970E6]"
+                          ? "font-medium text-[#0970E6]"
                           : "font-medium text-black"
                       )}
                     >
@@ -58,7 +58,7 @@ export function AppHeader() {
                       navigationMenuTriggerStyle(),
                       "bg-transparent hover:bg-transparent focus:bg-transparent hover:text-[#0970E6] active:text-[#0970E6] focus:text-[#0970E6]",
                       pathname === "/cours-matieres-premieres"
-                        ? "font-bold text-[#0970E6]"
+                        ? "font-medium text-[#0970E6]"
                         : "font-medium text-black"
                     )}
                   >

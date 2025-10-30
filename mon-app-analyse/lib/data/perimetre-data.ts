@@ -87,7 +87,9 @@ export interface PerimetreItem {
   evoPa: MetricDisplay;
   coutTheorique: MetricDisplay;
   opportunites: MetricDisplay;
-  // Prix de vente (uniquement pour les produits)
+  // Prix de vente et Prix d'achat (uniquement pour les produits)
+  paUnitaire?: MetricDisplay;
+  coutTheoriqueUnitaire?: MetricDisplay;
   pv?: MetricDisplay;
   pvLeclerc?: MetricDisplay;
   margePvLcl?: MetricDisplay;
@@ -242,28 +244,74 @@ const calculateMargePvc = (pv: Metric, evoPa: Metric, ca?: Metric): MetricDispla
 // Convertir les données de content.ts vers le format de la page
 const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => {
   return items.map((item) => {
-    // Calculer margePvLcl si pvLeclerc, evoPa et ca sont disponibles
+    // Variables pour les marges
     let margePvLcl: MetricDisplay | undefined = undefined;
-    if (item.pvLeclerc && item.evoPa && item.ca) {
-      const calculatedMarge = calculateMargePvLcl(item.pvLeclerc, item.evoPa, item.ca);
-      if (calculatedMarge !== null) {
-        margePvLcl = calculatedMarge;
-      }
-    }
-
-    // Calculer margePvc si pv, evoPa et ca sont disponibles
     let margePvc: MetricDisplay | undefined = undefined;
-    if (item.pv && item.evoPa && item.ca) {
-      const calculatedMargePvc = calculateMargePvc(item.pv, item.evoPa, item.ca);
-      if (calculatedMargePvc !== null) {
-        margePvc = calculatedMargePvc;
-      }
-    }
 
     // Marge moyenne catégorielle (valeur statique pour l'instant)
     let margeMoyenneCategorielle: string | undefined = undefined;
     if (item.categorie) {
       margeMoyenneCategorielle = "37.5%";
+    }
+
+    // Calculer PA unitaire pour les produits (basé sur evoPa et ca)
+    let paUnitaire: MetricDisplay | undefined = undefined;
+    if (item.pv && item.evoPa) {
+      // PA unitaire est généralement entre 60-85% du PV
+      const pvValue = parseFloat(item.pv.valeur.replace(/[^0-9.-]/g, ''));
+      const evoPaEvolution = parseFloat(item.evoPa.evolution.replace(/[^0-9.-]/g, ''));
+      const paUnitaireValue = pvValue * 0.70; // 70% du PV comme approximation
+      const paUnitaireEvolution = evoPaEvolution * (0.95 + Math.random() * 0.1); // Légère variation autour de l'évolution du PA total
+      paUnitaire = {
+        valeur: `${paUnitaireValue.toFixed(2)}€`,
+        evolution: `${paUnitaireEvolution >= 0 ? '+' : ''}${paUnitaireEvolution.toFixed(2)}%`
+      };
+    }
+
+    // Calculer Coût théorique unitaire pour les produits (basé sur coutTheorique et ca)
+    let coutTheoriqueUnitaire: MetricDisplay | undefined = undefined;
+    if (item.pv && item.coutTheorique) {
+      // Coût théorique unitaire est généralement entre 50-75% du PV
+      const pvValue = parseFloat(item.pv.valeur.replace(/[^0-9.-]/g, ''));
+      const coutTheoriqueEvolution = parseFloat(item.coutTheorique.evolution.replace(/[^0-9.-]/g, ''));
+      const coutTheoriqueUnitaireValue = pvValue * 0.60; // 60% du PV comme approximation
+      const coutTheoriqueUnitaireEvolution = coutTheoriqueEvolution * (0.95 + Math.random() * 0.1); // Légère variation
+      coutTheoriqueUnitaire = {
+        valeur: `${coutTheoriqueUnitaireValue.toFixed(2)}€`,
+        evolution: `${coutTheoriqueUnitaireEvolution >= 0 ? '+' : ''}${coutTheoriqueUnitaireEvolution.toFixed(2)}%`
+      };
+    }
+
+    // Calculer margePvc avec la formule simple : PV - PA unitaire
+    if (item.pv && paUnitaire) {
+      const pvValue = parseFloat(item.pv.valeur.replace(/[^0-9.-]/g, ''));
+      const paValue = parseFloat(paUnitaire.valeur.replace(/[^0-9.-]/g, ''));
+      const pvEvolution = parseFloat(item.pv.evolution.replace(/[^0-9.-]/g, ''));
+      const paEvolution = parseFloat(paUnitaire.evolution.replace(/[^0-9.-]/g, ''));
+
+      const margeValue = pvValue - paValue;
+      const margeEvolution = pvEvolution - paEvolution;
+
+      margePvc = {
+        valeur: `${margeValue.toFixed(2)}€`,
+        evolution: `${margeEvolution >= 0 ? '+' : ''}${margeEvolution.toFixed(2)}%`
+      };
+    }
+
+    // Calculer margePvLcl avec la formule simple : PV LCL - PA unitaire
+    if (item.pvLeclerc && paUnitaire) {
+      const pvLclValue = parseFloat(item.pvLeclerc.valeur.replace(/[^0-9.-]/g, ''));
+      const paValue = parseFloat(paUnitaire.valeur.replace(/[^0-9.-]/g, ''));
+      const pvLclEvolution = parseFloat(item.pvLeclerc.evolution.replace(/[^0-9.-]/g, ''));
+      const paEvolution = parseFloat(paUnitaire.evolution.replace(/[^0-9.-]/g, ''));
+
+      const margeValue = pvLclValue - paValue;
+      const margeEvolution = pvLclEvolution - paEvolution;
+
+      margePvLcl = {
+        valeur: `${margeValue.toFixed(2)}€`,
+        evolution: `${margeEvolution >= 0 ? '+' : ''}${margeEvolution.toFixed(2)}%`
+      };
     }
 
     return {
@@ -276,6 +324,8 @@ const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => 
       evoPa: formatToME(item.evoPa),
       coutTheorique: formatToME(item.coutTheorique),
       opportunites: formatToME(item.opportunite),
+      paUnitaire: paUnitaire,
+      coutTheoriqueUnitaire: coutTheoriqueUnitaire,
       pv: item.pv ? formatToCurrency(item.pv) : undefined,
       pvLeclerc: item.pvLeclerc ? formatToCurrency(item.pvLeclerc) : undefined,
       margePvLcl: margePvLcl,

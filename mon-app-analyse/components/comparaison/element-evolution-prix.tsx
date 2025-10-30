@@ -19,9 +19,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Download, Info, ChevronDown, ChevronUp } from "lucide-react"
+import { Download, Info, ChevronDown, ChevronUp, RefreshCw } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { CurveIcon } from "@/components/ui/curve-icon"
+
+// Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
+const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {
+  const allowedKeys = ['pays', 'fournisseur', 'fournisseurs', 'portefeuille']
+  const filtered = Object.entries(filters)
+    .filter(([key]) => allowedKeys.includes(key.toLowerCase()))
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+  console.log('[ElementEvolutionPrix] Original filters:', filters)
+  console.log('[ElementEvolutionPrix] Filtered filters:', filtered)
+  return filtered
+}
 
 interface ElementEvolutionPrixProps {
   element: {
@@ -39,6 +51,7 @@ interface ElementEvolutionPrixProps {
   setEvolutionDateRange?: (value: number[]) => void
   showEvolutionTable?: boolean
   setShowEvolutionTable?: (value: boolean) => void
+  hasPairedElementTags?: boolean
 }
 
 export function ElementEvolutionPrix({
@@ -53,6 +66,7 @@ export function ElementEvolutionPrix({
   setEvolutionDateRange: setEvolutionDateRangeProp,
   showEvolutionTable: showEvolutionTableProp,
   setShowEvolutionTable: setShowEvolutionTableProp,
+  hasPairedElementTags = false,
 }: ElementEvolutionPrixProps) {
   // États locaux comme fallback
   const [evolutionLegendOpacityLocal, setEvolutionLegendOpacityLocal] = useState<Record<string, boolean>>({
@@ -129,14 +143,17 @@ export function ElementEvolutionPrix({
     }
   }
 
+  const hasOwnTags = Object.entries(filterDisplayableFilters(element.filters)).length > 0
+  const shouldAddSpacing = !hasOwnTags && hasPairedElementTags
+
   return (
     <div className="space-y-6 border border-[#D9D9D9] rounded-lg p-6">
       {/* En-tête avec nom et filtres */}
-      <div>
+      <div className={shouldAddSpacing ? "min-h-[60px]" : ""}>
         <h3 className="text-lg font-bold mb-2">{element.name}</h3>
-        {Object.entries(element.filters).length > 0 && (
+        {hasOwnTags && (
           <div className="flex flex-wrap gap-1">
-            {Object.entries(element.filters).map(([key, value]) => (
+            {Object.entries(filterDisplayableFilters(element.filters)).map(([key, value]) => (
               <Badge key={key} variant="secondary" className="text-xs">
                 {value}
               </Badge>
@@ -145,51 +162,12 @@ export function ElementEvolutionPrix({
         )}
       </div>
 
-      {/* Sous-titre */}
-      <h4 className="text-[16px] font-medium">Graphique de l&apos;évolution des prix</h4>
-
       {/* Graphique */}
       <div>
         {/* Header avec controls */}
-        <div className="flex items-center justify-between mb-4">
-          {/* Gauche: Légendes cliquables + bouton désélectionner */}
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <div
-                className="w-4 h-4 bg-[#E91E63] rounded"
-                style={{ opacity: evolutionLegendOpacity.PA ? 1 : 0.3 }}
-              />
-              <span
-                className="text-sm"
-                onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, PA: !evolutionLegendOpacity.PA })}
-              >
-                PA
-              </span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <div
-                className="w-4 h-4 bg-[#607D8B] rounded"
-                style={{ opacity: evolutionLegendOpacity['cout-theorique'] ? 1 : 0.3 }}
-              />
-              <span
-                className="text-sm"
-                onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'cout-theorique': !evolutionLegendOpacity['cout-theorique'] })}
-              >
-                Coût théorique
-              </span>
-            </label>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[14px]"
-              onClick={() => setEvolutionLegendOpacity({ PA: false, 'cout-theorique': false })}
-            >
-              Tout désélectionner
-            </Button>
-          </div>
-
-          {/* Droite: Select période + Base 100 + Export */}
-          <div className="flex items-center gap-4">
+        <div className="space-y-4 mb-2">
+          {/* Première ligne: Select période + Base 100 + Export (alignés à droite) */}
+          <div className="flex items-center justify-end gap-4">
             <Select value={evolutionPeriod} onValueChange={(v: 'mois' | 'semaine' | 'jour') => setEvolutionPeriod(v)}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue />
@@ -208,18 +186,43 @@ export function ElementEvolutionPrix({
                 onCheckedChange={setEvolutionBase100}
               />
             </div>
-            <Button variant="ghost" size="icon">
-              <Download className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="p-0">
+              <Download className="text-[#0970E6]" width={24} height={24} />
+            </Button>
+          </div>
+
+          {/* Deuxième ligne: Légendes cliquables + icône refresh (centrées) */}
+          <div className="flex items-center justify-center gap-4">
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              style={{ opacity: evolutionLegendOpacity.PA ? 1 : 0.4 }}
+              onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, PA: !evolutionLegendOpacity.PA })}
+            >
+              <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
+              <span className="text-sm select-none">PA</span>
+            </div>
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              style={{ opacity: evolutionLegendOpacity['cout-theorique'] ? 1 : 0.4 }}
+              onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'cout-theorique': !evolutionLegendOpacity['cout-theorique'] })}
+            >
+              <CurveIcon color="#607D8B" className="w-[30px] h-[14px]" />
+              <span className="text-sm select-none">Coût théorique</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-0"
+              onClick={() => setEvolutionLegendOpacity({ PA: false, 'cout-theorique': false })}
+            >
+              <RefreshCw className="text-[#0970E6]" width={20} height={20} />
             </Button>
           </div>
         </div>
 
-        {/* Separator */}
-        <div className="border-t my-4" />
-
         {/* Graphique */}
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={getEvolutionChartData()} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+          <LineChart data={getEvolutionChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
