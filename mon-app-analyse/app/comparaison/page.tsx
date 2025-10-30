@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import { ArrowLeft } from "lucide-react"
 import { PeriodFilter } from "@/components/shared/period-filter"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,10 +15,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Info } from "lucide-react"
-import { ElementCostStructure } from "@/components/comparaison/element-cost-structure"
-import { ElementRecette } from "@/components/comparaison/element-recette"
-import { ElementEvolutionPrix } from "@/components/comparaison/element-evolution-prix"
 import { getPerimetreData, type PerimetreType } from "@/lib/data/perimetre-data"
+
+// Lazy load heavy comparison components with Recharts
+const ElementCostStructure = dynamic(() => import("@/components/comparaison/element-cost-structure").then(mod => ({ default: mod.ElementCostStructure })), { ssr: false })
+const ElementRecette = dynamic(() => import("@/components/comparaison/element-recette").then(mod => ({ default: mod.ElementRecette })), { ssr: false })
+const ElementEvolutionPrix = dynamic(() => import("@/components/comparaison/element-evolution-prix").then(mod => ({ default: mod.ElementEvolutionPrix })), { ssr: false })
 
 // Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
 const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {

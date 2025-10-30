@@ -1,16 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import dynamic from 'next/dynamic';
+
+// Lazy load heavy components - Command and Calendar
+const LazyCalendar = dynamic(() => import("@/components/ui/calendar").then(mod => ({ default: mod.Calendar })), { ssr: false }) as any;
+const LazyCommand = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.Command })), { ssr: false }) as any;
+const LazyCommandEmpty = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandEmpty })), { ssr: false }) as any;
+const LazyCommandGroup = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandGroup })), { ssr: false }) as any;
+const LazyCommandInput = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandInput })), { ssr: false }) as any;
+const LazyCommandItem = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandItem })), { ssr: false }) as any;
+const LazyCommandList = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandList })), { ssr: false }) as any;
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -784,19 +785,19 @@ export default function AnalyseValeurPage() {
               </Button>
             </PopoverTrigger>
           <PopoverContent className="p-0">
-            <Command
+            <LazyCommand
               shouldFilter={false}
             >
-              <CommandInput
+              <LazyCommandInput
                 value={searchInputValue}
                 onValueChange={setSearchInputValue}
                 placeholder={getSearchPlaceholder}
               />
-              <CommandList>
-                <CommandEmpty>Aucun résultat trouvé.</CommandEmpty>
-                <CommandGroup>
+              <LazyCommandList>
+                <LazyCommandEmpty>Aucun résultat trouvé.</LazyCommandEmpty>
+                <LazyCommandGroup>
                   {sortedData.map((item, index) => (
-                    <CommandItem
+                    <LazyCommandItem
                       key={`${item.label}-${index}`}
                       value={item.label}
                       onSelect={(currentValue) => {
@@ -830,11 +831,11 @@ export default function AnalyseValeurPage() {
                         )}
                       />
                       {item.label}
-                    </CommandItem>
+                    </LazyCommandItem>
                   ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
+                </LazyCommandGroup>
+              </LazyCommandList>
+            </LazyCommand>
           </PopoverContent>
         </Popover>
       )}
@@ -854,7 +855,7 @@ export default function AnalyseValeurPage() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar
+                <LazyCalendar
                   mode="range"
                   selected={{ from: dateRange.from, to: dateRange.to }}
                   numberOfMonths={2}

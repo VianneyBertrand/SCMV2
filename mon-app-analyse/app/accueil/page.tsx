@@ -2,14 +2,15 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
+import dynamic from 'next/dynamic'
+
+// Lazy load heavy Command component
+const LazyCommand = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.Command })), { ssr: false }) as any;
+const LazyCommandEmpty = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandEmpty })), { ssr: false }) as any;
+const LazyCommandGroup = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandGroup })), { ssr: false }) as any;
+const LazyCommandInput = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandInput })), { ssr: false }) as any;
+const LazyCommandItem = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandItem })), { ssr: false }) as any;
+const LazyCommandList = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandList })), { ssr: false }) as any;
 import { Label } from "@/components/ui/label"
 import {
   Popover,

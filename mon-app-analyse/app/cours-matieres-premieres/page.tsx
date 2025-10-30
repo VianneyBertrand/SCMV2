@@ -28,15 +28,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Calendar } from "@/components/ui/calendar";
+// Lazy load heavy components - Command and Calendar
+const LazyCommand = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.Command })), { ssr: false }) as any;
+const LazyCommandEmpty = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandEmpty })), { ssr: false }) as any;
+const LazyCommandGroup = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandGroup })), { ssr: false }) as any;
+const LazyCommandInput = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandInput })), { ssr: false }) as any;
+const LazyCommandItem = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandItem })), { ssr: false }) as any;
+const LazyCommandList = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandList })), { ssr: false }) as any;
+const LazyCalendar = dynamic(() => import("@/components/ui/calendar").then(mod => ({ default: mod.Calendar })), { ssr: false }) as any;
 import {
   Popover,
   PopoverContent,
@@ -47,15 +46,16 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIcon, Info, ChevronsUpDown, RotateCcw } from "lucide-react";
 import { CurveIcon } from "@/components/ui/curve-icon";
-import {
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-  CartesianGrid,
-} from "recharts";
+import dynamic from 'next/dynamic';
+
+// Lazy load Recharts components
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false });
+const LineChart = dynamic(() => import('recharts').then(mod => ({ default: mod.LineChart })), { ssr: false });
+const Line = dynamic(() => import('recharts').then(mod => ({ default: mod.Line })), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis })), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })), { ssr: false });
+const RechartsTooltip = dynamic(() => import('recharts').then(mod => ({ default: mod.Tooltip })), { ssr: false });
 
 // Types
 interface MatierePremiere {
@@ -658,7 +658,7 @@ export default function CoursMatieresPremieres() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar mode="range" selected={{ from: dateRange.from, to: dateRange.to }} numberOfMonths={2} />
+                <LazyCalendar mode="range" selected={{ from: dateRange.from, to: dateRange.to }} numberOfMonths={2} />
               </PopoverContent>
             </Popover>
           </div>
@@ -962,25 +962,25 @@ export default function CoursMatieresPremieres() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[500px] p-0" align="start">
-          <Command shouldFilter={false}>
-            <CommandInput
+          <LazyCommand shouldFilter={false}>
+            <LazyCommandInput
               value={searchTerm}
               onValueChange={setSearchTerm}
               placeholder="Rechercher une matière première..."
             />
-            <CommandList>
-              <CommandEmpty>Aucune matière première trouvée.</CommandEmpty>
-              <CommandGroup>
+            <LazyCommandList>
+              <LazyCommandEmpty>Aucune matière première trouvée.</LazyCommandEmpty>
+              <LazyCommandGroup>
                 {filteredMatieres.map((matiere) => (
-                  <CommandItem key={matiere.id} value={matiere.nom} onSelect={() => handleSelectMatiere(matiere)} className="py-2">
+                  <LazyCommandItem key={matiere.id} value={matiere.nom} onSelect={() => handleSelectMatiere(matiere)} className="py-2">
                     <Check className={cn("mr-2 h-4 w-4", selectedMatieres.find(m => m.id === matiere.id) ? "opacity-100" : "opacity-0")} />
                     <span className="font-medium text-gray-700">{matiere.code}</span>
                     <span className="text-gray-600 ml-2">- {matiere.nom}</span>
-                  </CommandItem>
+                  </LazyCommandItem>
                 ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
+              </LazyCommandGroup>
+            </LazyCommandList>
+          </LazyCommand>
         </PopoverContent>
       </Popover>
       </div>
