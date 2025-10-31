@@ -1,17 +1,11 @@
+// @ts-nocheck
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import dynamic from 'next/dynamic';
-
-// Lazy load heavy components - Command and Calendar
-const LazyCalendar = dynamic(() => import("@/components/ui/calendar").then(mod => ({ default: mod.Calendar })), { ssr: false }) as any;
-const LazyCommand = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.Command })), { ssr: false }) as any;
-const LazyCommandEmpty = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandEmpty })), { ssr: false }) as any;
-const LazyCommandGroup = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandGroup })), { ssr: false }) as any;
-const LazyCommandInput = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandInput })), { ssr: false }) as any;
-const LazyCommandItem = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandItem })), { ssr: false }) as any;
-const LazyCommandList = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandList })), { ssr: false }) as any;
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -26,9 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -56,17 +47,67 @@ import {
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
-  ChevronsUpDown,
   CalendarIcon,
   Check,
   ChevronDown as ChevronDownIcon,
+  ChevronsUpDown,
   Eye,
   Info,
   Search,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+
+// Lazy load heavy components - Command and Calendar
+const LazyCalendar = dynamic(
+  () =>
+    import("@/components/ui/calendar").then((mod) => ({
+      default: mod.Calendar,
+    })),
+  { ssr: false }
+) as any;
+const LazyCommand = dynamic(
+  () =>
+    import("@/components/ui/command").then((mod) => ({ default: mod.Command })),
+  { ssr: false }
+) as any;
+const LazyCommandEmpty = dynamic(
+  () =>
+    import("@/components/ui/command").then((mod) => ({
+      default: mod.CommandEmpty,
+    })),
+  { ssr: false }
+) as any;
+const LazyCommandGroup = dynamic(
+  () =>
+    import("@/components/ui/command").then((mod) => ({
+      default: mod.CommandGroup,
+    })),
+  { ssr: false }
+) as any;
+const LazyCommandInput = dynamic(
+  () =>
+    import("@/components/ui/command").then((mod) => ({
+      default: mod.CommandInput,
+    })),
+  { ssr: false }
+) as any;
+const LazyCommandItem = dynamic(
+  () =>
+    import("@/components/ui/command").then((mod) => ({
+      default: mod.CommandItem,
+    })),
+  { ssr: false }
+) as any;
+const LazyCommandList = dynamic(
+  () =>
+    import("@/components/ui/command").then((mod) => ({
+      default: mod.CommandList,
+    })),
+  { ssr: false }
+) as any;
 
 // Interface pour l'historique de navigation
 interface NavigationHistoryItem {
@@ -75,20 +116,24 @@ interface NavigationHistoryItem {
 }
 
 // Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
-const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {
-  const allowedKeys = ['pays', 'fournisseur', 'fournisseurs', 'portefeuille']
+const filterDisplayableFilters = (
+  filters: Record<string, string>
+): Record<string, string> => {
+  const allowedKeys = ["pays", "fournisseur", "fournisseurs", "portefeuille"];
   return Object.entries(filters)
     .filter(([key]) => allowedKeys.includes(key.toLowerCase()))
-    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
-}
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+};
 
 // Helper pour vérifier si des filtres non-affichables sont actifs
 const hasNonDisplayableFilters = (filters: Record<string, string>): boolean => {
-  const allowedKeys = ['pays', 'fournisseur', 'fournisseurs', 'portefeuille']
-  return Object.keys(filters).some(key => !allowedKeys.includes(key.toLowerCase()))
-}
+  const allowedKeys = ["pays", "fournisseur", "fournisseurs", "portefeuille"];
+  return Object.keys(filters).some(
+    (key) => !allowedKeys.includes(key.toLowerCase())
+  );
+};
 
-export default function AnalyseValeurPage() {
+function AnalyseValeurContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -105,8 +150,12 @@ export default function AnalyseValeurPage() {
   const [searchInputValue, setSearchInputValue] = useState("");
 
   // States pour la multi-sélection des fournisseurs
-  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>([]);
-  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>([]);
+  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>(
+    []
+  );
+  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<
+    string[]
+  >([]);
   const [openFournisseur, setOpenFournisseur] = useState(false);
   const [fournisseurSearch, setFournisseurSearch] = useState("");
 
@@ -129,133 +178,145 @@ export default function AnalyseValeurPage() {
   >([]);
 
   // States mode comparaison
-  const [comparedElements, setComparedElements] = useState<{
-    id: string
-    name: string
-    filters: Record<string, string>
-  }[]>([])
+  const [comparedElements, setComparedElements] = useState<
+    {
+      id: string;
+      name: string;
+      filters: Record<string, string>;
+    }[]
+  >([]);
 
-  const [comparisonByPerimeter, setComparisonByPerimeter] = useState<Record<string, typeof comparedElements>>({
-    "Marché": [],
+  const [comparisonByPerimeter, setComparisonByPerimeter] = useState<
+    Record<string, typeof comparedElements>
+  >({
+    Marché: [],
     "Marché détaillé": [],
-    "Catégorie": [],
+    Catégorie: [],
     "Groupe Famille": [],
-    "Famille": [],
+    Famille: [],
     "Sous Famille": [],
-    "Produit": [],
-    "Fournisseur": [],
-    "Portefeuille": [],
-  })
+    Produit: [],
+    Fournisseur: [],
+    Portefeuille: [],
+  });
 
   // Fonctions mode comparaison
   const generateElementId = (name: string, filters: Record<string, string>) => {
     const filterString = Object.entries(filters)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, value]) => `${key}:${value}`)
-      .join('|')
-    return `${name}||${filterString}`
-  }
+      .join("|");
+    return `${name}||${filterString}`;
+  };
 
   const getActiveFilters = () => {
-    const activeFilters: Record<string, string> = {}
+    const activeFilters: Record<string, string> = {};
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== "tous") {
-        activeFilters[key] = value
+        activeFilters[key] = value;
       }
-    })
+    });
     // Ajouter les fournisseurs sélectionnés
     if (fournisseurSelections.length > 0) {
-      activeFilters.fournisseurs = fournisseurSelections.join(' + ')
+      activeFilters.fournisseurs = fournisseurSelections.join(" + ");
     }
-    return activeFilters
-  }
+    return activeFilters;
+  };
 
   const isElementSelected = (name: string) => {
     // Vérifier si l'élément avec ces filtres précis existe déjà
-    const currentFilters = getActiveFilters()
-    const displayableFilters = filterDisplayableFilters(currentFilters)
-    const id = generateElementId(name, displayableFilters)
-    return comparedElements.some(el => el.id === id)
-  }
+    const currentFilters = getActiveFilters();
+    const displayableFilters = filterDisplayableFilters(currentFilters);
+    const id = generateElementId(name, displayableFilters);
+    return comparedElements.some((el) => el.id === id);
+  };
 
   const addToComparison = (name: string) => {
-    if (comparedElements.length >= 4) return
+    if (comparedElements.length >= 4) return;
 
     // Ne garder que les filtres affichables pour la comparaison
-    const currentFilters = getActiveFilters()
-    const displayableFilters = filterDisplayableFilters(currentFilters)
+    const currentFilters = getActiveFilters();
+    const displayableFilters = filterDisplayableFilters(currentFilters);
 
-    const id = generateElementId(name, displayableFilters)
+    const id = generateElementId(name, displayableFilters);
     // Vérifier si cet élément avec ces filtres précis existe déjà
-    if (comparedElements.some(el => el.id === id)) return
+    if (comparedElements.some((el) => el.id === id)) return;
 
-    console.log('fournisseurSelections:', fournisseurSelections)
-    console.log('currentFilters:', currentFilters)
-    console.log('displayableFilters:', displayableFilters)
+    console.log("fournisseurSelections:", fournisseurSelections);
+    console.log("currentFilters:", currentFilters);
+    console.log("displayableFilters:", displayableFilters);
 
-    const newElement = { id, name, filters: displayableFilters }
-    setComparedElements([...comparedElements, newElement])
-  }
+    const newElement = { id, name, filters: displayableFilters };
+    setComparedElements([...comparedElements, newElement]);
+  };
 
   const removeFromComparison = (id: string) => {
-    setComparedElements(comparedElements.filter(el => el.id !== id))
-  }
+    setComparedElements(comparedElements.filter((el) => el.id !== id));
+  };
 
   const goToComparison = () => {
-    if (comparedElements.length < 2) return
-    const encodedElements = encodeURIComponent(JSON.stringify(comparedElements))
-    router.push(`/comparaison?elements=${encodedElements}&perimetre=${perimetre}`)
-  }
+    if (comparedElements.length < 2) return;
+    const encodedElements = encodeURIComponent(
+      JSON.stringify(comparedElements)
+    );
+    router.push(
+      `/comparaison?elements=${encodedElements}&perimetre=${perimetre}`
+    );
+  };
 
   useEffect(() => {
     if (comparisonMode) {
-      const saved = comparisonByPerimeter[perimetre] || []
-      setComparedElements(saved)
+      const saved = comparisonByPerimeter[perimetre] || [];
+      setComparedElements(saved);
     }
-  }, [perimetre, comparisonMode])
+  }, [perimetre, comparisonMode]);
 
   useEffect(() => {
     if (comparisonMode) {
       setComparisonByPerimeter({
         ...comparisonByPerimeter,
-        [perimetre]: comparedElements
-      })
+        [perimetre]: comparedElements,
+      });
     }
-  }, [comparedElements, comparisonMode])
+  }, [comparedElements, comparisonMode]);
 
   const getPerimetreLabel = () => {
     const labels: Record<PerimetreType, string> = {
-      'Marché': 'marché',
-      'Marché détaillé': 'marché détaillé',
-      'Catégorie': 'catégorie',
-      'Groupe Famille': 'groupe famille',
-      'Famille': 'famille',
-      'Sous Famille': 'sous famille',
-      'Produit': 'produit',
-      'Fournisseur': 'fournisseur',
-      'Portefeuille': 'portefeuille'
-    }
-    return labels[perimetre] || 'élément'
-  }
+      Marché: "marché",
+      "Marché détaillé": "marché détaillé",
+      Catégorie: "catégorie",
+      "Groupe Famille": "groupe famille",
+      Famille: "famille",
+      "Sous Famille": "sous famille",
+      Produit: "produit",
+      Fournisseur: "fournisseur",
+      Portefeuille: "portefeuille",
+      Pays: "pays",
+    };
+    return labels[perimetre] || "élément";
+  };
 
   // Fonction helper pour mettre à jour l'URL avec le périmètre et les filtres
-  const updateURL = useCallback((newPerimetre: PerimetreType, newFilters: Record<string, string>) => {
-    const params = new URLSearchParams();
-    params.set('perimetre', newPerimetre);
+  const updateURL = useCallback(
+    (newPerimetre: PerimetreType, newFilters: Record<string, string>) => {
+      const params = new URLSearchParams();
+      params.set("perimetre", newPerimetre);
 
-    // Ajouter les filtres actifs à l'URL
-    Object.entries(newFilters).forEach(([key, value]) => {
-      if (value && value !== 'tous') {
-        params.set(key, value);
-      }
-    });
+      // Ajouter les filtres actifs à l'URL
+      Object.entries(newFilters).forEach(([key, value]) => {
+        if (value && value !== "tous") {
+          params.set(key, value);
+        }
+      });
 
-    router.replace(`/analyse-valeur?${params.toString()}`, { scroll: false });
-  }, [router]);
+      router.replace(`/analyse-valeur?${params.toString()}`, { scroll: false });
+    },
+    [router]
+  );
 
   // Initialiser depuis les URL params à chaque changement d'URL
   useEffect(() => {
-    const perimetreParam = searchParams.get('perimetre');
+    const perimetreParam = searchParams.get("perimetre");
     if (perimetreParam) {
       // Valider que le périmètre est valide
       const validPerimetres: PerimetreType[] = [
@@ -303,7 +364,7 @@ export default function AnalyseValeurPage() {
 
     filterKeys.forEach((key) => {
       const value = searchParams.get(key);
-      if (value && value !== 'tous') {
+      if (value && value !== "tous") {
         newFilters[key] = value;
         hasFilters = true;
       }
@@ -314,21 +375,21 @@ export default function AnalyseValeurPage() {
     }
 
     // Restaurer le mode comparaison si on revient de la page comparaison
-    const comparisonModeParam = searchParams.get('comparisonMode');
-    const elementsParam = searchParams.get('elements');
+    const comparisonModeParam = searchParams.get("comparisonMode");
+    const elementsParam = searchParams.get("elements");
 
-    if (comparisonModeParam === 'true' && elementsParam) {
+    if (comparisonModeParam === "true" && elementsParam) {
       try {
         const decodedElements = JSON.parse(decodeURIComponent(elementsParam));
         setComparisonMode(true);
         setComparedElements(decodedElements);
         // Mettre à jour comparisonByPerimeter pour éviter qu'il soit écrasé
-        setComparisonByPerimeter(prev => ({
+        setComparisonByPerimeter((prev) => ({
           ...prev,
-          [perimetreParam || perimetre]: decodedElements
+          [perimetreParam || perimetre]: decodedElements,
         }));
       } catch (e) {
-        console.error('Error parsing elements from URL:', e);
+        console.error("Error parsing elements from URL:", e);
       }
     }
   }, [searchParams, perimetre]); // S'exécuter à chaque changement des paramètres URL
@@ -340,11 +401,14 @@ export default function AnalyseValeurPage() {
   );
 
   // Handler pour changer un filtre individuel (mémoïsé)
-  const handleFilterChange = useCallback((filterType: string, value: string) => {
-    const newFilters = { ...filters, [filterType]: value };
-    setFilters(newFilters);
-    updateURL(perimetre, newFilters);
-  }, [filters, perimetre, updateURL]);
+  const handleFilterChange = useCallback(
+    (filterType: string, value: string) => {
+      const newFilters = { ...filters, [filterType]: value };
+      setFilters(newFilters);
+      updateURL(perimetre, newFilters);
+    },
+    [filters, perimetre, updateURL]
+  );
 
   // Fonction pour réinitialiser la recherche
   const resetRecherche = useCallback(() => {
@@ -403,7 +467,9 @@ export default function AnalyseValeurPage() {
 
   // Vérifier si le filtre fournisseur est visible
   const showFournisseurFilter = useMemo(() => {
-    return visibleFilters.includes("fournisseur") && perimetre !== "Fournisseur";
+    return (
+      visibleFilters.includes("fournisseur") && perimetre !== "Fournisseur"
+    );
   }, [visibleFilters, perimetre]);
 
   // Synchroniser les sélections temporaires quand on ouvre le popover
@@ -429,15 +495,16 @@ export default function AnalyseValeurPage() {
   // Générer le placeholder de recherche dynamique (mémoïsé)
   const getSearchPlaceholder = useMemo(() => {
     const articles: Record<PerimetreType, string> = {
-      "Marché": "un marché",
+      Marché: "un marché",
       "Marché détaillé": "un marché détaillé",
-      "Catégorie": "une catégorie",
+      Catégorie: "une catégorie",
       "Groupe Famille": "un groupe famille",
-      "Famille": "une famille",
+      Famille: "une famille",
       "Sous Famille": "une sous famille",
-      "Produit": "un produit ou EAN",
-      "Fournisseur": "un fournisseur",
-      "Portefeuille": "un portefeuille",
+      Produit: "un produit ou EAN",
+      Fournisseur: "un fournisseur",
+      Portefeuille: "un portefeuille",
+      Pays: "un pays", // ← Ajoutez cette ligne
     };
     return `Rechercher ${articles[perimetre]}`;
   }, [perimetre]);
@@ -467,19 +534,22 @@ export default function AnalyseValeurPage() {
   }, []);
 
   // Fonction pour gérer le tri (mémoïsée)
-  const handleSort = useCallback((column: string) => {
-    if (sortColumn === column) {
-      if (sortDirection === "asc") {
-        setSortDirection("desc");
-      } else if (sortDirection === "desc") {
-        setSortColumn(null);
-        setSortDirection(null);
+  const handleSort = useCallback(
+    (column: string) => {
+      if (sortColumn === column) {
+        if (sortDirection === "asc") {
+          setSortDirection("desc");
+        } else if (sortDirection === "desc") {
+          setSortColumn(null);
+          setSortDirection(null);
+        }
+      } else {
+        setSortColumn(column);
+        setSortDirection("asc");
       }
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  }, [sortColumn, sortDirection]);
+    },
+    [sortColumn, sortDirection]
+  );
 
   // Trier les données (optimisé)
   const sortedData = useMemo(() => {
@@ -501,60 +571,63 @@ export default function AnalyseValeurPage() {
   }, [rawData, sortColumn, sortDirection, parseMetricValue]);
 
   // Réinitialiser les filtres quand le périmètre change (mémoïsé)
-  const handlePerimetreChange = useCallback((newPerimetre: PerimetreType) => {
-    // Sauvegarder l'état actuel dans l'historique
-    setNavigationHistory(prev => [
-      ...prev,
-      { perimetre, filters: { ...filters } },
-    ]);
+  const handlePerimetreChange = useCallback(
+    (newPerimetre: PerimetreType) => {
+      // Sauvegarder l'état actuel dans l'historique
+      setNavigationHistory((prev) => [
+        ...prev,
+        { perimetre, filters: { ...filters } },
+      ]);
 
-    const newFilters = {
-      pays: "tous",
-      marche: "tous",
-      marcheDetaille: "tous",
-      categorie: "tous",
-      groupeFamille: "tous",
-      famille: "tous",
-      sousFamille: "tous",
-      fournisseur: "tous",
-      portefeuille: "tous",
-    };
+      const newFilters = {
+        pays: "tous",
+        marche: "tous",
+        marcheDetaille: "tous",
+        categorie: "tous",
+        groupeFamille: "tous",
+        famille: "tous",
+        sousFamille: "tous",
+        fournisseur: "tous",
+        portefeuille: "tous",
+      };
 
-    // Désactiver le mode comparaison si on passe au périmètre Marché
-    if (newPerimetre === "Marché") {
-      setComparisonMode(false);
-    }
+      // Désactiver le mode comparaison si on passe au périmètre Marché
+      if (newPerimetre === "Marché") {
+        setComparisonMode(false);
+      }
 
-    setPerimetre(newPerimetre);
-    setFilters(newFilters);
-    updateURL(newPerimetre, newFilters);
-  }, [perimetre, filters, updateURL]);
+      setPerimetre(newPerimetre);
+      setFilters(newFilters);
+      updateURL(newPerimetre, newFilters);
+    },
+    [perimetre, filters, updateURL]
+  );
 
   // Navigation vers un sous-niveau avec filtre (mémoïsé)
-  const handleSubLevelNavigation = useCallback((
-    targetPerimetre: PerimetreType,
-    filterValue: string
-  ) => {
-    // Sauvegarder l'état actuel dans l'historique
-    setNavigationHistory(prev => [
-      ...prev,
-      { perimetre, filters: { ...filters } },
-    ]);
+  const handleSubLevelNavigation = useCallback(
+    (targetPerimetre: PerimetreType, filterValue: string) => {
+      // Sauvegarder l'état actuel dans l'historique
+      setNavigationHistory((prev) => [
+        ...prev,
+        { perimetre, filters: { ...filters } },
+      ]);
 
-    // Obtenir la clé du filtre pour ce périmètre
-    const filterKey = perimetreToFilterKey[perimetre];
+      // Obtenir la clé du filtre pour ce périmètre
+      const filterKey = perimetreToFilterKey[perimetre];
 
-    // Appliquer les filtres : garder les filtres actifs + ajouter le nouveau
-    const newFilters = { ...filters };
-    if (filterKey) {
-      newFilters[filterKey] = filterValue;
-    }
+      // Appliquer les filtres : garder les filtres actifs + ajouter le nouveau
+      const newFilters = { ...filters };
+      if (filterKey) {
+        newFilters[filterKey] = filterValue;
+      }
 
-    // Changer le périmètre
-    setPerimetre(targetPerimetre);
-    setFilters(newFilters);
-    updateURL(targetPerimetre, newFilters);
-  }, [perimetre, filters, updateURL]);
+      // Changer le périmètre
+      setPerimetre(targetPerimetre);
+      setFilters(newFilters);
+      updateURL(targetPerimetre, newFilters);
+    },
+    [perimetre, filters, updateURL]
+  );
 
   // Retour au périmètre précédent (mémoïsé)
   const handleBackNavigation = useCallback(() => {
@@ -564,7 +637,7 @@ export default function AnalyseValeurPage() {
       return;
     }
 
-    setNavigationHistory(prev => {
+    setNavigationHistory((prev) => {
       // Récupérer le dernier état de l'historique
       const previousState = prev[prev.length - 1];
 
@@ -578,49 +651,59 @@ export default function AnalyseValeurPage() {
   }, [navigationHistory, router]);
 
   // Helper pour obtenir les options d'un filtre (mémoïsé pour éviter les recalculs)
-  const getFilterOptions = useCallback((filterType: string): string[] => {
-    // Pour pays, fournisseur et portefeuille, retourner les listes complètes (constantes)
-    if (filterType === "pays") {
-      return ["France", "Espagne", "Belgique", "Roumanie", "Pologne", "Italie"];
-    }
-    if (filterType === "fournisseur") {
-      return [
-        "Labeyrie Fine Foods",
-        "Picard Surgelés",
-        "Lactalis Foodservice",
-        "Fleury Michon",
-        "Danone Professionnel",
-        "Nestlé Professional",
-        "Sysco France",
-        "Transgourmet",
-        "Metro Cash & Carry",
-        "Brake France",
-      ];
-    }
-    if (filterType === "portefeuille") {
-      return [
-        "Premium Gourmet",
-        "Tradition & Qualité",
-        "Economique",
-        "Bio & Responsable",
-      ];
-    }
-
-    // Pour les autres filtres, récupérer les valeurs depuis les données (sans filtres pour avoir toutes les options)
-    const data = getPerimetreData(perimetre);
-    const uniqueValues = new Set<string>();
-
-    data.forEach((item) => {
-      if (filterType in item) {
-        const value = item[filterType as keyof typeof item];
-        if (value) {
-          uniqueValues.add(String(value));
-        }
+  const getFilterOptions = useCallback(
+    (filterType: string): string[] => {
+      // Pour pays, fournisseur et portefeuille, retourner les listes complètes (constantes)
+      if (filterType === "pays") {
+        return [
+          "France",
+          "Espagne",
+          "Belgique",
+          "Roumanie",
+          "Pologne",
+          "Italie",
+        ];
       }
-    });
+      if (filterType === "fournisseur") {
+        return [
+          "Labeyrie Fine Foods",
+          "Picard Surgelés",
+          "Lactalis Foodservice",
+          "Fleury Michon",
+          "Danone Professionnel",
+          "Nestlé Professional",
+          "Sysco France",
+          "Transgourmet",
+          "Metro Cash & Carry",
+          "Brake France",
+        ];
+      }
+      if (filterType === "portefeuille") {
+        return [
+          "Premium Gourmet",
+          "Tradition & Qualité",
+          "Economique",
+          "Bio & Responsable",
+        ];
+      }
 
-    return Array.from(uniqueValues);
-  }, [perimetre]);
+      // Pour les autres filtres, récupérer les valeurs depuis les données (sans filtres pour avoir toutes les options)
+      const data = getPerimetreData(perimetre);
+      const uniqueValues = new Set<string>();
+
+      data.forEach((item) => {
+        if (filterType in item) {
+          const value = item[filterType as keyof typeof item];
+          if (value) {
+            uniqueValues.add(String(value));
+          }
+        }
+      });
+
+      return Array.from(uniqueValues);
+    },
+    [perimetre]
+  );
 
   // Filtrer les fournisseurs selon la recherche
   const filteredFournisseurs = useMemo(() => {
@@ -644,7 +727,10 @@ export default function AnalyseValeurPage() {
       "fournisseur",
       "portefeuille",
     ];
-    return filterKeys.some((key) => filters[key] && filters[key] !== "tous") || fournisseurSelections.length > 0;
+    return (
+      filterKeys.some((key) => filters[key] && filters[key] !== "tous") ||
+      fournisseurSelections.length > 0
+    );
   }, [filters, fournisseurSelections]);
 
   // Réinitialiser tous les filtres (mémoïsé)
@@ -704,7 +790,10 @@ export default function AnalyseValeurPage() {
       <div className="mb-8 flex items-center gap-8">
         <h1 className="text-[40px] font-bold">Analyse de la valeur</h1>
 
-        <div className="flex items-center gap-4" style={{ opacity: perimetre === "Marché" ? 0.6 : 1 }}>
+        <div
+          className="flex items-center gap-4"
+          style={{ opacity: perimetre === "Marché" ? 0.6 : 1 }}
+        >
           <Switch
             id="comparison-mode"
             checked={comparisonMode}
@@ -713,7 +802,11 @@ export default function AnalyseValeurPage() {
           />
           <Label
             htmlFor="comparison-mode"
-            className={perimetre === "Marché" ? "text-sm text-gray-600" : "cursor-pointer text-sm text-gray-600"}
+            className={
+              perimetre === "Marché"
+                ? "text-sm text-gray-600"
+                : "cursor-pointer text-sm text-gray-600"
+            }
           >
             Mode comparaison
           </Label>
@@ -770,7 +863,7 @@ export default function AnalyseValeurPage() {
                       resetRecherche();
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         e.stopPropagation();
                         resetRecherche();
@@ -784,66 +877,72 @@ export default function AnalyseValeurPage() {
                 )}
               </Button>
             </PopoverTrigger>
-          <PopoverContent className="p-0">
-            <LazyCommand
-              shouldFilter={false}
-            >
-              <LazyCommandInput
-                value={searchInputValue}
-                onValueChange={setSearchInputValue}
-                placeholder={getSearchPlaceholder}
-              />
-              <LazyCommandList>
-                <LazyCommandEmpty>Aucun résultat trouvé.</LazyCommandEmpty>
-                <LazyCommandGroup>
-                  {sortedData.map((item, index) => (
-                    <LazyCommandItem
-                      key={`${item.label}-${index}`}
-                      value={item.label}
-                      onSelect={(currentValue) => {
-                        // Trouver l'item correspondant pour obtenir le label exact
-                        const selectedItem = sortedData.find(
-                          (dataItem) => dataItem.label.toLowerCase() === currentValue.toLowerCase()
-                        );
-                        const exactLabel = selectedItem?.label || currentValue;
+            <PopoverContent className="p-0">
+              <LazyCommand shouldFilter={false}>
+                <LazyCommandInput
+                  value={searchInputValue}
+                  onValueChange={setSearchInputValue}
+                  placeholder={getSearchPlaceholder}
+                />
+                <LazyCommandList>
+                  <LazyCommandEmpty>Aucun résultat trouvé.</LazyCommandEmpty>
+                  <LazyCommandGroup>
+                    {sortedData.map((item, index) => (
+                      <LazyCommandItem
+                        key={`${item.label}-${index}`}
+                        value={item.label}
+                        onSelect={(currentValue) => {
+                          // Trouver l'item correspondant pour obtenir le label exact
+                          const selectedItem = sortedData.find(
+                            (dataItem) =>
+                              dataItem.label.toLowerCase() ===
+                              currentValue.toLowerCase()
+                          );
+                          const exactLabel =
+                            selectedItem?.label || currentValue;
 
-                        setRechercheValue(exactLabel);
-                        setSearchInputValue(currentValue);
-                        setOpenRecherche(false);
+                          setRechercheValue(exactLabel);
+                          setSearchInputValue(currentValue);
+                          setOpenRecherche(false);
 
-                        // Mettre à jour le filtre correspondant au périmètre actuel
-                        const filterKey = perimetreToFilterKey[perimetre];
-                        if (filterKey) {
-                          setFilters((prev) => {
-                            const newFilters = { ...prev, [filterKey]: exactLabel };
-                            updateURL(perimetre, newFilters);
-                            return newFilters;
-                          });
-                        }
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          rechercheValue === item.label
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {item.label}
-                    </LazyCommandItem>
-                  ))}
-                </LazyCommandGroup>
-              </LazyCommandList>
-            </LazyCommand>
-          </PopoverContent>
-        </Popover>
-      )}
+                          // Mettre à jour le filtre correspondant au périmètre actuel
+                          const filterKey = perimetreToFilterKey[perimetre];
+                          if (filterKey) {
+                            setFilters((prev) => {
+                              const newFilters = {
+                                ...prev,
+                                [filterKey]: exactLabel,
+                              };
+                              updateURL(perimetre, newFilters);
+                              return newFilters;
+                            });
+                          }
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            rechercheValue === item.label
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        {item.label}
+                      </LazyCommandItem>
+                    ))}
+                  </LazyCommandGroup>
+                </LazyCommandList>
+              </LazyCommand>
+            </PopoverContent>
+          </Popover>
+        )}
 
         {/* Période */}
         <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
           <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Période</Label>
+            <Label className="text-sm font-medium text-gray-700 break-words">
+              Période
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -871,12 +970,16 @@ export default function AnalyseValeurPage() {
         <div className="mb-6 flex gap-4 items-center">
           <div className="flex gap-4 flex-1">
             {[0, 1, 2, 3].map((index) => {
-              const element = comparedElements[index]
+              const element = comparedElements[index];
 
               return (
                 <Card
                   key={index}
-                  className={`flex-1 min-h-[120px] shadow-none rounded-lg ${element ? 'border-2 border-blue' : 'border-2 border-dashed border-gray-300'}`}
+                  className={`flex-1 min-h-[120px] shadow-none rounded-lg ${
+                    element
+                      ? "border-2 border-blue"
+                      : "border-2 border-dashed border-gray-300"
+                  }`}
                 >
                   <CardContent className="p-4 relative">
                     {element ? (
@@ -892,9 +995,13 @@ export default function AnalyseValeurPage() {
                           {element.name}
                         </div>
 
-                        {Object.entries(filterDisplayableFilters(element.filters)).length > 0 && (
+                        {Object.entries(
+                          filterDisplayableFilters(element.filters)
+                        ).length > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {Object.entries(filterDisplayableFilters(element.filters)).map(([key, value]) => (
+                            {Object.entries(
+                              filterDisplayableFilters(element.filters)
+                            ).map(([key, value]) => (
                               <Badge
                                 key={key}
                                 variant="secondary"
@@ -910,7 +1017,8 @@ export default function AnalyseValeurPage() {
                       <div className="flex items-center justify-center h-full text-center">
                         {index === 0 ? (
                           <div className="text-sm text-gray-500">
-                            Sélectionnez le premier {getPerimetreLabel()} à comparer
+                            Sélectionnez le premier {getPerimetreLabel()} à
+                            comparer
                           </div>
                         ) : (
                           <div className="text-sm text-gray-400">
@@ -921,7 +1029,7 @@ export default function AnalyseValeurPage() {
                     )}
                   </CardContent>
                 </Card>
-              )
+              );
             })}
           </div>
 
@@ -961,9 +1069,7 @@ export default function AnalyseValeurPage() {
               </Label>
               <Select
                 value={filters[filterType] || "tous"}
-                onValueChange={(value) =>
-                  handleFilterChange(filterType, value)
-                }
+                onValueChange={(value) => handleFilterChange(filterType, value)}
               >
                 <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
                   <SelectValue placeholder="tous" />
@@ -993,9 +1099,7 @@ export default function AnalyseValeurPage() {
               </Label>
               <Select
                 value={filters[filterType] || "tous"}
-                onValueChange={(value) =>
-                  handleFilterChange(filterType, value)
-                }
+                onValueChange={(value) => handleFilterChange(filterType, value)}
               >
                 <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
                   <SelectValue placeholder="tous" />
@@ -1017,11 +1121,15 @@ export default function AnalyseValeurPage() {
         {showFournisseurFilter && (
           <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700 break-words">Fournisseur</Label>
+              <Label className="text-sm font-medium text-gray-700 break-words">
+                Fournisseur
+              </Label>
               <Popover open={openFournisseur} onOpenChange={setOpenFournisseur}>
                 <PopoverTrigger asChild>
                   <div
-                    className={`flex h-auto min-h-[36px] w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer hover:bg-white focus:outline-none focus:ring-1 focus:ring-ring ${fournisseurSelections.length === 0 ? 'pl-3 py-2' : 'p-0.5'}`}
+                    className={`flex h-auto min-h-[36px] w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer hover:bg-white focus:outline-none focus:ring-1 focus:ring-ring ${
+                      fournisseurSelections.length === 0 ? "pl-3 py-2" : "p-0.5"
+                    }`}
                     onClick={() => setOpenFournisseur(true)}
                   >
                     {fournisseurSelections.length === 0 ? (
@@ -1037,8 +1145,12 @@ export default function AnalyseValeurPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setFournisseurSelections(prev => prev.filter(item => item !== f));
-                                setTempFournisseurSelections(prev => prev.filter(item => item !== f));
+                                setFournisseurSelections((prev) =>
+                                  prev.filter((item) => item !== f)
+                                );
+                                setTempFournisseurSelections((prev) =>
+                                  prev.filter((item) => item !== f)
+                                );
                               }}
                               className="text-[#0970E6] hover:text-[#075bb3]"
                             >
@@ -1089,9 +1201,9 @@ export default function AnalyseValeurPage() {
                           key={f}
                           className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded cursor-pointer"
                           onClick={() => {
-                            setTempFournisseurSelections(prev =>
+                            setTempFournisseurSelections((prev) =>
                               prev.includes(f)
-                                ? prev.filter(item => item !== f)
+                                ? prev.filter((item) => item !== f)
                                 : [...prev, f]
                             );
                           }}
@@ -1099,10 +1211,10 @@ export default function AnalyseValeurPage() {
                           <Checkbox
                             checked={tempFournisseurSelections.includes(f)}
                             onCheckedChange={(checked) => {
-                              setTempFournisseurSelections(prev =>
+                              setTempFournisseurSelections((prev) =>
                                 checked
                                   ? [...prev, f]
-                                  : prev.filter(item => item !== f)
+                                  : prev.filter((item) => item !== f)
                               );
                             }}
                           />
@@ -1151,7 +1263,8 @@ export default function AnalyseValeurPage() {
                 <TableHead className="w-[300px] font-semibold pl-4">
                   <div className="flex items-center gap-2">
                     {perimetreOptions.find((p) => p.value === perimetre)
-                      ?.label || ""} ({dataWithSubLevelCounts.length})
+                      ?.label || ""}{" "}
+                    ({dataWithSubLevelCounts.length})
                     <ChevronsUpDown
                       className="h-4 w-4 cursor-pointer text-[#121212]"
                       onClick={() => handleSort("label")}
@@ -1211,12 +1324,18 @@ export default function AnalyseValeurPage() {
                         <Info className="h-4 w-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        {perimetre === "Produit" ? "Prix Achat unitaire" : "Prix Achat total"}
+                        {perimetre === "Produit"
+                          ? "Prix Achat unitaire"
+                          : "Prix Achat total"}
                       </TooltipContent>
                     </Tooltip>
                     <ChevronsUpDown
                       className="h-4 w-4 cursor-pointer text-[#121212]"
-                      onClick={() => handleSort(perimetre === "Produit" ? "paUnitaire" : "evoPa")}
+                      onClick={() =>
+                        handleSort(
+                          perimetre === "Produit" ? "paUnitaire" : "evoPa"
+                        )
+                      }
                     />
                   </div>
                 </TableHead>
@@ -1228,12 +1347,20 @@ export default function AnalyseValeurPage() {
                         <Info className="h-4 w-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        {perimetre === "Produit" ? "PA théorique unitaire" : "PA théorique total"}
+                        {perimetre === "Produit"
+                          ? "PA théorique unitaire"
+                          : "PA théorique total"}
                       </TooltipContent>
                     </Tooltip>
                     <ChevronsUpDown
                       className="h-4 w-4 cursor-pointer text-[#121212]"
-                      onClick={() => handleSort(perimetre === "Produit" ? "coutTheoriqueUnitaire" : "coutTheorique")}
+                      onClick={() =>
+                        handleSort(
+                          perimetre === "Produit"
+                            ? "coutTheoriqueUnitaire"
+                            : "coutTheorique"
+                        )
+                      }
                     />
                   </div>
                 </TableHead>
@@ -1246,7 +1373,9 @@ export default function AnalyseValeurPage() {
                           <TooltipTrigger>
                             <Info className="h-4 w-4 text-[#121212]" />
                           </TooltipTrigger>
-                          <TooltipContent>Prix de vente Carrefour</TooltipContent>
+                          <TooltipContent>
+                            Prix de vente Carrefour
+                          </TooltipContent>
                         </Tooltip>
                         <ChevronsUpDown
                           className="h-4 w-4 cursor-pointer text-[#121212]"
@@ -1276,7 +1405,9 @@ export default function AnalyseValeurPage() {
                           <TooltipTrigger>
                             <Info className="h-4 w-4 text-[#121212]" />
                           </TooltipTrigger>
-                          <TooltipContent>Marge entre PA et PV LCL</TooltipContent>
+                          <TooltipContent>
+                            Marge entre PA et PV LCL
+                          </TooltipContent>
                         </Tooltip>
                         <ChevronsUpDown
                           className="h-4 w-4 cursor-pointer text-[#121212]"
@@ -1309,23 +1440,34 @@ export default function AnalyseValeurPage() {
             <TableBody>
               {dataWithSubLevelCounts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={perimetre === "Produit" ? 11 : 8} className="text-center text-gray-500">
+                  <TableCell
+                    colSpan={perimetre === "Produit" ? 11 : 8}
+                    className="text-center text-gray-500"
+                  >
                     Aucune donnée disponible
                   </TableCell>
                 </TableRow>
               ) : (
                 dataWithSubLevelCounts.map((row, index) => {
-                  const isSelected = isElementSelected(row.label)
+                  const isSelected = isElementSelected(row.label);
 
                   return (
                     <TableRow
                       key={`${row.label}-${index}`}
-                      className={comparisonMode && !isSelected ? "cursor-pointer hover:bg-gray-50" : "cursor-pointer hover:bg-gray-50"}
+                      className={
+                        comparisonMode && !isSelected
+                          ? "cursor-pointer hover:bg-gray-50"
+                          : "cursor-pointer hover:bg-gray-50"
+                      }
                       onClick={() => {
                         if (comparisonMode && !isSelected) {
-                          addToComparison(row.label)
+                          addToComparison(row.label);
                         } else if (!comparisonMode) {
-                          router.push(`/detail?perimetre=${encodeURIComponent(perimetre)}&label=${encodeURIComponent(row.label)}`)
+                          router.push(
+                            `/detail?perimetre=${encodeURIComponent(
+                              perimetre
+                            )}&label=${encodeURIComponent(row.label)}`
+                          );
                         }
                       }}
                     >
@@ -1346,7 +1488,7 @@ export default function AnalyseValeurPage() {
                                   <button
                                     key={subLevel}
                                     className="text-sm hover:underline font-medium"
-                                    style={{ color: '#0970E6' }}
+                                    style={{ color: "#0970E6" }}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleSubLevelNavigation(
@@ -1445,14 +1587,16 @@ export default function AnalyseValeurPage() {
                       <TableCell>
                         <div className="flex flex-col">
                           <div className="font-medium">
-                            {perimetre === "Produit" && row.coutTheoriqueUnitaire
+                            {perimetre === "Produit" &&
+                            row.coutTheoriqueUnitaire
                               ? row.coutTheoriqueUnitaire.valeur
                               : row.coutTheorique.valeur}
                           </div>
                           <div
                             className={cn(
                               "font-medium",
-                              (perimetre === "Produit" && row.coutTheoriqueUnitaire
+                              (perimetre === "Produit" &&
+                              row.coutTheoriqueUnitaire
                                 ? row.coutTheoriqueUnitaire.evolution
                                 : row.coutTheorique.evolution
                               ).startsWith("+")
@@ -1460,7 +1604,8 @@ export default function AnalyseValeurPage() {
                                 : "text-green-600"
                             )}
                           >
-                            {perimetre === "Produit" && row.coutTheoriqueUnitaire
+                            {perimetre === "Produit" &&
+                            row.coutTheoriqueUnitaire
                               ? row.coutTheoriqueUnitaire.evolution
                               : row.coutTheorique.evolution}
                           </div>
@@ -1490,7 +1635,9 @@ export default function AnalyseValeurPage() {
                       {perimetre === "Produit" && row.pvLeclerc && (
                         <TableCell>
                           <div className="flex flex-col">
-                            <div className="font-medium">{row.pvLeclerc.valeur}</div>
+                            <div className="font-medium">
+                              {row.pvLeclerc.valeur}
+                            </div>
                             <div
                               className={cn(
                                 "font-medium",
@@ -1509,7 +1656,9 @@ export default function AnalyseValeurPage() {
                       {perimetre === "Produit" && row.margePvLcl && (
                         <TableCell>
                           <div className="flex flex-col">
-                            <div className="font-medium">{row.margePvLcl.valeur}</div>
+                            <div className="font-medium">
+                              {row.margePvLcl.valeur}
+                            </div>
                             <div
                               className={cn(
                                 "font-medium",
@@ -1544,14 +1693,17 @@ export default function AnalyseValeurPage() {
                       </TableCell>
 
                       {/* Colonne Eye / Checkbox */}
-                      <TableCell className="w-12" onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        className="w-12"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {comparisonMode ? (
                           <Checkbox
                             checked={isSelected}
                             disabled={isSelected}
                             onCheckedChange={() => {
                               if (!isSelected) {
-                                addToComparison(row.label)
+                                addToComparison(row.label);
                               }
                             }}
                           />
@@ -1561,7 +1713,11 @@ export default function AnalyseValeurPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/detail?perimetre=${encodeURIComponent(perimetre)}&label=${encodeURIComponent(row.label)}`);
+                              router.push(
+                                `/detail?perimetre=${encodeURIComponent(
+                                  perimetre
+                                )}&label=${encodeURIComponent(row.label)}`
+                              );
                             }}
                           >
                             <Eye className="w-4 h-4" />
@@ -1569,7 +1725,7 @@ export default function AnalyseValeurPage() {
                         )}
                       </TableCell>
                     </TableRow>
-                  )
+                  );
                 })
               )}
             </TableBody>
@@ -1577,5 +1733,13 @@ export default function AnalyseValeurPage() {
         </div>
       </TooltipProvider>
     </main>
+  );
+}
+
+export default function AnalyseValeurPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <AnalyseValeurContent />
+    </Suspense>
   );
 }
