@@ -568,7 +568,7 @@ export default function AccueilPage() {
                 label="France"
                 percentage="34.43%"
                 evolution="+0.24%"
-                color="bg-[#F0FAF6]"
+                color="bg-[#FFEFEF]"
                 className="flex-[34] h-full"
                 href="/detail?perimetre=Pays&label=France"
                 totalPA={categorieData.evoPa.valeur}
@@ -578,7 +578,7 @@ export default function AccueilPage() {
                 label="Belgique"
                 percentage="25.32%"
                 evolution="-1.15%"
-                color="bg-[#FFEFEF]"
+                color="bg-[#F0FAF6]"
                 className="flex-[25] h-full"
                 href="/detail?perimetre=Pays&label=Belgique"
                 totalPA={categorieData.evoPa.valeur}
@@ -590,7 +590,7 @@ export default function AccueilPage() {
                   label="Espagne"
                   percentage="14.21%"
                   evolution="+1.18%"
-                  color="bg-[#8EE2BF]"
+                  color="bg-[#F57A7E]"
                   className="flex-[14] w-full"
                   href="/detail?perimetre=Pays&label=Espagne"
                   totalPA={categorieData.evoPa.valeur}
@@ -601,7 +601,7 @@ export default function AccueilPage() {
                     label="Roumanie"
                     percentage="8.36%"
                     evolution="+0.90%"
-                    color="bg-[#F0FAF6]"
+                    color="bg-[#FFEFEF]"
                     className="flex-[8] h-full"
                     href="/detail?perimetre=Pays&label=Roumanie"
                     totalPA={categorieData.evoPa.valeur}
@@ -610,7 +610,7 @@ export default function AccueilPage() {
                     label="Italie"
                     percentage="3.58%"
                     evolution="-1.60%"
-                    color="bg-[#F57A7E]"
+                    color="bg-[#8EE2BF]"
                     className="flex-[4] h-full"
                     href="/detail?perimetre=Pays&label=Italie"
                     totalPA={categorieData.evoPa.valeur}
@@ -619,7 +619,7 @@ export default function AccueilPage() {
                     label="Pologne"
                     percentage="2.10%"
                     evolution="+1.80%"
-                    color="bg-[#2FB67E]"
+                    color="bg-[#F25056]"
                     className="flex-[2] h-full"
                     href="/detail?perimetre=Pays&label=Pologne"
                     totalPA={categorieData.evoPa.valeur}
@@ -652,7 +652,7 @@ export default function AccueilPage() {
                 label="MPA"
                 percentage="42.03%"
                 evolution="-2.70%"
-                color="bg-[#F25056]"
+                color="bg-[#2FB67E]"
                 className="flex-[42] h-full"
                 href="/detail/mpa"
                 totalPA={categorieData.evoPa.valeur}
@@ -662,7 +662,7 @@ export default function AccueilPage() {
                 label="MPI"
                 percentage="37.23%"
                 evolution="-1.10%"
-                color="bg-[#FFEFEF]"
+                color="bg-[#F0FAF6]"
                 className="flex-[37] h-full"
                 href="/detail/mpi"
                 totalPA={categorieData.evoPa.valeur}
@@ -708,7 +708,7 @@ export default function AccueilPage() {
                 label="SURGELE VIANDES LEGUMES"
                 percentage="7.53%"
                 evolution="+1.60%"
-                color="bg-[#8EE2BF]"
+                color="bg-[#F57A7E]"
                 className="flex-[7.5] h-full"
                 href="/detail?perimetre=Catégorie&label=SURGELE VIANDES LEGUMES"
                 totalPA={categorieData.evoPa.valeur}
@@ -718,7 +718,7 @@ export default function AccueilPage() {
                 label="SURGELES GLACES PPI"
                 percentage="6.33%"
                 evolution="-1.69%"
-                color="bg-[#F57A7E]"
+                color="bg-[#8EE2BF]"
                 className="flex-[6.3] h-full"
                 href="/detail?perimetre=Catégorie&label=SURGELES GLACES PPI"
                 totalPA={categorieData.evoPa.valeur}
@@ -728,7 +728,7 @@ export default function AccueilPage() {
                 label="LAIT BEURRE CREME"
                 percentage="6.03%"
                 evolution="-7.60%"
-                color="bg-[#F25056]"
+                color="bg-[#2FB67E]"
                 className="flex-[6] h-full"
                 href="/detail?perimetre=Catégorie&label=LAIT BEURRE CREME"
                 totalPA={categorieData.evoPa.valeur}
@@ -740,7 +740,7 @@ export default function AccueilPage() {
                   label="SURGELE POISSON PLATS CUIS POT"
                   percentage="4.17%"
                   evolution="-1.70%"
-                  color="bg-[#F57A7E]"
+                  color="bg-[#8EE2BF]"
                   className="flex-[5.5] w-full"
                   href="/detail?perimetre=Catégorie&label=SURGELE POISSON PLATS CUIS POT"
                   totalPA={categorieData.evoPa.valeur}
@@ -751,7 +751,7 @@ export default function AccueilPage() {
                     label="TRAITEUR"
                     percentage="3.93%"
                     evolution="-1.21%"
-                    color="bg-[#FFEFEF]"
+                    color="bg-[#F0FAF6]"
                     className="flex-[3.9] h-full"
                     href="/detail?perimetre=Catégorie&label=TRAITEUR"
                     totalPA={categorieData.evoPa.valeur}
@@ -760,7 +760,7 @@ export default function AccueilPage() {
                     label="ULTRAFAIS"
                     percentage="3.65%"
                     evolution="-0.08%"
-                    color="bg-[#FFEFEF]"
+                    color="bg-[#F0FAF6]"
                     className="flex-[3.7] h-full"
                     href="/detail?perimetre=Catégorie&label=ULTRAFAIS"
                     totalPA={categorieData.evoPa.valeur}
@@ -772,7 +772,7 @@ export default function AccueilPage() {
                     label="FROMAGES"
                     percentage="3.32%"
                     evolution="-0.20%"
-                    color="bg-[#FFEFEF]"
+                    color="bg-[#F0FAF6]"
                     className="flex-[3.3] h-full"
                     href="/detail?perimetre=Catégorie&label=FROMAGES"
                     totalPA={categorieData.evoPa.valeur}
@@ -781,7 +781,7 @@ export default function AccueilPage() {
                     label="SAUCISSERIE"
                     percentage="2.63%"
                     evolution="-1.80%"
-                    color="bg-[#F57A7E]"
+                    color="bg-[#8EE2BF]"
                     className="flex-[2.6] h-full"
                     href="/detail?perimetre=Catégorie&label=SAUCISSERIE"
                     totalPA={categorieData.evoPa.valeur}
@@ -790,7 +790,7 @@ export default function AccueilPage() {
                     label="VOLAILLE CHARCUTERIE"
                     percentage="1.93%"
                     evolution="-0.69%"
-                    color="bg-[#FFEFEF]"
+                    color="bg-[#F0FAF6]"
                     className="flex-[2] h-full"
                     href="/detail?perimetre=Catégorie&label=VOLAILLE CHARCUTERIE"
                     totalPA={categorieData.evoPa.valeur}
@@ -802,14 +802,24 @@ export default function AccueilPage() {
                 // Heatmap par famille (portefeuille spécifique)
                 <>
                   {top5Famille.map((item, index) => {
-                    const colors = ['bg-[#8EE2BF]', 'bg-[#F0FAF6]', 'bg-[#FFEFEF]', 'bg-[#F57A7E]', 'bg-[#F25056]']
+                    // Calculer la couleur en fonction de l'évolution (logique inversée pour PA)
+                    const getColorFromEvolution = (evolution: string) => {
+                      const value = parseFloat(evolution.replace('%', ''))
+                      if (value >= 1.5) return 'bg-[#F25056]' // Rouge foncé pour forte hausse
+                      if (value >= 0.5) return 'bg-[#F57A7E]' // Rouge moyen
+                      if (value > 0) return 'bg-[#FFEFEF]' // Rouge clair
+                      if (value >= -0.5) return 'bg-[#F0FAF6]' // Vert clair
+                      if (value >= -1.5) return 'bg-[#8EE2BF]' // Vert moyen
+                      return 'bg-[#2FB67E]' // Vert foncé pour forte baisse
+                    }
+
                     return (
                       <HeatmapRect
                         key={item.id}
                         label={item.label}
                         percentage={item.ca.valeur}
                         evolution={item.ca.evolution}
-                        color={colors[index] || 'bg-gray-200'}
+                        color={getColorFromEvolution(item.ca.evolution)}
                         className="flex-1 h-full"
                         href={`/detail?perimetre=Famille&label=${encodeURIComponent(item.label)}`}
                         totalPA={categorieData.evoPa.valeur}
@@ -844,7 +854,7 @@ export default function AccueilPage() {
                 label="Lactalis"
                 percentage="21.12%"
                 evolution="-0.29%"
-                color="bg-[#FFEFEF]"
+                color="bg-[#F0FAF6]"
                 className="flex-[21] h-full"
                 href="/detail?perimetre=Fournisseur&label=Lactalis"
                 totalPA={categorieData.evoPa.valeur}
@@ -854,7 +864,7 @@ export default function AccueilPage() {
                 label="Savencia"
                 percentage="19.24%"
                 evolution="-0.80%"
-                color="bg-[#FFEFEF]"
+                color="bg-[#F0FAF6]"
                 className="flex-[19] h-full"
                 href="/detail?perimetre=Fournisseur&label=Savencia"
                 totalPA={categorieData.evoPa.valeur}
@@ -864,7 +874,7 @@ export default function AccueilPage() {
                 label="Bel"
                 percentage="8.53%"
                 evolution="+0.80%"
-                color="bg-[#F0FAF6]"
+                color="bg-[#FFEFEF]"
                 className="flex-[8.5] h-full"
                 href="/detail?perimetre=Fournisseur&label=Bel"
                 totalPA={categorieData.evoPa.valeur}
@@ -876,7 +886,7 @@ export default function AccueilPage() {
                   label="Fromageries BEL"
                   percentage="7.93%"
                   evolution="+1.80%"
-                  color="bg-[#8EE2BF]"
+                  color="bg-[#F57A7E]"
                   className="flex-[8] w-full"
                   href="/detail?perimetre=Fournisseur&label=Fromageries BEL"
                   totalPA={categorieData.evoPa.valeur}
@@ -886,7 +896,7 @@ export default function AccueilPage() {
                   label="Agrial"
                   percentage="6.93%"
                   evolution="-0.60%"
-                  color="bg-[#FFEFEF]"
+                  color="bg-[#F0FAF6]"
                   className="flex-[7] w-full"
                   href="/detail?perimetre=Fournisseur&label=Agrial"
                   totalPA={categorieData.evoPa.valeur}
@@ -897,7 +907,7 @@ export default function AccueilPage() {
                     label="Sodaal"
                     percentage="4.07%"
                     evolution="-0.90%"
-                    color="bg-[#FFEFEF]"
+                    color="bg-[#F0FAF6]"
                     className="flex-[4] h-full"
                     href="/detail?perimetre=Fournisseur&label=Sodaal"
                     totalPA={categorieData.evoPa.valeur}
@@ -906,7 +916,7 @@ export default function AccueilPage() {
                     label="Eurial"
                     percentage="3.00%"
                     evolution="-0.06%"
-                    color="bg-[#FFEFEF]"
+                    color="bg-[#F0FAF6]"
                     className="flex-[3] h-full"
                     href="/detail?perimetre=Fournisseur&label=Eurial"
                     totalPA={categorieData.evoPa.valeur}
@@ -915,7 +925,7 @@ export default function AccueilPage() {
                     label="Triballat Noyal"
                     percentage="2.33%"
                     evolution="-3.21%"
-                    color="bg-[#F25056]"
+                    color="bg-[#2FB67E]"
                     className="flex-[2.4] h-full"
                     href="/detail?perimetre=Fournisseur&label=Triballat Noyal"
                     totalPA={categorieData.evoPa.valeur}

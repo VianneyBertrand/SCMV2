@@ -57,6 +57,7 @@ const XAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis
 const YAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), { ssr: false });
 const CartesianGrid = dynamic(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })), { ssr: false });
 const RechartsTooltip = dynamic(() => import('recharts').then(mod => ({ default: mod.Tooltip })), { ssr: false });
+const Brush = dynamic(() => import('recharts').then(mod => ({ default: mod.Brush })), { ssr: false });
 
 // Types
 interface MatierePremiere {
@@ -1066,7 +1067,8 @@ export default function CoursMatieresPremieres() {
         </div>
 
         {/* Graphique */}
-        <ResponsiveContainer width="100%" height={400}>
+        <div className="overflow-hidden">
+        <ResponsiveContainer width="100%" height={400} style={{ paddingBottom: '20px' }}>
           <LineChart data={getEvolutionData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tick={{ fontSize: 12 }} />
@@ -1083,13 +1085,10 @@ export default function CoursMatieresPremieres() {
                 hide={legendOpacityEvolution[matiere.code] === false}
               />
             ))}
+            <Brush dataKey="date" height={30} stroke="#0970E6" fill="#FFFFFF" />
           </LineChart>
         </ResponsiveContainer>
-
-          {/* Range Slider */}
-          <div className="mt-6 px-4">
-            <Slider min={0} max={100} step={1} value={evolutionDateRange} onValueChange={setEvolutionDateRange} />
-          </div>
+        </div>
         </div>
       </div>
 
@@ -1330,7 +1329,8 @@ export default function CoursMatieresPremieres() {
         </div>
 
         {/* Graphique annuel */}
-        <ResponsiveContainer width="100%" height={400}>
+        <div className="overflow-hidden">
+        <ResponsiveContainer width="100%" height={400} style={{ paddingBottom: '20px' }}>
           <LineChart data={base100Annuel ? annualData.map((item, index) => {
             if (index === 0) return item;
             const newItem: any = { mois: item.mois };
@@ -1362,13 +1362,10 @@ export default function CoursMatieresPremieres() {
                 hide={legendOpacityAnnual[item.year] === false}
               />
             ))}
+            <Brush dataKey="mois" height={30} stroke="#0970E6" fill="#FFFFFF" />
           </LineChart>
         </ResponsiveContainer>
-
-          {/* Range Slider */}
-          <div className="mt-6 px-4">
-            <Slider min={0} max={100} step={1} value={annuelDateRange} onValueChange={setAnnuelDateRange} />
-          </div>
+        </div>
         </div>
       </div>
     </main>
