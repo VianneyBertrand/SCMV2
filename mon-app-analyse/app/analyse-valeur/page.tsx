@@ -115,6 +115,8 @@ interface NavigationHistoryItem {
   perimetre: PerimetreType;
   filters: Record<string, string>;
   fournisseurSelections: string[];
+  paysSelections: string[];
+  portefeuilleSelections: string[];
 }
 
 // Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
@@ -161,6 +163,18 @@ function AnalyseValeurContent() {
   >([]);
   const [openFournisseur, setOpenFournisseur] = useState(false);
   const [fournisseurSearch, setFournisseurSearch] = useState("");
+
+  // States pour la multi-sélection des pays
+  const [paysSelections, setPaysSelections] = useState<string[]>([]);
+  const [tempPaysSelections, setTempPaysSelections] = useState<string[]>([]);
+  const [openPays, setOpenPays] = useState(false);
+  const [paysSearch, setPaysSearch] = useState("");
+
+  // States pour la multi-sélection des portefeuilles
+  const [portefeuilleSelections, setPortefeuilleSelections] = useState<string[]>([]);
+  const [tempPortefeuilleSelections, setTempPortefeuilleSelections] = useState<string[]>([]);
+  const [openPortefeuille, setOpenPortefeuille] = useState(false);
+  const [portefeuilleSearch, setPortefeuilleSearch] = useState("");
 
   // States pour les filtres dynamiques
   const [filters, setFilters] = useState<Record<string, string>>({
@@ -222,6 +236,14 @@ function AnalyseValeurContent() {
     // Ajouter les fournisseurs sélectionnés
     if (fournisseurSelections.length > 0) {
       activeFilters.fournisseurs = fournisseurSelections.join(" + ");
+    }
+    // Ajouter les pays sélectionnés
+    if (paysSelections.length > 0) {
+      activeFilters.pays = paysSelections.join(" + ");
+    }
+    // Ajouter les portefeuilles sélectionnés
+    if (portefeuilleSelections.length > 0) {
+      activeFilters.portefeuille = portefeuilleSelections.join(" + ");
     }
     return activeFilters;
   };
@@ -482,6 +504,20 @@ function AnalyseValeurContent() {
     }
   }, [openFournisseur, fournisseurSelections]);
 
+  // Synchroniser les sélections temporaires pays quand on ouvre le popover
+  useEffect(() => {
+    if (openPays) {
+      setTempPaysSelections(paysSelections);
+    }
+  }, [openPays, paysSelections]);
+
+  // Synchroniser les sélections temporaires portefeuille quand on ouvre le popover
+  useEffect(() => {
+    if (openPortefeuille) {
+      setTempPortefeuilleSelections(portefeuilleSelections);
+    }
+  }, [openPortefeuille, portefeuilleSelections]);
+
   // Options de périmètre
   const perimetreOptions = [
     { value: "Marché" as const, label: "Marché" },
@@ -579,7 +615,13 @@ function AnalyseValeurContent() {
       // Sauvegarder l'état actuel dans l'historique
       setNavigationHistory((prev) => [
         ...prev,
-        { perimetre, filters: { ...filters }, fournisseurSelections: [...fournisseurSelections] },
+        {
+          perimetre,
+          filters: { ...filters },
+          fournisseurSelections: [...fournisseurSelections],
+          paysSelections: [...paysSelections],
+          portefeuilleSelections: [...portefeuilleSelections]
+        },
       ]);
 
       const newFilters = {
@@ -603,9 +645,13 @@ function AnalyseValeurContent() {
       setFilters(newFilters);
       setFournisseurSelections([]);
       setTempFournisseurSelections([]);
+      setPaysSelections([]);
+      setTempPaysSelections([]);
+      setPortefeuilleSelections([]);
+      setTempPortefeuilleSelections([]);
       updateURL(newPerimetre, newFilters);
     },
-    [perimetre, filters, fournisseurSelections, updateURL]
+    [perimetre, filters, fournisseurSelections, paysSelections, portefeuilleSelections, updateURL]
   );
 
   // Navigation vers un sous-niveau avec filtre (mémoïsé)
@@ -614,7 +660,13 @@ function AnalyseValeurContent() {
       // Sauvegarder l'état actuel dans l'historique
       setNavigationHistory((prev) => [
         ...prev,
-        { perimetre, filters: { ...filters }, fournisseurSelections: [...fournisseurSelections] },
+        {
+          perimetre,
+          filters: { ...filters },
+          fournisseurSelections: [...fournisseurSelections],
+          paysSelections: [...paysSelections],
+          portefeuilleSelections: [...portefeuilleSelections]
+        },
       ]);
 
       // Obtenir la clé du filtre pour ce périmètre
@@ -631,7 +683,7 @@ function AnalyseValeurContent() {
       setFilters(newFilters);
       updateURL(targetPerimetre, newFilters);
     },
-    [perimetre, filters, fournisseurSelections, updateURL]
+    [perimetre, filters, fournisseurSelections, paysSelections, portefeuilleSelections, updateURL]
   );
 
   // Retour au périmètre précédent (mémoïsé)
@@ -649,6 +701,10 @@ function AnalyseValeurContent() {
     setFilters(previousState.filters);
     setFournisseurSelections(previousState.fournisseurSelections);
     setTempFournisseurSelections(previousState.fournisseurSelections);
+    setPaysSelections(previousState.paysSelections);
+    setTempPaysSelections(previousState.paysSelections);
+    setPortefeuilleSelections(previousState.portefeuilleSelections);
+    setTempPortefeuilleSelections(previousState.portefeuilleSelections);
     updateURL(previousState.perimetre, previousState.filters);
 
     // Retirer cet état de l'historique
@@ -714,6 +770,24 @@ function AnalyseValeurContent() {
     );
   }, [fournisseurSearch, getFilterOptions]);
 
+  // Filtrer les pays selon la recherche
+  const filteredPays = useMemo(() => {
+    const allPays = getFilterOptions("pays");
+    if (!paysSearch) return allPays;
+    return allPays.filter((p) =>
+      p.toLowerCase().includes(paysSearch.toLowerCase())
+    );
+  }, [paysSearch, getFilterOptions]);
+
+  // Filtrer les portefeuilles selon la recherche
+  const filteredPortefeuilles = useMemo(() => {
+    const allPortefeuilles = getFilterOptions("portefeuille");
+    if (!portefeuilleSearch) return allPortefeuilles;
+    return allPortefeuilles.filter((p) =>
+      p.toLowerCase().includes(portefeuilleSearch.toLowerCase())
+    );
+  }, [portefeuilleSearch, getFilterOptions]);
+
   // Vérifier si au moins un filtre est actif
   const hasActiveFilters = useMemo(() => {
     const filterKeys: FilterType[] = [
@@ -729,9 +803,11 @@ function AnalyseValeurContent() {
     ];
     return (
       filterKeys.some((key) => filters[key] && filters[key] !== "tous") ||
-      fournisseurSelections.length > 0
+      fournisseurSelections.length > 0 ||
+      paysSelections.length > 0 ||
+      portefeuilleSelections.length > 0
     );
-  }, [filters, fournisseurSelections]);
+  }, [filters, fournisseurSelections, paysSelections, portefeuilleSelections]);
 
   // Réinitialiser tous les filtres (mémoïsé)
   const handleResetFilters = useCallback(() => {
@@ -749,6 +825,10 @@ function AnalyseValeurContent() {
     setFilters(newFilters);
     setFournisseurSelections([]);
     setTempFournisseurSelections([]);
+    setPaysSelections([]);
+    setTempPaysSelections([]);
+    setPortefeuilleSelections([]);
+    setTempPortefeuilleSelections([]);
     updateURL(perimetre, newFilters);
   }, [perimetre, updateURL]);
 
@@ -1207,35 +1287,130 @@ function AnalyseValeurContent() {
           </Card>
         ))}
 
-        {/* Autres filtres (Pays, Portefeuille) */}
-        {otherFilters.map((filterType) => (
-          <Card
-            key={filterType}
-            className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none"
-          >
+        {/* Pays avec multi-sélection */}
+        {otherFilters.includes("pays") && (
+          <Card className={`border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none ${hierarchyFilters.length > 0 ? 'ml-2' : ''}`}>
             <div className="flex items-center gap-2">
               <Label className="text-sm font-medium text-gray-700 break-words">
-                {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                Pays
               </Label>
-              <Select
-                value={filters[filterType] || "tous"}
-                onValueChange={(value) => handleFilterChange(filterType, value)}
-              >
-                <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                  <SelectValue placeholder="tous" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tous">tous</SelectItem>
-                  {getFilterOptions(filterType).map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openPays} onOpenChange={setOpenPays}>
+                <PopoverTrigger asChild>
+                  <div
+                    className={`flex h-9 w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring ${
+                      paysSelections.length === 0 ? "pl-3 py-2" : "p-0.5"
+                    }`}
+                    onClick={() => setOpenPays(true)}
+                  >
+                    {paysSelections.length === 0 ? (
+                      <span className="text-[16px]">tous</span>
+                    ) : (
+                      <div className="flex items-center gap-1 flex-1 overflow-hidden flex-wrap">
+                        {paysSelections.slice(0, 2).map((p, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
+                          >
+                            <span className="text-[14px] font-medium">{p}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPaysSelections((prev) =>
+                                  prev.filter((item) => item !== p)
+                                );
+                                setTempPaysSelections((prev) =>
+                                  prev.filter((item) => item !== p)
+                                );
+                              }}
+                              className="text-[#0970E6] hover:text-[#075bb3]"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {paysSelections.length > 2 && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            +{paysSelections.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <ChevronDownIcon className="h-4 w-4 text-[#0970E6] ml-2 mr-2 flex-shrink-0" />
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <div className="flex flex-col">
+                    {/* Champ de recherche */}
+                    <div className="p-3 border-b">
+                      <Input
+                        placeholder="Rechercher pays..."
+                        value={paysSearch}
+                        onChange={(e) => setPaysSearch(e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
+
+                    {/* Bouton Tout désélectionner */}
+                    {tempPaysSelections.length > 0 && (
+                      <div className="px-3 pt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs text-gray-600 hover:text-gray-900"
+                          onClick={() => setTempPaysSelections([])}
+                        >
+                          Tout désélectionner
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Liste avec checkboxes */}
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                      {filteredPays.map((p) => (
+                        <div
+                          key={p}
+                          className="flex items-center gap-2 px-4 py-4 rounded cursor-pointer"
+                          onClick={() => {
+                            setTempPaysSelections((prev) =>
+                              prev.includes(p)
+                                ? prev.filter((item) => item !== p)
+                                : [...prev, p]
+                            );
+                          }}
+                        >
+                          <Checkbox
+                            checked={tempPaysSelections.includes(p)}
+                            onCheckedChange={(checked) => {
+                              setTempPaysSelections((prev) =>
+                                checked
+                                  ? [...prev, p]
+                                  : prev.filter((item) => item !== p)
+                              );
+                            }}
+                          />
+                          <span className="text-[16px]">{p}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bouton Valider */}
+                    <div className="p-3 border-t">
+                      <Button
+                        className="w-full bg-[#0970E6] hover:bg-[#075bb3] text-white"
+                        onClick={() => {
+                          setPaysSelections(tempPaysSelections);
+                          setOpenPays(false);
+                        }}
+                      >
+                        Valider
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </Card>
-        ))}
+        )}
 
         {/* Fournisseur avec multi-sélection */}
         {showFournisseurFilter && (
@@ -1362,12 +1537,137 @@ function AnalyseValeurContent() {
           </Card>
         )}
 
+        {/* Portefeuille avec multi-sélection */}
+        {otherFilters.includes("portefeuille") && (
+          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium text-gray-700 break-words">
+                Portefeuille
+              </Label>
+              <Popover open={openPortefeuille} onOpenChange={setOpenPortefeuille}>
+                <PopoverTrigger asChild>
+                  <div
+                    className={`flex h-9 w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring ${
+                      portefeuilleSelections.length === 0 ? "pl-3 py-2" : "p-0.5"
+                    }`}
+                    onClick={() => setOpenPortefeuille(true)}
+                  >
+                    {portefeuilleSelections.length === 0 ? (
+                      <span className="text-[16px]">tous</span>
+                    ) : (
+                      <div className="flex items-center gap-1 flex-1 overflow-hidden flex-wrap">
+                        {portefeuilleSelections.slice(0, 2).map((p, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
+                          >
+                            <span className="text-[14px] font-medium">{p}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPortefeuilleSelections((prev) =>
+                                  prev.filter((item) => item !== p)
+                                );
+                                setTempPortefeuilleSelections((prev) =>
+                                  prev.filter((item) => item !== p)
+                                );
+                              }}
+                              className="text-[#0970E6] hover:text-[#075bb3]"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {portefeuilleSelections.length > 2 && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            +{portefeuilleSelections.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <ChevronDownIcon className="h-4 w-4 text-[#0970E6] ml-2 mr-2 flex-shrink-0" />
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <div className="flex flex-col">
+                    {/* Champ de recherche */}
+                    <div className="p-3 border-b">
+                      <Input
+                        placeholder="Rechercher portefeuille..."
+                        value={portefeuilleSearch}
+                        onChange={(e) => setPortefeuilleSearch(e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
+
+                    {/* Bouton Tout désélectionner */}
+                    {tempPortefeuilleSelections.length > 0 && (
+                      <div className="px-3 pt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs text-gray-600 hover:text-gray-900"
+                          onClick={() => setTempPortefeuilleSelections([])}
+                        >
+                          Tout désélectionner
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Liste avec checkboxes */}
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                      {filteredPortefeuilles.map((p) => (
+                        <div
+                          key={p}
+                          className="flex items-center gap-2 px-4 py-4 rounded cursor-pointer"
+                          onClick={() => {
+                            setTempPortefeuilleSelections((prev) =>
+                              prev.includes(p)
+                                ? prev.filter((item) => item !== p)
+                                : [...prev, p]
+                            );
+                          }}
+                        >
+                          <Checkbox
+                            checked={tempPortefeuilleSelections.includes(p)}
+                            onCheckedChange={(checked) => {
+                              setTempPortefeuilleSelections((prev) =>
+                                checked
+                                  ? [...prev, p]
+                                  : prev.filter((item) => item !== p)
+                              );
+                            }}
+                          />
+                          <span className="text-[16px]">{p}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bouton Valider */}
+                    <div className="p-3 border-t">
+                      <Button
+                        className="w-full bg-[#0970E6] hover:bg-[#075bb3] text-white"
+                        onClick={() => {
+                          setPortefeuilleSelections(tempPortefeuilleSelections);
+                          setOpenPortefeuille(false);
+                        }}
+                      >
+                        Valider
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </Card>
+        )}
+
         {/* Bouton Réinitialiser */}
         {hasActiveFilters && (
           <Button
             variant="outline"
             onClick={handleResetFilters}
-            className="h-[52px] border-gray-300 bg-white hover:bg-gray-50"
+            className="h-[52px] border-blue text-blue bg-white hover:border-[#004E9B] hover:text-[#004E9B]"
           >
             Réinitialiser
           </Button>
