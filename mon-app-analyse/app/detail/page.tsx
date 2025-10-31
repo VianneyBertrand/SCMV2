@@ -39,15 +39,18 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useMemo, useState, Suspense } from "react"
 import dynamic from 'next/dynamic'
 
-// Lazy load Recharts components
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false });
-const LineChart = dynamic(() => import('recharts').then(mod => ({ default: mod.LineChart })), { ssr: false });
-const Line = dynamic(() => import('recharts').then(mod => ({ default: mod.Line })), { ssr: false });
-const XAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis })), { ssr: false });
-const YAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), { ssr: false });
-const CartesianGrid = dynamic(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })), { ssr: false });
-const RechartsTooltip = dynamic(() => import('recharts').then(mod => ({ default: mod.Tooltip })), { ssr: false });
-const Legend = dynamic(() => import('recharts').then(mod => ({ default: mod.Legend })), { ssr: false });
+// Import Recharts components directly
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  Brush
+} from 'recharts';
 
 // Composant HeatmapRect (copié depuis app/accueil/page.tsx)
 interface HeatmapRectProps {
@@ -287,10 +290,14 @@ function DetailContent() {
   // États pour Evolution Prix
   const [evolutionPeriod, setEvolutionPeriod] = useState<'mois' | 'semaine' | 'jour'>('mois')
   const [evolutionBase100, setEvolutionBase100] = useState(false)
-  const [evolutionDateRange, setEvolutionDateRange] = useState([0, 100])
+  const [evolutionDateRange, setEvolutionDateRange] = useState<{startIndex: number, endIndex: number}>({startIndex: 0, endIndex: 11})
   const [evolutionLegendOpacity, setEvolutionLegendOpacity] = useState<Record<string, boolean>>({
     PA: true,
     'cout-theorique': true,
+    PV: false,
+    'PV-LCL': false,
+    'Marge-PV': false,
+    'Marge-PV-LCL': false,
   })
 
   // Récupérer l'item spécifique
@@ -1050,7 +1057,20 @@ function DetailContent() {
 
   // Données Evolution Prix - Graphique
   const getEvolutionChartData = () => {
-    const baseData = [
+    const baseData = perimetre === "Produit" ? [
+      { date: '2024-04', PA: 320, 'cout-theorique': 260, PV: 450, 'PV-LCL': 430, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-05', PA: 315, 'cout-theorique': 250, PV: 445, 'PV-LCL': 425, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-06', PA: 310, 'cout-theorique': 220, PV: 440, 'PV-LCL': 420, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-07', PA: 325, 'cout-theorique': 250, PV: 455, 'PV-LCL': 435, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-08', PA: 335, 'cout-theorique': 270, PV: 465, 'PV-LCL': 445, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-09', PA: 340, 'cout-theorique': 280, PV: 470, 'PV-LCL': 450, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-10', PA: 345, 'cout-theorique': 285, PV: 475, 'PV-LCL': 455, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-11', PA: 350, 'cout-theorique': 290, PV: 480, 'PV-LCL': 460, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2024-12', PA: 355, 'cout-theorique': 295, PV: 485, 'PV-LCL': 465, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2025-01', PA: 360, 'cout-theorique': 300, PV: 490, 'PV-LCL': 470, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2025-02', PA: 365, 'cout-theorique': 305, PV: 495, 'PV-LCL': 475, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+      { date: '2025-03', PA: 370, 'cout-theorique': 310, PV: 500, 'PV-LCL': 480, 'Marge-PV': 130, 'Marge-PV-LCL': 110 },
+    ] : [
       { date: '2024-04', PA: 320, 'cout-theorique': 260 },
       { date: '2024-05', PA: 315, 'cout-theorique': 250 },
       { date: '2024-06', PA: 310, 'cout-theorique': 220 },
@@ -1069,6 +1089,23 @@ function DetailContent() {
       const firstPA = baseData[0].PA
       const firstCT = baseData[0]['cout-theorique']
 
+      if (perimetre === "Produit") {
+        const firstPV = baseData[0].PV
+        const firstPVLCL = baseData[0]['PV-LCL']
+        const firstMargePV = baseData[0]['Marge-PV']
+        const firstMargePVLCL = baseData[0]['Marge-PV-LCL']
+
+        return baseData.map(item => ({
+          date: item.date,
+          PA: (item.PA / firstPA) * 100,
+          'cout-theorique': (item['cout-theorique'] / firstCT) * 100,
+          PV: (item.PV / firstPV) * 100,
+          'PV-LCL': (item['PV-LCL'] / firstPVLCL) * 100,
+          'Marge-PV': (item['Marge-PV'] / firstMargePV) * 100,
+          'Marge-PV-LCL': (item['Marge-PV-LCL'] / firstMargePVLCL) * 100,
+        }))
+      }
+
       return baseData.map(item => ({
         date: item.date,
         PA: (item.PA / firstPA) * 100,
@@ -1078,6 +1115,39 @@ function DetailContent() {
 
     return baseData
   }
+
+  // Calcul des évolutions dynamiques basées sur la période sélectionnée (Brush)
+  const evolutionCardData = useMemo(() => {
+    const chartData = getEvolutionChartData()
+    const { startIndex, endIndex } = evolutionDateRange
+
+    if (startIndex === endIndex || !chartData[startIndex] || !chartData[endIndex]) {
+      return null
+    }
+
+    const startData = chartData[startIndex]
+    const endData = chartData[endIndex]
+
+    const calculateEvolution = (start: number, end: number) => {
+      if (start === 0) return '+0.0%'
+      const evolution = ((end - start) / start) * 100
+      return `${evolution >= 0 ? '+' : ''}${evolution.toFixed(1)}%`
+    }
+
+    const result: any = {
+      PA: calculateEvolution(startData.PA, endData.PA),
+      'PA théorique': calculateEvolution(startData['cout-theorique'], endData['cout-theorique'])
+    }
+
+    if (perimetre === "Produit") {
+      result['PV'] = calculateEvolution(startData.PV, endData.PV)
+      result['PV LCL'] = calculateEvolution(startData['PV-LCL'], endData['PV-LCL'])
+      result['Marge PV'] = calculateEvolution(startData['Marge-PV'], endData['Marge-PV'])
+      result['Marge PV LCL'] = calculateEvolution(startData['Marge-PV-LCL'], endData['Marge-PV-LCL'])
+    }
+
+    return result
+  }, [evolutionDateRange, perimetre, evolutionBase100])
 
   // Données Evolution Prix - Tableau
   const getEvolutionTableData = () => {
@@ -1984,9 +2054,9 @@ function DetailContent() {
                   </div>
 
                   {/* Graphique */}
-                  <div className="mb-6">
-                    <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={getChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
+                  <div className="mb-6" style={{ paddingBottom: '20px' }}>
+                    <ResponsiveContainer width="100%" height={400} style={{ overflow: 'visible' }}>
+                    <LineChart data={getChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }} style={{ overflow: 'visible' }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} />
@@ -2058,6 +2128,12 @@ function DetailContent() {
                           <Line type="monotone" dataKey="plastique-emballage" stroke="#FFA726" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['plastique-emballage']} />
                         </>
                       )}
+                      <Brush
+                        dataKey="date"
+                        height={30}
+                        stroke="#0970E6"
+                        fill="#FFFFFF"
+                      />
                     </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -2447,7 +2523,19 @@ function DetailContent() {
         </TabsContent>
 
         <TabsContent value="recette" className="space-y-6 mt-10">
-          <h2 className="text-[20px] font-medium mb-4">Répartition en volume des matières premières</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-[20px] font-medium">Répartition en volume des matières premières</h2>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-[#121212]" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Visualisation de la répartition en volume des matières premières</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <div className="flex justify-between items-center mb-4">
             <div className="flex gap-0 w-fit">
               <button onClick={() => setRecetteSubTab('mpa')} className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${recetteSubTab === 'mpa' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}>
@@ -2484,8 +2572,8 @@ function DetailContent() {
         <TabsContent value="evolution-prix" className="mt-10">
           <div className="space-y-6">
             {/* Card graphique */}
-            <Card className="border-0 shadow-none">
-              <CardContent className="p-0">
+            <Card className="border-0 shadow-none overflow-visible">
+              <CardContent className="p-0 overflow-visible">
                 {/* Titre et Contrôles sur la même ligne */}
                 <div className="flex items-start justify-between mb-4">
                   <h2 className="text-[20px] font-medium">
@@ -2532,8 +2620,44 @@ function DetailContent() {
                     onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'cout-theorique': !evolutionLegendOpacity['cout-theorique'] })}
                   >
                     <CurveIcon color="#607D8B" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">PA total théorique</span>
+                    <span className="text-sm select-none">PA théorique</span>
                   </div>
+                  {perimetre === "Produit" && (
+                    <>
+                      <div
+                        className="flex items-center gap-2 cursor-pointer"
+                        style={{ opacity: evolutionLegendOpacity.PV ? 1 : 0.4 }}
+                        onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, PV: !evolutionLegendOpacity.PV })}
+                      >
+                        <CurveIcon color="#4CAF50" className="w-[30px] h-[14px]" />
+                        <span className="text-sm select-none">PV</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-2 cursor-pointer"
+                        style={{ opacity: evolutionLegendOpacity['PV-LCL'] ? 1 : 0.4 }}
+                        onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'PV-LCL': !evolutionLegendOpacity['PV-LCL'] })}
+                      >
+                        <CurveIcon color="#FF9800" className="w-[30px] h-[14px]" />
+                        <span className="text-sm select-none">PV LCL</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-2 cursor-pointer"
+                        style={{ opacity: evolutionLegendOpacity['Marge-PV'] ? 1 : 0.4 }}
+                        onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'Marge-PV': !evolutionLegendOpacity['Marge-PV'] })}
+                      >
+                        <CurveIcon color="#9C27B0" className="w-[30px] h-[14px]" />
+                        <span className="text-sm select-none">Marge PV</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-2 cursor-pointer"
+                        style={{ opacity: evolutionLegendOpacity['Marge-PV-LCL'] ? 1 : 0.4 }}
+                        onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'Marge-PV-LCL': !evolutionLegendOpacity['Marge-PV-LCL'] })}
+                      >
+                        <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
+                        <span className="text-sm select-none">Marge PV LCL</span>
+                      </div>
+                    </>
+                  )}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -2541,7 +2665,11 @@ function DetailContent() {
                           variant="ghost"
                           size="sm"
                           className="p-2"
-                          onClick={() => setEvolutionLegendOpacity({ PA: false, 'cout-theorique': false })}
+                          onClick={() => setEvolutionLegendOpacity(
+                            perimetre === "Produit"
+                              ? { PA: false, 'cout-theorique': false, PV: false, 'PV-LCL': false, 'Marge-PV': false, 'Marge-PV-LCL': false }
+                              : { PA: false, 'cout-theorique': false }
+                          )}
                         >
                           <RotateCcw className="w-4 h-4 text-[#0970E6]" />
                         </Button>
@@ -2554,88 +2682,146 @@ function DetailContent() {
                 </div>
 
                 {/* Graphique */}
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={getEvolutionChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <RechartsTooltip
-                      formatter={(value: number) => value.toFixed(1)}
-                    />
-                    {evolutionLegendOpacity.PA && (
-                      <Line
-                        type="monotone"
-                        dataKey="PA"
-                        stroke="#E91E63"
-                        strokeWidth={2}
-                        dot={false}
+                <div style={{ paddingBottom: '20px' }}>
+                  <ResponsiveContainer width="100%" height={500} style={{ overflow: 'visible' }}>
+                    <LineChart data={getEvolutionChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }} style={{ overflow: 'visible' }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <RechartsTooltip
+                        formatter={(value: number, name: string) => {
+                          const labels: Record<string, string> = {
+                            'PA': 'PA',
+                            'cout-theorique': 'PA théorique',
+                            'PV': 'PV',
+                            'PV-LCL': 'PV LCL',
+                            'Marge-PV': 'Marge PV',
+                            'Marge-PV-LCL': 'Marge PV LCL'
+                          }
+                          return [value.toFixed(1), labels[name] || name]
+                        }}
                       />
-                    )}
-                    {evolutionLegendOpacity['cout-theorique'] && (
-                      <Line
-                        type="monotone"
-                        dataKey="cout-theorique"
-                        stroke="#607D8B"
-                        strokeWidth={2}
-                        dot={false}
+                      {evolutionLegendOpacity.PA && (
+                        <Line
+                          type="monotone"
+                          dataKey="PA"
+                          stroke="#E91E63"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      )}
+                      {evolutionLegendOpacity['cout-theorique'] && (
+                        <Line
+                          type="monotone"
+                          dataKey="cout-theorique"
+                          stroke="#607D8B"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      )}
+                      {perimetre === "Produit" && evolutionLegendOpacity.PV && (
+                        <Line
+                          type="monotone"
+                          dataKey="PV"
+                          stroke="#4CAF50"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      )}
+                      {perimetre === "Produit" && evolutionLegendOpacity['PV-LCL'] && (
+                        <Line
+                          type="monotone"
+                          dataKey="PV-LCL"
+                          stroke="#FF9800"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      )}
+                      {perimetre === "Produit" && evolutionLegendOpacity['Marge-PV'] && (
+                        <Line
+                          type="monotone"
+                          dataKey="Marge-PV"
+                          stroke="#9C27B0"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      )}
+                      {perimetre === "Produit" && evolutionLegendOpacity['Marge-PV-LCL'] && (
+                        <Line
+                          type="monotone"
+                          dataKey="Marge-PV-LCL"
+                          stroke="#00BCD4"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      )}
+                      <Brush
+                        dataKey="date"
+                        height={30}
+                        stroke="#0970E6"
+                        fill="#FFFFFF"
                       />
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
-
-                {/* Range Slider */}
-                <div className="mt-6 px-4">
-                  <Slider
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={evolutionDateRange}
-                    onValueChange={setEvolutionDateRange}
-                  />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
             {/* Cards KPI */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="border rounded-lg p-6 shadow-none">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium">Evo PA</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-[#121212]" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Évolution du prix d&apos;achat</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <p className="text-3xl font-bold text-green-600">+3.6%</p>
-              </Card>
+            <div className="space-y-4 mt-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-medium">Pourcentage d&apos;évolution sur la période</h3>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-[#121212]" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Évolution en pourcentage des métriques sur la période sélectionnée</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
-              <Card className="border rounded-lg p-6 shadow-none">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium">PA total théorique</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-[#121212]" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Évolution du coût théorique total</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <p className="text-3xl font-bold text-green-600">+3.6%</p>
-              </Card>
+              <div className={`grid grid-cols-1 gap-4 ${perimetre === "Produit" ? "md:grid-cols-6" : "md:grid-cols-2"}`}>
+                {(perimetre === "Produit" ? productCards : kpiCards).filter(card =>
+                  perimetre === "Produit"
+                    ? ['PA', 'PA théorique', 'PV', 'PV LCL', 'Marge PV', 'Marge PV LCL'].includes(card.label)
+                    : ['PA', 'PA théorique'].includes(card.label)
+                ).map(card => {
+                  const isPositive = card.evolution?.startsWith('+')
+                  const isInversed = ["PA", "PA théorique", "Marge PV", "Marge PV LCL"].includes(card.label)
+                  const color = isInversed
+                    ? (isPositive ? 'text-red-600' : 'text-green-600')
+                    : (isPositive ? 'text-green-600' : 'text-red-600')
+
+                  return (
+                    <Card key={card.label} className="p-4 rounded shadow-none">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-sm font-medium">{card.label}</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="w-4 h-4 text-[#121212]" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{card.tooltip}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className={`text-2xl font-bold ${color}`}>
+                        {card.evolution}
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Tableau Détail */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Détail</h3>
+              <h3 className="text-lg font-medium">Détail</h3>
               <Card className="border rounded-lg shadow-none">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">

@@ -20,14 +20,17 @@ import { Info, Download, ChevronDown, ChevronUp, RotateCcw } from "lucide-react"
 import dynamic from 'next/dynamic'
 import { CurveIcon } from "@/components/ui/curve-icon"
 
-// Lazy load Recharts components
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false });
-const LineChart = dynamic(() => import('recharts').then(mod => ({ default: mod.LineChart })), { ssr: false });
-const Line = dynamic(() => import('recharts').then(mod => ({ default: mod.Line })), { ssr: false });
-const XAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis })), { ssr: false });
-const YAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), { ssr: false });
-const CartesianGrid = dynamic(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })), { ssr: false });
-const RechartsTooltip = dynamic(() => import('recharts').then(mod => ({ default: mod.Tooltip })), { ssr: false });
+// Import Recharts components directly
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Brush
+} from 'recharts';
 
 // Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
 const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {
@@ -314,6 +317,23 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
       { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'energie': 245, 'transport': 465, 'emballage': 305, 'main-oeuvre': 335, 'transport-routier': 460, 'transport-maritime': 470, 'electricite': 250, 'gaz': 240, 'salaires-production': 340, 'salaires-logistique': 330, 'carton-ondule': 310, 'plastique-emballage': 300 },
       { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'energie': 235, 'transport': 475, 'emballage': 315, 'main-oeuvre': 345, 'transport-routier': 470, 'transport-maritime': 480, 'electricite': 240, 'gaz': 230, 'salaires-production': 350, 'salaires-logistique': 340, 'carton-ondule': 320, 'plastique-emballage': 310 },
     ]
+
+    // Si base 100 est activé, normaliser les données
+    if (base100 && baseData.length > 0) {
+      const firstRow = baseData[0]
+      const keys = Object.keys(firstRow).filter(key => key !== 'date')
+
+      return baseData.map(row => {
+        const normalizedRow: any = { date: row.date }
+        keys.forEach(key => {
+          const firstValue = firstRow[key]
+          const currentValue = row[key]
+          normalizedRow[key] = firstValue !== 0 ? (currentValue / firstValue) * 100 : 100
+        })
+        return normalizedRow
+      })
+    }
+
     return baseData
   }
 
@@ -1279,9 +1299,9 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
           </div>
 
           {/* Graphique */}
-          <div className="mb-6">
-            <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={getChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
+          <div className="mb-6" style={{ paddingBottom: '20px' }}>
+            <ResponsiveContainer width="100%" height={400} style={{ overflow: 'visible' }}>
+            <LineChart data={getChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }} style={{ overflow: 'visible' }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
@@ -1353,6 +1373,12 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                   <Line type="monotone" dataKey="plastique-emballage" stroke="#FFA726" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['plastique-emballage']} />
                 </>
               )}
+              <Brush
+                dataKey="date"
+                height={30}
+                stroke="#0970E6"
+                fill="#FFFFFF"
+              />
             </LineChart>
             </ResponsiveContainer>
           </div>

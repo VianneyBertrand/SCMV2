@@ -62,6 +62,10 @@ function ComparaisonContent() {
   const [evolutionLegendOpacity, setEvolutionLegendOpacity] = useState<Record<string, boolean>>({
     PA: true,
     'cout-theorique': true,
+    PV: false,
+    'PV-LCL': false,
+    'Marge-PV': false,
+    'Marge-PV-LCL': false,
   })
   const [evolutionPeriod, setEvolutionPeriod] = useState<'mois' | 'semaine' | 'jour'>('mois')
   const [evolutionBase100, setEvolutionBase100] = useState(false)
@@ -217,7 +221,7 @@ function ComparaisonContent() {
         <TabsContent value="resume" className="mt-10">
           <div className="flex items-center gap-2 mb-6">
             <h2 className="text-[20px] font-medium">
-              Les principales métriques de vos {perimetre || 'éléments'}
+              Comparaison des métriques
             </h2>
           </div>
 
@@ -301,7 +305,7 @@ function ComparaisonContent() {
 
         <TabsContent value="structure-cout" className="mt-10">
           <div className="flex items-center gap-2 mb-6">
-            <h2 className="text-[20px] font-medium">Répartition en valeur des matières premières</h2>
+            <h2 className="text-[20px] font-medium">Comparaison des structures de coût</h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
@@ -395,7 +399,17 @@ function ComparaisonContent() {
 
         <TabsContent value="recette" className="mt-10">
           <div className="flex items-center gap-2 mb-6">
-            <h2 className="text-[20px] font-medium">Répartition en volume des matières premières</h2>
+            <h2 className="text-[20px] font-medium">Comparaison des recettes</h2>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-[#121212]" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Comparaison des recettes entre les éléments sélectionnés</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -451,7 +465,7 @@ function ComparaisonContent() {
 
         <TabsContent value="evolution-prix" className="mt-10">
           <div className="flex items-center gap-2 mb-6">
-            <h2 className="text-[20px] font-medium">Évolution des prix de vos {perimetre || 'éléments'}</h2>
+            <h2 className="text-[20px] font-medium">Comparaison des évolutions de prix</h2>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -460,6 +474,7 @@ function ComparaisonContent() {
               {elements[0] && (
                 <ElementEvolutionPrix
                   element={elements[0]}
+                  perimetre={perimetre}
                   evolutionLegendOpacity={evolutionLegendOpacity}
                   setEvolutionLegendOpacity={setEvolutionLegendOpacity}
                   evolutionPeriod={evolutionPeriod}
@@ -476,6 +491,7 @@ function ComparaisonContent() {
               {elements[2] && (
                 <ElementEvolutionPrix
                   element={elements[2]}
+                  perimetre={perimetre}
                   evolutionLegendOpacity={evolutionLegendOpacity}
                   setEvolutionLegendOpacity={setEvolutionLegendOpacity}
                   evolutionPeriod={evolutionPeriod}
@@ -496,6 +512,7 @@ function ComparaisonContent() {
               {elements[1] && (
                 <ElementEvolutionPrix
                   element={elements[1]}
+                  perimetre={perimetre}
                   evolutionLegendOpacity={evolutionLegendOpacity}
                   setEvolutionLegendOpacity={setEvolutionLegendOpacity}
                   evolutionPeriod={evolutionPeriod}
@@ -512,6 +529,7 @@ function ComparaisonContent() {
               {elements[3] && (
                 <ElementEvolutionPrix
                   element={elements[3]}
+                  perimetre={perimetre}
                   evolutionLegendOpacity={evolutionLegendOpacity}
                   setEvolutionLegendOpacity={setEvolutionLegendOpacity}
                   evolutionPeriod={evolutionPeriod}

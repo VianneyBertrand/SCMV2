@@ -113,6 +113,7 @@ const LazyCommandList = dynamic(
 interface NavigationHistoryItem {
   perimetre: PerimetreType;
   filters: Record<string, string>;
+  fournisseurSelections: string[];
 }
 
 // Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
@@ -143,6 +144,7 @@ function AnalyseValeurContent() {
     from: new Date(2024, 10, 11),
     to: new Date(2024, 10, 14),
   });
+  const [typePrix, setTypePrix] = useState<"Prix départ" | "Prix franco">("Prix départ");
 
   // States pour le combobox
   const [openRecherche, setOpenRecherche] = useState(false);
@@ -576,7 +578,7 @@ function AnalyseValeurContent() {
       // Sauvegarder l'état actuel dans l'historique
       setNavigationHistory((prev) => [
         ...prev,
-        { perimetre, filters: { ...filters } },
+        { perimetre, filters: { ...filters }, fournisseurSelections: [...fournisseurSelections] },
       ]);
 
       const newFilters = {
@@ -598,9 +600,11 @@ function AnalyseValeurContent() {
 
       setPerimetre(newPerimetre);
       setFilters(newFilters);
+      setFournisseurSelections([]);
+      setTempFournisseurSelections([]);
       updateURL(newPerimetre, newFilters);
     },
-    [perimetre, filters, updateURL]
+    [perimetre, filters, fournisseurSelections, updateURL]
   );
 
   // Navigation vers un sous-niveau avec filtre (mémoïsé)
@@ -609,7 +613,7 @@ function AnalyseValeurContent() {
       // Sauvegarder l'état actuel dans l'historique
       setNavigationHistory((prev) => [
         ...prev,
-        { perimetre, filters: { ...filters } },
+        { perimetre, filters: { ...filters }, fournisseurSelections: [...fournisseurSelections] },
       ]);
 
       // Obtenir la clé du filtre pour ce périmètre
@@ -626,29 +630,29 @@ function AnalyseValeurContent() {
       setFilters(newFilters);
       updateURL(targetPerimetre, newFilters);
     },
-    [perimetre, filters, updateURL]
+    [perimetre, filters, fournisseurSelections, updateURL]
   );
 
   // Retour au périmètre précédent (mémoïsé)
   const handleBackNavigation = useCallback(() => {
-    // Si l'historique est vide, utiliser router.back() pour revenir à la page précédente
+    // Si l'historique est vide, ne rien faire (le bouton sera désactivé)
     if (navigationHistory.length === 0) {
-      router.back();
       return;
     }
 
-    setNavigationHistory((prev) => {
-      // Récupérer le dernier état de l'historique
-      const previousState = prev[prev.length - 1];
+    // Récupérer le dernier état de l'historique
+    const previousState = navigationHistory[navigationHistory.length - 1];
 
-      // Restaurer l'état
-      setPerimetre(previousState.perimetre);
-      setFilters(previousState.filters);
+    // Restaurer l'état
+    setPerimetre(previousState.perimetre);
+    setFilters(previousState.filters);
+    setFournisseurSelections(previousState.fournisseurSelections);
+    setTempFournisseurSelections(previousState.fournisseurSelections);
+    updateURL(previousState.perimetre, previousState.filters);
 
-      // Retirer cet état de l'historique
-      return prev.slice(0, -1);
-    });
-  }, [navigationHistory, router]);
+    // Retirer cet état de l'historique
+    setNavigationHistory((prev) => prev.slice(0, -1));
+  }, [navigationHistory, updateURL]);
 
   // Helper pour obtenir les options d'un filtre (mémoïsé pour éviter les recalculs)
   const getFilterOptions = useCallback(
@@ -781,6 +785,7 @@ function AnalyseValeurContent() {
         variant="ghost"
         className="-ml-2 mb-2 gap-2 text-sm"
         onClick={handleBackNavigation}
+        disabled={navigationHistory.length === 0}
       >
         <ArrowLeft className="h-4 w-4" />
         Retour
@@ -841,15 +846,15 @@ function AnalyseValeurContent() {
           </div>
         </Card>
 
-        {/* Recherche dynamique (Combobox) - masqué pour le périmètre Marché */}
-        {perimetre !== "Marché" && (
+        {/* Recherche dynamique (Combobox) - masqué pour le périmètre Marché - affiché ici uniquement si mode comparaison OFF */}
+        {perimetre !== "Marché" && !comparisonMode && (
           <Popover open={openRecherche} onOpenChange={setOpenRecherche}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
                 aria-expanded={openRecherche}
-                className="h-[52px] justify-between border-[#EBEBEB] bg-[#ffffff] rounded font-normal shadow-none"
+                className="h-[52px] justify-between border-[#EBEBEB] bg-[#ffffff] hover:bg-white rounded font-normal shadow-none"
               >
                 {rechercheValue || getSearchPlaceholder}
                 {rechercheValue ? (
@@ -947,7 +952,7 @@ function AnalyseValeurContent() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-auto justify-between border-gray-200 bg-white  font-normal shadow-none"
+                  className="w-auto justify-between border-gray-200 bg-white hover:bg-white font-normal shadow-none"
                 >
                   11/12/2024 - 14/12/2024
                   <CalendarIcon className="h-4 w-4 text-blue" />
@@ -961,6 +966,27 @@ function AnalyseValeurContent() {
                 />
               </PopoverContent>
             </Popover>
+          </div>
+        </Card>
+
+        {/* Prix */}
+        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium text-gray-700 break-words">
+              Prix
+            </Label>
+            <Select
+              value={typePrix}
+              onValueChange={(value) => setTypePrix(value as "Prix départ" | "Prix franco")}
+            >
+              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Prix départ">Prix départ</SelectItem>
+                <SelectItem value="Prix franco">Prix franco</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </Card>
       </div>
@@ -1040,6 +1066,104 @@ function AnalyseValeurContent() {
           >
             Comparer
           </Button>
+        </div>
+      )}
+
+      {/* INPUT RECHERCHE - Affiché ici quand mode comparaison ON */}
+      {comparisonMode && perimetre !== "Marché" && (
+        <div className="mb-4">
+          <Popover open={openRecherche} onOpenChange={setOpenRecherche}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openRecherche}
+                className="h-[52px] justify-between border-[#EBEBEB] bg-[#ffffff] hover:bg-white rounded font-normal shadow-none"
+              >
+                {rechercheValue || getSearchPlaceholder}
+                {rechercheValue ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="ml-2 cursor-pointer inline-flex"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      resetRecherche();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        resetRecherche();
+                      }
+                    }}
+                  >
+                    <X className="h-4 w-4 shrink-0 hover:opacity-70" />
+                  </span>
+                ) : (
+                  <Search className="ml-2 h-4 w-4 shrink-0 text-blue" />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0">
+              <LazyCommand shouldFilter={false}>
+                <LazyCommandInput
+                  value={searchInputValue}
+                  onValueChange={setSearchInputValue}
+                  placeholder={getSearchPlaceholder}
+                />
+                <LazyCommandList>
+                  <LazyCommandEmpty>Aucun résultat trouvé.</LazyCommandEmpty>
+                  <LazyCommandGroup>
+                    {sortedData.map((item, index) => (
+                      <LazyCommandItem
+                        key={`${item.label}-${index}`}
+                        value={item.label}
+                        onSelect={(currentValue) => {
+                          // Trouver l'item correspondant pour obtenir le label exact
+                          const selectedItem = sortedData.find(
+                            (dataItem) =>
+                              dataItem.label.toLowerCase() ===
+                              currentValue.toLowerCase()
+                          );
+                          const exactLabel =
+                            selectedItem?.label || currentValue;
+
+                          setRechercheValue(exactLabel);
+                          setSearchInputValue(currentValue);
+                          setOpenRecherche(false);
+
+                          // Mettre à jour le filtre correspondant au périmètre actuel
+                          const filterKey = perimetreToFilterKey[perimetre];
+                          if (filterKey) {
+                            setFilters((prev) => {
+                              const newFilters = {
+                                ...prev,
+                                [filterKey]: exactLabel,
+                              };
+                              updateURL(perimetre, newFilters);
+                              return newFilters;
+                            });
+                          }
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            rechercheValue === item.label
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        {item.label}
+                      </LazyCommandItem>
+                    ))}
+                  </LazyCommandGroup>
+                </LazyCommandList>
+              </LazyCommand>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
