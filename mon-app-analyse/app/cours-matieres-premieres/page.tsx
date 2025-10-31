@@ -45,6 +45,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles";
 import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIcon, Info, ChevronsUpDown, RotateCcw } from "lucide-react";
 import { CurveIcon } from "@/components/ui/curve-icon";
 import dynamic from 'next/dynamic';
@@ -99,7 +100,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Farine & Levure",
     sousFamille: "Farines blanches",
     fournisseur: "Labeyrie Fine Foods",
-    portefeuille: "Tradition & Qualité",
+    portefeuille: "Jean Dubois",
   },
   {
     id: "2",
@@ -118,7 +119,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Lait",
     sousFamille: "Lait UHT",
     fournisseur: "Lactalis Foodservice",
-    portefeuille: "Premium Gourmet",
+    portefeuille: "Marie Grivault",
   },
   {
     id: "3",
@@ -137,7 +138,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Beurre",
     sousFamille: "Beurre doux",
     fournisseur: "Lactalis Foodservice",
-    portefeuille: "Premium Gourmet",
+    portefeuille: "Pierre Lefebvre",
   },
   {
     id: "4",
@@ -156,7 +157,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Fromages à pâte pressée",
     sousFamille: "Emmental",
     fournisseur: "Lactalis Foodservice",
-    portefeuille: "Tradition & Qualité",
+    portefeuille: "Sophie Martin",
   },
   {
     id: "5",
@@ -175,7 +176,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Poissons fumés",
     sousFamille: "Saumon fumé",
     fournisseur: "Labeyrie Fine Foods",
-    portefeuille: "Premium Gourmet",
+    portefeuille: "Thomas Bernard",
   },
   {
     id: "6",
@@ -194,7 +195,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Jambons",
     sousFamille: "Jambon cuit",
     fournisseur: "Fleury Michon",
-    portefeuille: "Tradition & Qualité",
+    portefeuille: "Claire Durand",
   },
   {
     id: "7",
@@ -213,7 +214,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Yaourts",
     sousFamille: "Yaourts natures",
     fournisseur: "Danone Professionnel",
-    portefeuille: "Bio & Responsable",
+    portefeuille: "Antoine Rousseau",
   },
   {
     id: "8",
@@ -232,7 +233,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Légumes surgelés",
     sousFamille: "Pommes de terre",
     fournisseur: "Picard Surgelés",
-    portefeuille: "Economique",
+    portefeuille: "Isabelle Mercier",
   },
   {
     id: "9",
@@ -251,7 +252,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Glaces",
     sousFamille: "Glaces vanille",
     fournisseur: "Nestlé Professional",
-    portefeuille: "Premium Gourmet",
+    portefeuille: "Nicolas Laurent",
   },
   {
     id: "10",
@@ -270,7 +271,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Volailles surgelées",
     sousFamille: "Poulet",
     fournisseur: "Sysco France",
-    portefeuille: "Tradition & Qualité",
+    portefeuille: "Émilie Fournier",
   },
   {
     id: "11",
@@ -289,7 +290,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Crème",
     sousFamille: "Crème épaisse",
     fournisseur: "Lactalis Foodservice",
-    portefeuille: "Premium Gourmet",
+    portefeuille: "Jean Dubois",
   },
   {
     id: "12",
@@ -308,7 +309,7 @@ const matieresPremieres: MatierePremiere[] = [
     famille: "Œufs",
     sousFamille: "Œufs frais",
     fournisseur: "Transgourmet",
-    portefeuille: "Economique",
+    portefeuille: "Marie Grivault",
   },
 ];
 
@@ -908,10 +909,9 @@ export default function CoursMatieresPremieres() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="tous" className="py-3">tous</SelectItem>
-                <SelectItem value="Premium Gourmet" className="py-3">Premium Gourmet</SelectItem>
-                <SelectItem value="Tradition & Qualité" className="py-3">Tradition & Qualité</SelectItem>
-                <SelectItem value="Economique" className="py-3">Economique</SelectItem>
-                <SelectItem value="Bio & Responsable" className="py-3">Bio & Responsable</SelectItem>
+                {PORTEFEUILLE_NAMES.map((nom) => (
+                  <SelectItem key={nom} value={nom} className="py-3">{nom}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

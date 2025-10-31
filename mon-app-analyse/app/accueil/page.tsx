@@ -3,6 +3,8 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import dynamic from 'next/dynamic'
 
 // Lazy load heavy Command component
@@ -41,10 +43,11 @@ import {
   type PerimetreType
 } from "@/lib/data/perimetre-data"
 import { cn, calculateValorisation } from "@/lib/utils"
-import { CalendarIcon, Check, ChevronsUpDown, Eye, Info } from "lucide-react"
+import { PORTEFEUILLE_CATEGORIE_MAP, PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles"
+import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Eye, Info, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 // Composant Heatmap Rectangle réutilisable
 interface HeatmapRectProps {
@@ -235,20 +238,6 @@ function OpportunityTable({ title, perimetre, items, activeFilters = {} }: Oppor
   )
 }
 
-// Mapping des portefeuilles vers les catégories
-const PORTEFEUILLE_CATEGORIE_MAP: Record<string, string> = {
-  "Jean Dubois": "SAURISSERIE",
-  "Marie Grivault": "SURGELE POISSON PLATS CUIS PDT",
-  "Pierre Lefebvre": "SURGELE VIANDES LEGUMES",
-  "Sophie Martin": "SURGELES GLACE PPI",
-  "Thomas Bernard": "VOLAILLE CHARCUTERIE",
-  "Claire Durand": "FROMAGE",
-  "Antoine Rousseau": "LAIT BEURRE CREME",
-  "Isabelle Mercier": "TRAITEUR  ",
-  "Nicolas Laurent": "ULTRA FRAIS",
-  "Émilie Fournier": "ŒUF PPI"
-}
-
 export default function AccueilPage() {
   const router = useRouter()
 
@@ -258,8 +247,35 @@ export default function AccueilPage() {
   // State pour le combobox
   const [openCombobox, setOpenCombobox] = useState(false)
 
+  // State pour les fournisseurs sélectionnés (multiselection)
+  const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>([])
+  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>([])
+  const [openFournisseursPopover, setOpenFournisseursPopover] = useState(false)
+  const [fournisseurSearch, setFournisseurSearch] = useState("")
+
   // Options des portefeuilles
-  const portefeuilleOptions = Object.keys(PORTEFEUILLE_CATEGORIE_MAP)
+  const portefeuilleOptions = PORTEFEUILLE_NAMES
+
+  // Liste des fournisseurs
+  const fournisseursList = useMemo(() => {
+    const data = getPerimetreData("Fournisseur")
+    return data.map(f => f.label)
+  }, [])
+
+  // Filtrer les fournisseurs selon la recherche
+  const filteredFournisseurs = useMemo(() => {
+    if (!fournisseurSearch) return fournisseursList
+    return fournisseursList.filter((f) =>
+      f.toLowerCase().includes(fournisseurSearch.toLowerCase())
+    )
+  }, [fournisseurSearch, fournisseursList])
+
+  // Synchroniser les sélections temporaires quand on ouvre le popover
+  useEffect(() => {
+    if (openFournisseursPopover) {
+      setTempFournisseurSelections(selectedFournisseurs)
+    }
+  }, [openFournisseursPopover, selectedFournisseurs])
 
   // Récupérer les données du périmètre Marché pour les liens de navigation
   const marcheData = useMemo(() => getPerimetreData("Marché"), [])
@@ -422,6 +438,69 @@ export default function AccueilPage() {
       .slice(0, 5)
   }, [selectedPortefeuille, selectedCategorie])
 
+  // Données dynamiques pour les heatmaps
+  const paysData = useMemo(() => {
+    const data = getPerimetreData("Pays")
+    const totalCA = data.reduce((sum, item) => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      return sum + caValue
+    }, 0)
+
+    return data.map(item => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      const percentage = ((caValue / totalCA) * 100).toFixed(2)
+
+      // Calculer la couleur en fonction de l'évolution PA
+      const evoValue = parseFloat(item.evoPa.evolution.replace('%', ''))
+      let color = 'bg-gray-200'
+      if (evoValue > 2) color = 'bg-[#F25056]' // Rouge foncé
+      else if (evoValue >= 1) color = 'bg-[#F57A7E]' // Rouge moyen
+      else if (evoValue > 0) color = 'bg-[#FFEFEF]' // Rouge pâle
+      else if (evoValue >= -1) color = 'bg-[#F0FAF6]' // Vert pâle
+      else if (evoValue >= -2) color = 'bg-[#8EE2BF]' // Vert moyen
+      else color = 'bg-[#2FB67E]' // Vert foncé
+
+      return {
+        label: item.label,
+        percentage: `${percentage}%`,
+        evolution: item.evoPa.evolution,
+        color,
+        flex: parseFloat(percentage)
+      }
+    }).sort((a, b) => b.flex - a.flex)
+  }, [])
+
+  const fournisseursData = useMemo(() => {
+    const data = getPerimetreData("Fournisseur")
+    const totalCA = data.reduce((sum, item) => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      return sum + caValue
+    }, 0)
+
+    return data.map(item => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      const percentage = ((caValue / totalCA) * 100).toFixed(2)
+
+      // Calculer la couleur en fonction de l'évolution PA
+      const evoValue = parseFloat(item.evoPa.evolution.replace('%', ''))
+      let color = 'bg-gray-200'
+      if (evoValue > 2) color = 'bg-[#F25056]' // Rouge foncé
+      else if (evoValue >= 1) color = 'bg-[#F57A7E]' // Rouge moyen
+      else if (evoValue > 0) color = 'bg-[#FFEFEF]' // Rouge pâle
+      else if (evoValue >= -1) color = 'bg-[#F0FAF6]' // Vert pâle
+      else if (evoValue >= -2) color = 'bg-[#8EE2BF]' // Vert moyen
+      else color = 'bg-[#2FB67E]' // Vert foncé
+
+      return {
+        label: item.label,
+        percentage: `${percentage}%`,
+        evolution: item.evoPa.evolution,
+        color,
+        flex: parseFloat(percentage)
+      }
+    }).sort((a, b) => b.flex - a.flex)
+  }, [])
+
   return (
     <main className="w-full px-[60px] py-4 space-y-6">
       {/* Titre + Contrôles */}
@@ -563,69 +642,69 @@ export default function AccueilPage() {
           </div>
           <div className="rounded overflow-hidden">
             <div className="flex gap-1 h-[300px]">
-              {/* France - le plus gros, toute la hauteur à gauche */}
-              <HeatmapRect
-                label="France"
-                percentage="34.43%"
-                evolution="+0.24%"
-                color="bg-[#FFEFEF]"
-                className="flex-[34] h-full"
-                href="/detail?perimetre=Pays&label=France"
-                totalPA={categorieData.evoPa.valeur}
-              />
-              {/* Belgique - deuxième plus gros */}
-              <HeatmapRect
-                label="Belgique"
-                percentage="25.32%"
-                evolution="-1.15%"
-                color="bg-[#F0FAF6]"
-                className="flex-[25] h-full"
-                href="/detail?perimetre=Pays&label=Belgique"
-                totalPA={categorieData.evoPa.valeur}
-              />
-              {/* Colonne droite avec les 4 petits */}
-              <div className="flex-[41] flex flex-col gap-1">
-                {/* Espagne */}
-                <HeatmapRect
-                  label="Espagne"
-                  percentage="14.21%"
-                  evolution="+1.18%"
-                  color="bg-[#F57A7E]"
-                  className="flex-[14] w-full"
-                  href="/detail?perimetre=Pays&label=Espagne"
-                  totalPA={categorieData.evoPa.valeur}
-                />
-                {/* Ligne avec Roumanie, Italie, Pologne */}
-                <div className="flex-[27] flex gap-1">
-                  <HeatmapRect
-                    label="Roumanie"
-                    percentage="8.36%"
-                    evolution="+0.90%"
-                    color="bg-[#FFEFEF]"
-                    className="flex-[8] h-full"
-                    href="/detail?perimetre=Pays&label=Roumanie"
-                    totalPA={categorieData.evoPa.valeur}
-                  />
-                  <HeatmapRect
-                    label="Italie"
-                    percentage="3.58%"
-                    evolution="-1.60%"
-                    color="bg-[#8EE2BF]"
-                    className="flex-[4] h-full"
-                    href="/detail?perimetre=Pays&label=Italie"
-                    totalPA={categorieData.evoPa.valeur}
-                  />
-                  <HeatmapRect
-                    label="Pologne"
-                    percentage="2.10%"
-                    evolution="+1.80%"
-                    color="bg-[#F25056]"
-                    className="flex-[2] h-full"
-                    href="/detail?perimetre=Pays&label=Pologne"
-                    totalPA={categorieData.evoPa.valeur}
-                  />
-                </div>
-              </div>
+              {paysData.length >= 2 && (
+                <>
+                  {/* Premier pays (le plus gros) */}
+                  <div style={{ flex: paysData[0].flex }} className="h-full">
+                    <HeatmapRect
+                      label={paysData[0].label}
+                      percentage={paysData[0].percentage}
+                      evolution={paysData[0].evolution}
+                      color={paysData[0].color}
+                      className="h-full"
+                      href={`/detail?perimetre=Pays&label=${encodeURIComponent(paysData[0].label)}`}
+                      totalPA={categorieData.evoPa.valeur}
+                    />
+                  </div>
+                  {/* Deuxième pays */}
+                  <div style={{ flex: paysData[1].flex }} className="h-full">
+                    <HeatmapRect
+                      label={paysData[1].label}
+                      percentage={paysData[1].percentage}
+                      evolution={paysData[1].evolution}
+                      color={paysData[1].color}
+                      className="h-full"
+                      href={`/detail?perimetre=Pays&label=${encodeURIComponent(paysData[1].label)}`}
+                      totalPA={categorieData.evoPa.valeur}
+                    />
+                  </div>
+                  {/* Colonne droite avec les autres pays */}
+                  {paysData.length > 2 && (
+                    <div style={{ flex: paysData.slice(2).reduce((sum, p) => sum + p.flex, 0) }} className="flex flex-col gap-1">
+                      {paysData[2] && (
+                        <div style={{ flex: paysData[2].flex }} className="w-full">
+                          <HeatmapRect
+                            label={paysData[2].label}
+                            percentage={paysData[2].percentage}
+                            evolution={paysData[2].evolution}
+                            color={paysData[2].color}
+                            className="w-full h-full"
+                            href={`/detail?perimetre=Pays&label=${encodeURIComponent(paysData[2].label)}`}
+                            totalPA={categorieData.evoPa.valeur}
+                          />
+                        </div>
+                      )}
+                      {paysData.length > 3 && (
+                        <div style={{ flex: paysData.slice(3).reduce((sum, p) => sum + p.flex, 0) }} className="flex gap-1">
+                          {paysData.slice(3).map((pays) => (
+                            <div key={pays.label} style={{ flex: pays.flex }} className="h-full">
+                              <HeatmapRect
+                                label={pays.label}
+                                percentage={pays.percentage}
+                                evolution={pays.evolution}
+                                color={pays.color}
+                                className="h-full"
+                                href={`/detail?perimetre=Pays&label=${encodeURIComponent(pays.label)}`}
+                                totalPA={categorieData.evoPa.valeur}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -648,35 +727,57 @@ export default function AccueilPage() {
           <div className="rounded overflow-hidden">
             <div className="flex gap-1 h-[300px]">
               {/* MPA - le plus gros */}
-              <HeatmapRect
-                label="MPA"
-                percentage="42.03%"
-                evolution="-2.70%"
-                color="bg-[#2FB67E]"
-                className="flex-[42] h-full"
-                href="/detail/mpa"
-                totalPA={categorieData.evoPa.valeur}
-              />
+              <div style={{ flex: parseFloat(categorieData.mpa.valeur) }} className="h-full">
+                <HeatmapRect
+                  label="MPA"
+                  percentage={categorieData.mpa.valeur}
+                  evolution={categorieData.mpa.evolution}
+                  color={(() => {
+                    const evoValue = parseFloat(categorieData.mpa.evolution.replace('%', ''))
+                    if (evoValue > 2) return 'bg-[#F25056]'
+                    if (evoValue >= 1) return 'bg-[#F57A7E]'
+                    if (evoValue > 0) return 'bg-[#FFEFEF]'
+                    if (evoValue >= -1) return 'bg-[#F0FAF6]'
+                    if (evoValue >= -2) return 'bg-[#8EE2BF]'
+                    return 'bg-[#2FB67E]'
+                  })()}
+                  className="h-full"
+                  href="/detail/mpa"
+                  totalPA={categorieData.evoPa.valeur}
+                />
+              </div>
               {/* MPI - deuxième */}
-              <HeatmapRect
-                label="MPI"
-                percentage="37.23%"
-                evolution="-1.10%"
-                color="bg-[#F0FAF6]"
-                className="flex-[37] h-full"
-                href="/detail/mpi"
-                totalPA={categorieData.evoPa.valeur}
-              />
+              <div style={{ flex: parseFloat(categorieData.mpi.valeur) }} className="h-full">
+                <HeatmapRect
+                  label="MPI"
+                  percentage={categorieData.mpi.valeur}
+                  evolution={categorieData.mpi.evolution}
+                  color={(() => {
+                    const evoValue = parseFloat(categorieData.mpi.evolution.replace('%', ''))
+                    if (evoValue > 2) return 'bg-[#F25056]'
+                    if (evoValue >= 1) return 'bg-[#F57A7E]'
+                    if (evoValue > 0) return 'bg-[#FFEFEF]'
+                    if (evoValue >= -1) return 'bg-[#F0FAF6]'
+                    if (evoValue >= -2) return 'bg-[#8EE2BF]'
+                    return 'bg-[#2FB67E]'
+                  })()}
+                  className="h-full"
+                  href="/detail/mpi"
+                  totalPA={categorieData.evoPa.valeur}
+                />
+              </div>
               {/* Autre - le plus petit */}
-              <HeatmapRect
-                label="Autre"
-                percentage="3.21%"
-                evolution="+0.00%"
-                color="bg-gray-400"
-                className="flex-[3] h-full"
-                href="/detail/autre"
-                totalPA={categorieData.evoPa.valeur}
-              />
+              <div style={{ flex: 100 - parseFloat(categorieData.mpa.valeur) - parseFloat(categorieData.mpi.valeur) }} className="h-full">
+                <HeatmapRect
+                  label="Autre"
+                  percentage={`${(100 - parseFloat(categorieData.mpa.valeur) - parseFloat(categorieData.mpi.valeur)).toFixed(2)}%`}
+                  evolution="+0.00%"
+                  color="bg-gray-400"
+                  className="h-full"
+                  href="/detail/autre"
+                  totalPA={categorieData.evoPa.valeur}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -805,11 +906,11 @@ export default function AccueilPage() {
                     // Calculer la couleur en fonction de l'évolution (logique inversée pour PA)
                     const getColorFromEvolution = (evolution: string) => {
                       const value = parseFloat(evolution.replace('%', ''))
-                      if (value >= 1.5) return 'bg-[#F25056]' // Rouge foncé pour forte hausse
-                      if (value >= 0.5) return 'bg-[#F57A7E]' // Rouge moyen
-                      if (value > 0) return 'bg-[#FFEFEF]' // Rouge clair
-                      if (value >= -0.5) return 'bg-[#F0FAF6]' // Vert clair
-                      if (value >= -1.5) return 'bg-[#8EE2BF]' // Vert moyen
+                      if (value > 2) return 'bg-[#F25056]' // Rouge foncé pour forte hausse
+                      if (value >= 1) return 'bg-[#F57A7E]' // Rouge moyen
+                      if (value > 0) return 'bg-[#FFEFEF]' // Rouge pâle
+                      if (value >= -1) return 'bg-[#F0FAF6]' // Vert pâle
+                      if (value >= -2) return 'bg-[#8EE2BF]' // Vert moyen
                       return 'bg-[#2FB67E]' // Vert foncé pour forte baisse
                     }
 
@@ -849,89 +950,97 @@ export default function AccueilPage() {
           </div>
           <div className="rounded overflow-hidden">
             <div className="flex gap-1 h-[300px]">
-              {/* Lactalis - le plus gros */}
-              <HeatmapRect
-                label="Lactalis"
-                percentage="21.12%"
-                evolution="-0.29%"
-                color="bg-[#F0FAF6]"
-                className="flex-[21] h-full"
-                href="/detail?perimetre=Fournisseur&label=Lactalis"
-                totalPA={categorieData.evoPa.valeur}
-              />
-              {/* Savencia - deuxième */}
-              <HeatmapRect
-                label="Savencia"
-                percentage="19.24%"
-                evolution="-0.80%"
-                color="bg-[#F0FAF6]"
-                className="flex-[19] h-full"
-                href="/detail?perimetre=Fournisseur&label=Savencia"
-                totalPA={categorieData.evoPa.valeur}
-              />
-              {/* Bel */}
-              <HeatmapRect
-                label="Bel"
-                percentage="8.53%"
-                evolution="+0.80%"
-                color="bg-[#FFEFEF]"
-                className="flex-[8.5] h-full"
-                href="/detail?perimetre=Fournisseur&label=Bel"
-                totalPA={categorieData.evoPa.valeur}
-              />
-              {/* Colonne droite avec les 5 petits */}
-              <div className="flex-[24] flex flex-col gap-1">
-                {/* Fromageries BEL */}
-                <HeatmapRect
-                  label="Fromageries BEL"
-                  percentage="7.93%"
-                  evolution="+1.80%"
-                  color="bg-[#F57A7E]"
-                  className="flex-[8] w-full"
-                  href="/detail?perimetre=Fournisseur&label=Fromageries BEL"
-                  totalPA={categorieData.evoPa.valeur}
-                />
-                {/* Agrial */}
-                <HeatmapRect
-                  label="Agrial"
-                  percentage="6.93%"
-                  evolution="-0.60%"
-                  color="bg-[#F0FAF6]"
-                  className="flex-[7] w-full"
-                  href="/detail?perimetre=Fournisseur&label=Agrial"
-                  totalPA={categorieData.evoPa.valeur}
-                />
-                {/* Ligne du bas avec Sodaal, Eurial, Triballat Noyal */}
-                <div className="flex-[9.4] flex gap-1">
-                  <HeatmapRect
-                    label="Sodaal"
-                    percentage="4.07%"
-                    evolution="-0.90%"
-                    color="bg-[#F0FAF6]"
-                    className="flex-[4] h-full"
-                    href="/detail?perimetre=Fournisseur&label=Sodaal"
-                    totalPA={categorieData.evoPa.valeur}
-                  />
-                  <HeatmapRect
-                    label="Eurial"
-                    percentage="3.00%"
-                    evolution="-0.06%"
-                    color="bg-[#F0FAF6]"
-                    className="flex-[3] h-full"
-                    href="/detail?perimetre=Fournisseur&label=Eurial"
-                    totalPA={categorieData.evoPa.valeur}
-                  />
-                  <HeatmapRect
-                    label="Triballat Noyal"
-                    percentage="2.33%"
-                    evolution="-3.21%"
-                    color="bg-[#2FB67E]"
-                    className="flex-[2.4] h-full"
-                    href="/detail?perimetre=Fournisseur&label=Triballat Noyal"
-                    totalPA={categorieData.evoPa.valeur}
-                  />
-                </div>
-              </div>
+              {fournisseursData.length >= 2 && (
+                <>
+                  {/* Premier fournisseur (le plus gros) */}
+                  <div style={{ flex: fournisseursData[0].flex }} className="h-full">
+                    <HeatmapRect
+                      label={fournisseursData[0].label}
+                      percentage={fournisseursData[0].percentage}
+                      evolution={fournisseursData[0].evolution}
+                      color={fournisseursData[0].color}
+                      className="h-full"
+                      href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[0].label)}`}
+                      totalPA={categorieData.evoPa.valeur}
+                    />
+                  </div>
+                  {/* Deuxième fournisseur */}
+                  <div style={{ flex: fournisseursData[1].flex }} className="h-full">
+                    <HeatmapRect
+                      label={fournisseursData[1].label}
+                      percentage={fournisseursData[1].percentage}
+                      evolution={fournisseursData[1].evolution}
+                      color={fournisseursData[1].color}
+                      className="h-full"
+                      href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[1].label)}`}
+                      totalPA={categorieData.evoPa.valeur}
+                    />
+                  </div>
+                  {/* Troisième fournisseur */}
+                  {fournisseursData[2] && (
+                    <div style={{ flex: fournisseursData[2].flex }} className="h-full">
+                      <HeatmapRect
+                        label={fournisseursData[2].label}
+                        percentage={fournisseursData[2].percentage}
+                        evolution={fournisseursData[2].evolution}
+                        color={fournisseursData[2].color}
+                        className="h-full"
+                        href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[2].label)}`}
+                        totalPA={categorieData.evoPa.valeur}
+                      />
+                    </div>
+                  )}
+                  {/* Colonne droite avec les autres fournisseurs */}
+                  {fournisseursData.length > 3 && (
+                    <div style={{ flex: fournisseursData.slice(3).reduce((sum, p) => sum + p.flex, 0) }} className="flex flex-col gap-1">
+                      {fournisseursData[3] && (
+                        <div style={{ flex: fournisseursData[3].flex }} className="w-full">
+                          <HeatmapRect
+                            label={fournisseursData[3].label}
+                            percentage={fournisseursData[3].percentage}
+                            evolution={fournisseursData[3].evolution}
+                            color={fournisseursData[3].color}
+                            className="w-full h-full"
+                            href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[3].label)}`}
+                            totalPA={categorieData.evoPa.valeur}
+                          />
+                        </div>
+                      )}
+                      {fournisseursData[4] && (
+                        <div style={{ flex: fournisseursData[4].flex }} className="w-full">
+                          <HeatmapRect
+                            label={fournisseursData[4].label}
+                            percentage={fournisseursData[4].percentage}
+                            evolution={fournisseursData[4].evolution}
+                            color={fournisseursData[4].color}
+                            className="w-full h-full"
+                            href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[4].label)}`}
+                            totalPA={categorieData.evoPa.valeur}
+                          />
+                        </div>
+                      )}
+                      {/* Ligne du bas avec les petits fournisseurs */}
+                      {fournisseursData.length > 5 && (
+                        <div style={{ flex: fournisseursData.slice(5).reduce((sum, p) => sum + p.flex, 0) }} className="flex gap-1">
+                          {fournisseursData.slice(5).map((fournisseur) => (
+                            <div key={fournisseur.label} style={{ flex: fournisseur.flex }} className="h-full">
+                              <HeatmapRect
+                                label={fournisseur.label}
+                                percentage={fournisseur.percentage}
+                                evolution={fournisseur.evolution}
+                                color={fournisseur.color}
+                                className="h-full"
+                                href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseur.label)}`}
+                                totalPA={categorieData.evoPa.valeur}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -959,16 +1068,120 @@ export default function AccueilPage() {
             <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium text-gray-700">Fournisseurs</Label>
-                <Select defaultValue="tous">
-                  <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                    <SelectValue placeholder="Fournisseurs" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tous">Tous</SelectItem>
-                    <SelectItem value="danone">Danone</SelectItem>
-                    <SelectItem value="lactalis">Lactalis</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Popover open={openFournisseursPopover} onOpenChange={setOpenFournisseursPopover}>
+                  <PopoverTrigger asChild>
+                    <div
+                      className={`flex h-9 w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring ${
+                        selectedFournisseurs.length === 0 ? "pl-3 py-2" : "p-0.5"
+                      }`}
+                      onClick={() => setOpenFournisseursPopover(true)}
+                    >
+                      {selectedFournisseurs.length === 0 ? (
+                        <span className="text-[16px]">tous</span>
+                      ) : (
+                        <div className="flex items-center gap-1 flex-1 overflow-hidden flex-wrap">
+                          {selectedFournisseurs.slice(0, 2).map((f, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
+                            >
+                              <span className="text-[14px] font-medium">{f}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedFournisseurs((prev) =>
+                                    prev.filter((item) => item !== f)
+                                  );
+                                  setTempFournisseurSelections((prev) =>
+                                    prev.filter((item) => item !== f)
+                                  );
+                                }}
+                                className="text-[#0970E6] hover:text-[#075bb3]"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          {selectedFournisseurs.length > 2 && (
+                            <span className="text-xs text-gray-500 ml-1">
+                              +{selectedFournisseurs.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <ChevronDownIcon className="h-4 w-4 text-[#0970E6] ml-2 mr-2 flex-shrink-0" />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <div className="flex flex-col">
+                      {/* Champ de recherche */}
+                      <div className="p-3 border-b">
+                        <Input
+                          placeholder="Rechercher fournisseur..."
+                          value={fournisseurSearch}
+                          onChange={(e) => setFournisseurSearch(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+
+                      {/* Bouton Tout désélectionner */}
+                      {tempFournisseurSelections.length > 0 && (
+                        <div className="px-3 pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs text-gray-600 hover:text-gray-900"
+                            onClick={() => setTempFournisseurSelections([])}
+                          >
+                            Tout désélectionner
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Liste avec checkboxes */}
+                      <div className="max-h-[300px] overflow-y-auto p-1">
+                        {filteredFournisseurs.map((f) => (
+                          <div
+                            key={f}
+                            className="flex items-center gap-2 px-4 py-4 rounded cursor-pointer"
+                            onClick={() => {
+                              setTempFournisseurSelections((prev) =>
+                                prev.includes(f)
+                                  ? prev.filter((item) => item !== f)
+                                  : [...prev, f]
+                              );
+                            }}
+                          >
+                            <Checkbox
+                              checked={tempFournisseurSelections.includes(f)}
+                              onCheckedChange={(checked) => {
+                                setTempFournisseurSelections((prev) =>
+                                  checked
+                                    ? [...prev, f]
+                                    : prev.filter((item) => item !== f)
+                                );
+                              }}
+                            />
+                            <span className="text-[16px]">{f}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Bouton Valider */}
+                      <div className="p-3 border-t">
+                        <Button
+                          className="w-full bg-[#0970E6] hover:bg-[#075bb3] text-white"
+                          onClick={() => {
+                            setSelectedFournisseurs(tempFournisseurSelections);
+                            setOpenFournisseursPopover(false);
+                          }}
+                        >
+                          Valider
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </Card>
 

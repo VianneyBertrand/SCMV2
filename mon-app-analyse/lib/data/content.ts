@@ -1,3 +1,5 @@
+import { PORTEFEUILLE_CATEGORIE_MAP } from "@/lib/constants/portefeuilles";
+
 // Types pour les périmètres
 export type PerimetreType =
   | "Marché"
@@ -341,12 +343,7 @@ const fournisseurs = [
   "Metro Cash & Carry",
   "Brake France",
 ];
-const portefeuilles = [
-  "Portefeuille Jean Dubois",
-  "Portefeuille Marie Grivault",
-  "Portefeuille Marrivois",
-  "Portefeuille Améliennes",
-];
+const portefeuilles = Object.keys(PORTEFEUILLE_CATEGORIE_MAP);
 
 // Helper pour obtenir un élément aléatoire
 const getRandomItem = <T,>(array: T[], index: number): T => {
@@ -729,10 +726,16 @@ export const perimetreData: Record<PerimetreType, PerimetreItem[]> = {
   ],
 
   Portefeuille: [
-    { id: "port1", nom: "Portefeuille Jean Dubois", tags: ["125 PRO"], ...generateCoherentMetrics(450000000, 0, "FROMAGE") },
-    { id: "port2", nom: "Portefeuille Marie Grivault", tags: ["185 PRO"], ...generateCoherentMetrics(525000000, 1, "SAURISSERIE") },
-    { id: "port3", nom: "Portefeuille Marrivois", tags: ["142 PRO"], ...generateCoherentMetrics(195000000, 2, "SURGELE VIANDES LEGUMES") },
-    { id: "port4", nom: "Portefeuille Améliennes", tags: ["40 PRO"], ...generateCoherentMetrics(80000000, 3, "ULTRA FRAIS") },
+    { id: "port1", nom: "Jean Dubois", tags: ["145 PRO"], ...generateCoherentMetrics(520000000, 0, "SAURISSERIE") },
+    { id: "port2", nom: "Marie Grivault", tags: ["168 PRO"], ...generateCoherentMetrics(485000000, 1, "SURGELE POISSON PLATS CUIS PDT") },
+    { id: "port3", nom: "Pierre Lefebvre", tags: ["132 PRO"], ...generateCoherentMetrics(395000000, 2, "SURGELE VIANDES LEGUMES") },
+    { id: "port4", nom: "Sophie Martin", tags: ["124 PRO"], ...generateCoherentMetrics(365000000, 3, "SURGELES GLACE PPI") },
+    { id: "port5", nom: "Thomas Bernard", tags: ["156 PRO"], ...generateCoherentMetrics(445000000, 4, "VOLAILLE CHARCUTERIE") },
+    { id: "port6", nom: "Claire Durand", tags: ["138 PRO"], ...generateCoherentMetrics(410000000, 5, "FROMAGE") },
+    { id: "port7", nom: "Antoine Rousseau", tags: ["115 PRO"], ...generateCoherentMetrics(325000000, 6, "LAIT BEURRE CREME") },
+    { id: "port8", nom: "Isabelle Mercier", tags: ["142 PRO"], ...generateCoherentMetrics(425000000, 7, "TRAITEUR  ") },
+    { id: "port9", nom: "Nicolas Laurent", tags: ["95 PRO"], ...generateCoherentMetrics(285000000, 8, "ULTRA FRAIS") },
+    { id: "port10", nom: "Émilie Fournier", tags: ["88 PRO"], ...generateCoherentMetrics(245000000, 9, "ŒUF PPI") },
   ],
 
   Pays: [

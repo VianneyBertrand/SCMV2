@@ -45,6 +45,7 @@ import {
   type PerimetreType,
 } from "@/lib/data/perimetre-data";
 import { cn } from "@/lib/utils";
+import { PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles";
 import {
   ArrowLeft,
   CalendarIcon,
@@ -683,12 +684,7 @@ function AnalyseValeurContent() {
         ];
       }
       if (filterType === "portefeuille") {
-        return [
-          "Premium Gourmet",
-          "Tradition & Qualité",
-          "Economique",
-          "Bio & Responsable",
-        ];
+        return PORTEFEUILLE_NAMES;
       }
 
       // Pour les autres filtres, récupérer les valeurs depuis les données (sans filtres pour avoir toutes les options)
@@ -1251,13 +1247,13 @@ function AnalyseValeurContent() {
               <Popover open={openFournisseur} onOpenChange={setOpenFournisseur}>
                 <PopoverTrigger asChild>
                   <div
-                    className={`flex h-auto min-h-[36px] w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer hover:bg-white focus:outline-none focus:ring-1 focus:ring-ring ${
+                    className={`flex h-9 w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring ${
                       fournisseurSelections.length === 0 ? "pl-3 py-2" : "p-0.5"
                     }`}
                     onClick={() => setOpenFournisseur(true)}
                   >
                     {fournisseurSelections.length === 0 ? (
-                      <span className="text-muted-foreground">tous</span>
+                      <span className="text-[16px]">tous</span>
                     ) : (
                       <div className="flex items-center gap-1 flex-1 overflow-hidden flex-wrap">
                         {fournisseurSelections.slice(0, 2).map((f, idx) => (
@@ -1292,7 +1288,7 @@ function AnalyseValeurContent() {
                     <ChevronDownIcon className="h-4 w-4 text-[#0970E6] ml-2 mr-2 flex-shrink-0" />
                   </div>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
+                <PopoverContent className="w-[400px] p-0" align="start">
                   <div className="flex flex-col">
                     {/* Champ de recherche */}
                     <div className="p-3 border-b">
@@ -1319,11 +1315,11 @@ function AnalyseValeurContent() {
                     )}
 
                     {/* Liste avec checkboxes */}
-                    <div className="max-h-[300px] overflow-y-auto p-2">
+                    <div className="max-h-[300px] overflow-y-auto p-1">
                       {filteredFournisseurs.map((f) => (
                         <div
                           key={f}
-                          className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded cursor-pointer"
+                          className="flex items-center gap-2 px-4 py-4 rounded cursor-pointer"
                           onClick={() => {
                             setTempFournisseurSelections((prev) =>
                               prev.includes(f)
@@ -1342,7 +1338,7 @@ function AnalyseValeurContent() {
                               );
                             }}
                           />
-                          <span className="text-sm">{f}</span>
+                          <span className="text-[16px]">{f}</span>
                         </div>
                       ))}
                     </div>

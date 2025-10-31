@@ -136,12 +136,13 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
 const getColorFromEvolution = (evolution: string): string => {
   const value = parseFloat(evolution.replace('%', ''))
 
-  if (value >= 5) return "bg-[#2FB67E]" // Green +++
-  if (value >= 1) return "bg-[#8EE2BF]" // Green ++
-  if (value > 0) return "bg-[#F0FAF6]" // Green +
-  if (value >= -1) return "bg-[#FFEFEF]" // Red -
-  if (value >= -5) return "bg-[#F57A7E]" // Red --
-  return "bg-[#F25056]" // Red ---
+  // Logique inversée : rouge = augmentation PA = mauvais, vert = baisse PA = bon
+  if (value > 2) return 'bg-[#F25056]' // Rouge foncé (forte hausse > 2% = très mauvais)
+  if (value >= 1) return 'bg-[#F57A7E]' // Rouge moyen (entre 1% et 2%)
+  if (value > 0) return 'bg-[#FFEFEF]' // Rouge pâle (entre 0% et 1%)
+  if (value >= -1) return 'bg-[#F0FAF6]' // Vert pâle (entre 0% et -1%)
+  if (value >= -2) return 'bg-[#8EE2BF]' // Vert moyen (entre -1% et -2%)
+  return 'bg-[#2FB67E]' // Vert foncé (forte baisse < -2% = très bon)
 }
 
 // Helper pour générer le titre avec la bonne préposition
@@ -405,21 +406,21 @@ function DetailContent() {
       })
     }
 
-    // Opportunité = PA théorique - PA
+    // Opportunité = PA - PA théorique (si négatif, afficher 0.00€)
     if (currentItem.paUnitaire && currentItem.coutTheoriqueUnitaire) {
       const paTheorique = parseFloat(currentItem.coutTheoriqueUnitaire.valeur.replace(/[^0-9.-]/g, ''));
       const pa = parseFloat(currentItem.paUnitaire.valeur.replace(/[^0-9.-]/g, ''));
-      const opportunite = paTheorique - pa;
+      const opportunite = Math.max(0, pa - paTheorique);
 
       const paTheoriqueEvol = parseFloat(currentItem.coutTheoriqueUnitaire.evolution.replace(/[^0-9.-]/g, ''));
       const paEvol = parseFloat(currentItem.paUnitaire.evolution.replace(/[^0-9.-]/g, ''));
-      const opportuniteEvol = paTheoriqueEvol - paEvol;
+      const opportuniteEvol = paEvol - paTheoriqueEvol;
 
       cards.push({
         label: "Opportunité",
         value: `${opportunite.toFixed(2)}€`,
         evolution: `${opportuniteEvol >= 0 ? '+' : ''}${opportuniteEvol.toFixed(2)}%`,
-        tooltip: "Opportunité d'économie (PA théorique - PA)"
+        tooltip: "Opportunité d'économie (PA - PA théorique)"
       })
     }
 
@@ -493,27 +494,41 @@ function DetailContent() {
 
   // Données pour heatmap Pays (filtré par l'élément actuel si applicable)
   const paysHeatmapData = useMemo(() => {
-    // Pour simplifier, on utilise des données statiques pour l'instant
-    // Dans une vraie app, on filtrerait les données de pays selon l'élément actuel
-    return [
-      { label: "France", percentage: "34.43%", evolution: "+0.24%", href: "/detail?perimetre=Pays&label=France" },
-      { label: "Belgique", percentage: "25.32%", evolution: "-1.15%", href: "/detail?perimetre=Pays&label=Belgique" },
-      { label: "Espagne", percentage: "14.21%", evolution: "+1.18%", href: "/detail?perimetre=Pays&label=Espagne" },
-      { label: "Roumanie", percentage: "8.36%", evolution: "+0.90%", href: "/detail?perimetre=Pays&label=Roumanie" },
-      { label: "Italie", percentage: "3.58%", evolution: "-1.60%", href: "/detail?perimetre=Pays&label=Italie" },
-      { label: "Pologne", percentage: "2.10%", evolution: "+1.80%", href: "/detail?perimetre=Pays&label=Pologne" },
-    ]
+    const data = getPerimetreData("Pays")
+    const totalCA = data.reduce((sum, item) => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      return sum + caValue
+    }, 0)
+
+    return data.map(item => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      const percentage = ((caValue / totalCA) * 100).toFixed(2)
+
+      return {
+        label: item.label,
+        percentage: `${percentage}%`,
+        evolution: item.evoPa.evolution,
+        href: `/detail?perimetre=Pays&label=${encodeURIComponent(item.label)}`
+      }
+    }).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage))
   }, [])
 
   // Données pour heatmap Fournisseur (top 3)
   const fournisseurHeatmapData = useMemo(() => {
     const data = getPerimetreData("Fournisseur")
-    return data.slice(0, 3).map((item, index) => {
-      const percentages = ["21.12%", "19.24%", "8.53%"]
+    const totalCA = data.reduce((sum, item) => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      return sum + caValue
+    }, 0)
+
+    return data.slice(0, 3).map(item => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      const percentage = ((caValue / totalCA) * 100).toFixed(2)
+
       return {
         label: item.label,
-        percentage: percentages[index] || "5%",
-        evolution: item.ca.evolution,
+        percentage: `${percentage}%`,
+        evolution: item.evoPa.evolution,
         href: `/detail?perimetre=Fournisseur&label=${encodeURIComponent(item.label)}`
       }
     })
@@ -527,13 +542,37 @@ function DetailContent() {
   const getCostHeatmapData = () => {
     switch (costSubTab) {
       case 'total':
+        const mpaValue = parseFloat(currentItem.mpa.valeur)
+        const mpiValue = parseFloat(currentItem.mpi.valeur)
+        const autreValue = (100 - mpaValue - mpiValue).toFixed(2)
+
+        const getMPAColor = () => {
+          const evoValue = parseFloat(currentItem.mpa.evolution.replace('%', ''))
+          if (evoValue > 2) return 'bg-[#F25056]'
+          if (evoValue >= 1) return 'bg-[#F57A7E]'
+          if (evoValue > 0) return 'bg-[#FFEFEF]'
+          if (evoValue >= -1) return 'bg-[#F0FAF6]'
+          if (evoValue >= -2) return 'bg-[#8EE2BF]'
+          return 'bg-[#2FB67E]'
+        }
+
+        const getMPIColor = () => {
+          const evoValue = parseFloat(currentItem.mpi.evolution.replace('%', ''))
+          if (evoValue > 2) return 'bg-[#F25056]'
+          if (evoValue >= 1) return 'bg-[#F57A7E]'
+          if (evoValue > 0) return 'bg-[#FFEFEF]'
+          if (evoValue >= -1) return 'bg-[#F0FAF6]'
+          if (evoValue >= -2) return 'bg-[#8EE2BF]'
+          return 'bg-[#2FB67E]'
+        }
+
         return {
           layout: 'horizontal',
           type: 'total' as const,
           items: [
-            { label: 'MPA', percentage: '48.23%', evolution: '+3.20%', color: 'bg-[#F25056]', className: 'flex-1', href: '/detail?perimetre=MPA' },
-            { label: 'MPI', percentage: '37.43%', evolution: '-1.80%', color: 'bg-[#2FB67E]', className: 'flex-1', href: '/detail?perimetre=MPI' },
-            { label: 'Autre', percentage: '10.01%', evolution: '0.00%', color: 'bg-gray-400', className: 'w-1/6', href: '/detail?perimetre=Autre' },
+            { label: 'MPA', percentage: currentItem.mpa.valeur, evolution: currentItem.mpa.evolution, color: getMPAColor(), className: 'flex-1', href: '/detail?perimetre=MPA' },
+            { label: 'MPI', percentage: currentItem.mpi.valeur, evolution: currentItem.mpi.evolution, color: getMPIColor(), className: 'flex-1', href: '/detail?perimetre=MPI' },
+            { label: 'Autre', percentage: `${autreValue}%`, evolution: '+0.00%', color: 'bg-gray-400', className: 'w-1/6', href: '/detail?perimetre=Autre' },
           ]
         }
       case 'mpa':
@@ -1153,13 +1192,49 @@ function DetailContent() {
   const getEvolutionTableData = () => {
     const baseData = getEvolutionChartData()
 
+    const headers = baseData.map(d => {
+      const [year, month] = d.date.split('-')
+      if (evolutionPeriod === 'mois') return `${month}/${year.slice(2)}`
+      if (evolutionPeriod === 'semaine') return `S${month}/${year.slice(2)}`
+      return `01/${month}/${year.slice(2)}`
+    })
+
+    // Different rows for Produit vs other perimetres
+    if (perimetre === "Produit") {
+      return {
+        headers,
+        rows: [
+          {
+            label: "PA",
+            values: baseData.map(d => evolutionBase100 ? d.PA.toFixed(1) : d.PA.toString())
+          },
+          {
+            label: 'PA théorique',
+            values: baseData.map(d => evolutionBase100 ? d['cout-theorique'].toFixed(1) : d['cout-theorique'].toString())
+          },
+          {
+            label: 'PV',
+            values: baseData.map(d => evolutionBase100 ? d.PV.toFixed(1) : d.PV.toString())
+          },
+          {
+            label: 'PV LCL',
+            values: baseData.map(d => evolutionBase100 ? d['PV-LCL'].toFixed(1) : d['PV-LCL'].toString())
+          },
+          {
+            label: 'Marge PV',
+            values: baseData.map(d => evolutionBase100 ? d['Marge-PV'].toFixed(1) : d['Marge-PV'].toString())
+          },
+          {
+            label: 'Marge PV LCL',
+            values: baseData.map(d => evolutionBase100 ? d['Marge-PV-LCL'].toFixed(1) : d['Marge-PV-LCL'].toString())
+          }
+        ]
+      }
+    }
+
+    // For other perimetres
     return {
-      headers: baseData.map(d => {
-        const [year, month] = d.date.split('-')
-        if (evolutionPeriod === 'mois') return `${month}/${year.slice(2)}`
-        if (evolutionPeriod === 'semaine') return `S${month}/${year.slice(2)}`
-        return `01/${month}/${year.slice(2)}`
-      }),
+      headers,
       rows: [
         {
           label: "PA total",
@@ -1512,7 +1587,11 @@ function DetailContent() {
         {/* Tab Structure de coût */}
         <TabsContent value="structure-cout" className="space-y-6 mt-10">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-[20px] font-medium">Répartition en valeur des matières premières</h2>
+            <h2 className="text-[20px] font-medium">
+              {costSubTab === 'total' && 'Répartition en valeur des MPA et MPI'}
+              {costSubTab === 'mpa' && 'Répartition en valeur des MPA'}
+              {costSubTab === 'mpi' && 'Répartition en valeur des MPI'}
+            </h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
@@ -1558,16 +1637,17 @@ function DetailContent() {
                       return (
                         <div className="flex gap-1 h-[300px]">
                           {heatmapData.items.map((item, idx) => (
-                            <HeatmapRect
-                              key={idx}
-                              label={item.label}
-                              percentage={item.percentage}
-                              evolution={item.evolution}
-                              color={item.color}
-                              className={`${item.className} h-full`}
-                              href={item.href}
-                              type={heatmapData.type}
-                            />
+                            <div key={idx} style={{ flex: parseFloat(item.percentage) }} className="h-full">
+                              <HeatmapRect
+                                label={item.label}
+                                percentage={item.percentage}
+                                evolution={item.evolution}
+                                color={item.color}
+                                className="h-full"
+                                href={item.href}
+                                type={heatmapData.type}
+                              />
+                            </div>
                           ))}
                         </div>
                       )
@@ -2524,7 +2604,10 @@ function DetailContent() {
 
         <TabsContent value="recette" className="space-y-6 mt-10">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-[20px] font-medium">Répartition en volume des matières premières</h2>
+            <h2 className="text-[20px] font-medium">
+              {recetteSubTab === 'mpa' && 'Répartition en volume des MPA'}
+              {recetteSubTab === 'mpi' && 'Répartition en volume des MPI'}
+            </h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
@@ -2770,7 +2853,7 @@ function DetailContent() {
             {/* Cards KPI */}
             <div className="space-y-4 mt-4">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-medium">Pourcentage d&apos;évolution sur la période</h3>
+                <h3 className="text-[20px] font-medium">Pourcentage d&apos;évolution sur la période</h3>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
@@ -2787,10 +2870,10 @@ function DetailContent() {
                 {(perimetre === "Produit" ? productCards : kpiCards).filter(card =>
                   perimetre === "Produit"
                     ? ['PA', 'PA théorique', 'PV', 'PV LCL', 'Marge PV', 'Marge PV LCL'].includes(card.label)
-                    : ['PA', 'PA théorique'].includes(card.label)
+                    : ['PA total', 'PA total théorique'].includes(card.label)
                 ).map(card => {
                   const isPositive = card.evolution?.startsWith('+')
-                  const isInversed = ["PA", "PA théorique", "Marge PV", "Marge PV LCL"].includes(card.label)
+                  const isInversed = ["PA", "PA théorique", "PA total", "PA total théorique", "Marge PV", "Marge PV LCL"].includes(card.label)
                   const color = isInversed
                     ? (isPositive ? 'text-red-600' : 'text-green-600')
                     : (isPositive ? 'text-green-600' : 'text-red-600')
