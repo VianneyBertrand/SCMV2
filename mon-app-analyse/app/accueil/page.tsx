@@ -44,11 +44,13 @@ import {
 } from "@/lib/data/perimetre-data"
 import { cn, calculateValorisation } from "@/lib/utils"
 import { PORTEFEUILLE_CATEGORIE_MAP, PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles"
-import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Eye, Info, X, RefreshCw } from "lucide-react"
+import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Eye, Info, X } from "lucide-react"
+import { SwitchIcon } from "@/components/ui/switch-icon"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { usePeriodMode } from "@/hooks/usePeriodMode"
+import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 
 // Composant Heatmap Rectangle réutilisable
 interface HeatmapRectProps {
@@ -255,6 +257,9 @@ export default function AccueilPage() {
   const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca')
   const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume')
 
+  // Mode unité UVC/Tonne pour Volume
+  const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-accueil')
+
   // State pour le portefeuille sélectionné
   const [selectedPortefeuille, setSelectedPortefeuille] = useState<string>("tous")
 
@@ -329,10 +334,16 @@ export default function AccueilPage() {
       CAM: { value: "1254.00 M€", evolution: "+3.20%" }
     }
 
-    // Valeurs fixes CAD/CAM pour Volume
+    // Valeurs fixes CAD/CAM et UVC/Tonne pour Volume
     const volumeData = {
-      CAD: { value: "287.932", evolution: "+2.63%" },
-      CAM: { value: "316.725", evolution: "+3.10%" }
+      UVC: {
+        CAD: { value: "287.932", evolution: "+2.63%" },
+        CAM: { value: "316.725", evolution: "+3.10%" }
+      },
+      Tonne: {
+        CAD: { value: "45.123", evolution: "+2.50%" },
+        CAM: { value: "49.876", evolution: "+3.05%" }
+      }
     }
 
     return [
@@ -345,12 +356,14 @@ export default function AccueilPage() {
         onToggleMode: toggleCAMode
       },
       {
-        label: "Volume (UVC)",
-        value: volumeData[volumeMode].value,
-        evolution: volumeData[volumeMode].evolution,
-        tooltip: "Volume total en unités de vente consommateur",
+        label: "Volume",
+        value: volumeData[volumeUnit][volumeMode].value,
+        evolution: volumeData[volumeUnit][volumeMode].evolution,
+        tooltip: `Volume total en ${volumeUnit === 'UVC' ? 'unités de vente consommateur' : 'tonnes'}`,
         mode: volumeMode,
-        onToggleMode: toggleVolumeMode
+        onToggleMode: toggleVolumeMode,
+        unit: volumeUnit,
+        onToggleUnit: toggleVolumeUnit
       },
       {
         label: "MPA",
@@ -383,7 +396,7 @@ export default function AccueilPage() {
         tooltip: "Opportunité d'optimisation identifiée"
       },
     ]
-  }, [categorieData, caMode, volumeMode, toggleCAMode, toggleVolumeMode])
+  }, [categorieData, caMode, volumeMode, volumeUnit, toggleCAMode, toggleVolumeMode, toggleVolumeUnit])
 
   // Calculer les comptages pour le périmètre Marché
   const navigationLinks = useMemo(() => {
@@ -626,59 +639,61 @@ export default function AccueilPage() {
             color = isPositive ? 'text-green-600' : 'text-red-600'
           }
 
-          const hasMode = card.label === "CA" || card.label === "Volume (UVC)"
+          const hasMode = card.label === "CA" || card.label === "Volume"
+          const hasUnit = card.label === "Volume"
 
           return (
             <Card key={card.label} className="p-4 rounded shadow-none">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium">
-                  {hasMode ? (
-                    <div className="inline-flex items-center gap-1">
-                      {card.label.replace(" (UVC)", "")}
-                      {card.label.includes("(UVC)") && <span className="text-xs text-gray-500">(UVC)</span>}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                card.onToggleMode?.()
-                              }}
-                              className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-0.5"
-                            >
-                              {card.mode} <RefreshCw className="w-2.5 h-2.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            <div className="space-y-1">
-                              <p className="font-semibold">{card.mode === 'CAD' ? 'Cumul À Date' : 'Cumul Année Mobile'}</p>
-                              <p className="text-xs">
-                                {card.mode === 'CAD'
-                                  ? '1er janvier 2025 → aujourd\'hui'
-                                  : '12 derniers mois glissants'}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Cliquez pour voir {card.mode === 'CAD' ? 'CAM' : 'CAD'}
-                              </p>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  ) : (
-                    card.label
-                  )}
-                </span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-[#121212]" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{card.tooltip}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {hasMode ? (
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-sm font-medium">{card.label}</span>
+                    {hasUnit && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          card.onToggleUnit?.()
+                        }}
+                        className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                      >
+                        {card.unit} <SwitchIcon className="w-4 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        card.onToggleMode?.()
+                      }}
+                      className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                    >
+                      {card.mode} <SwitchIcon className="w-4 h-3.5" />
+                    </button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-4 h-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{card.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium">{card.label}</span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-4 h-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{card.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </>
+                )}
               </div>
               <div className="text-2xl font-bold mb-1">{card.value}</div>
               {card.evolution && (

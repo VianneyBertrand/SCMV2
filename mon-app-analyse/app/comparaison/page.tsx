@@ -16,7 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Info, RefreshCw } from "lucide-react"
+import { Info } from "lucide-react"
+import { SwitchIcon } from "@/components/ui/switch-icon"
 import { getPerimetreData, type PerimetreType } from "@/lib/data/perimetre-data"
 
 // Lazy load heavy comparison components with Recharts
@@ -286,44 +287,37 @@ function ComparaisonContent() {
                             <div className="inline-flex items-center gap-1">
                               {metric.label.replace(" (UVC)", "")}
                               {metric.label.includes("(UVC)") && <span className="text-xs text-gray-500">(UVC)</span>}
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  toggleMode()
+                                }}
+                                className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                              >
+                                {mode} <SwitchIcon className="w-4 h-3.5" />
+                              </button>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault()
-                                      toggleMode()
-                                    }}
-                                    className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-0.5"
-                                  >
-                                    {mode} <RefreshCw className="w-2.5 h-2.5" />
-                                  </button>
+                                  <Info className="h-4 w-4 text-[#121212] cursor-help" />
                                 </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-xs">
-                                  <div className="space-y-1">
-                                    <p className="font-semibold">{mode === 'CAD' ? 'Cumul À Date' : 'Cumul Année Mobile'}</p>
-                                    <p className="text-xs">
-                                      {mode === 'CAD'
-                                        ? '1er janvier 2025 → aujourd\'hui'
-                                        : '12 derniers mois glissants'}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      Cliquez pour voir {mode === 'CAD' ? 'CAM' : 'CAD'}
-                                    </p>
-                                  </div>
+                                <TooltipContent>
+                                  <p>{metric.label}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </div>
                           ) : (
-                            metric.label
+                            <>
+                              {metric.label}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-4 w-4 text-[#121212] cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{metric.label}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </>
                           )}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-4 w-4 text-[#121212] cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{metric.label}</p>
-                            </TooltipContent>
-                          </Tooltip>
                         </div>
                       </TableCell>
                       {elements.map((element) => {
