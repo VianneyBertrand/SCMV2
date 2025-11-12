@@ -59,7 +59,7 @@ interface HeatmapRectProps {
   evolution: string
   color: string
   className?: string
-  href: string
+  href?: string // Rendre href optionnel pour désactiver le clic
   totalPA?: string // PA total pour calculer la valorisation
   lastUpdate?: string // Date de dernière mise à jour
 }
@@ -77,20 +77,34 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, tot
     return evolution
   }, [evolution])
 
+  const content = (
+    <>
+      <span className="text-[14px] font-bold text-center text-black line-clamp-3 break-words w-full px-1">{label}</span>
+      <span className="text-[14px] font-medium text-black mt-1">{percentage}</span>
+      <span className="text-[14px] font-medium text-black">
+        {evolution}
+      </span>
+    </>
+  )
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link
-            href={href}
-            className={`${color} ${className} p-2 flex flex-col items-center justify-center hover:opacity-90 transition-opacity cursor-pointer overflow-hidden`}
-          >
-            <span className="text-[14px] font-bold text-center text-black line-clamp-3 break-words w-full px-1">{label}</span>
-            <span className="text-[14px] font-medium text-black mt-1">{percentage}</span>
-            <span className="text-[14px] font-medium text-black">
-              {evolution}
-            </span>
-          </Link>
+          {href ? (
+            <Link
+              href={href}
+              className={`${color} ${className} p-2 flex flex-col items-center justify-center hover:opacity-90 transition-opacity cursor-pointer overflow-hidden`}
+            >
+              {content}
+            </Link>
+          ) : (
+            <div
+              className={`${color} ${className} p-2 flex flex-col items-center justify-center overflow-hidden`}
+            >
+              {content}
+            </div>
+          )}
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={-50} className="max-w-xs">
           <div>
@@ -828,7 +842,6 @@ export default function AccueilPage() {
                     return 'bg-[#2FB67E]'
                   })()}
                   className="h-full"
-                  href="/detail/mpa"
                   totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                 />
               </div>
@@ -848,7 +861,6 @@ export default function AccueilPage() {
                     return 'bg-[#2FB67E]'
                   })()}
                   className="h-full"
-                  href="/detail/mpi"
                   totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                 />
               </div>
@@ -860,7 +872,6 @@ export default function AccueilPage() {
                   evolution="+0.00%"
                   color="bg-gray-400"
                   className="h-full"
-                  href="/detail/autre"
                   totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                 />
               </div>
