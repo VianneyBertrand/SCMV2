@@ -51,6 +51,13 @@ import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
+import { useRestoredPageState } from "@/hooks/usePageState"
+
+// Interface pour l'état de la page à persister
+interface AccueilPageState {
+  selectedPortefeuille: string;
+  selectedFournisseurs: string[];
+}
 
 // Composant Heatmap Rectangle réutilisable
 interface HeatmapRectProps {
@@ -269,6 +276,9 @@ function OpportunityTable({ title, perimetre, items, activeFilters = {} }: Oppor
 export default function AccueilPage() {
   const router = useRouter()
 
+  // Restaurer l'état sauvegardé
+  const restoredState = useRestoredPageState<AccueilPageState>('accueil');
+
   // Modes période CAD/CAM pour CA et Volume
   const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca')
   const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume')
@@ -277,14 +287,14 @@ export default function AccueilPage() {
   const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-accueil')
 
   // State pour le portefeuille sélectionné
-  const [selectedPortefeuille, setSelectedPortefeuille] = useState<string>("tous")
+  const [selectedPortefeuille, setSelectedPortefeuille] = useState<string>(restoredState?.selectedPortefeuille ?? "tous")
 
   // State pour le combobox
   const [openCombobox, setOpenCombobox] = useState(false)
 
   // State pour les fournisseurs sélectionnés (multiselection)
-  const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>([])
-  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>([])
+  const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>(restoredState?.selectedFournisseurs ?? [])
+  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>(restoredState?.selectedFournisseurs ?? [])
   const [openFournisseursPopover, setOpenFournisseursPopover] = useState(false)
   const [fournisseurSearch, setFournisseurSearch] = useState("")
 
@@ -311,6 +321,22 @@ export default function AccueilPage() {
       setTempFournisseurSelections(selectedFournisseurs)
     }
   }, [openFournisseursPopover, selectedFournisseurs])
+
+  // Sauvegarder l'état de la page à chaque changement
+  useEffect(() => {
+    const pageState: AccueilPageState = {
+      selectedPortefeuille,
+      selectedFournisseurs,
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('page-state-accueil', JSON.stringify(pageState));
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'état:', error);
+      }
+    }
+  }, [selectedPortefeuille, selectedFournisseurs]);
 
   // Récupérer les données du périmètre Marché pour les liens de navigation
   const marcheData = useMemo(() => getPerimetreData("Marché"), [])

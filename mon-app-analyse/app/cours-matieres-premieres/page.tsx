@@ -49,6 +49,7 @@ import { PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles";
 import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIcon, Info, ChevronsUpDown, RotateCcw } from "lucide-react";
 import { CurveIcon } from "@/components/ui/curve-icon";
 import dynamic from 'next/dynamic';
+import { useRestoredPageState } from "@/hooks/usePageState";
 
 // Lazy load Recharts components
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false });
@@ -79,6 +80,23 @@ interface MatierePremiere {
   sousFamille: string;
   fournisseur: string;
   portefeuille: string;
+}
+
+// Interface pour l'état de la page à persister
+interface CoursMatieresPageState {
+  paysDestination: string;
+  unite: string;
+  categorie: string;
+  groupeFamille: string;
+  famille: string;
+  sousFamille: string;
+  fournisseurSelections: string[];
+  portefeuille: string;
+  selectedMatieres: MatierePremiere[];
+  periodeGraphique: "mois" | "semaine" | "jour";
+  base100: boolean;
+  base100Annuel: boolean;
+  matiereSelectionneeAnnuelle: string;
 }
 
 // Données mockées - matières premières cohérentes avec PLS
@@ -372,20 +390,23 @@ const years = [
 const matiereColors = ["#E91E63", "#607D8B", "#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#00BCD4", "#8BC34A", "#FF5722", "#795548", "#607D8B", "#3F51B5"];
 
 export default function CoursMatieresPremieres() {
+  // Restaurer l'état sauvegardé
+  const restoredState = useRestoredPageState<CoursMatieresPageState>('cours-matieres');
+
   // États filtres
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(2024, 11, 11),
     to: new Date(2024, 11, 14),
   });
-  const [paysDestination, setPaysDestination] = useState("tous");
-  const [unite, setUnite] = useState("tous");
-  const [categorie, setCategorie] = useState("tous");
-  const [groupeFamille, setGroupeFamille] = useState("tous");
-  const [famille, setFamille] = useState("tous");
-  const [sousFamille, setSousFamille] = useState("tous");
-  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>([]);
-  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>([]);
-  const [portefeuille, setPortefeuille] = useState("tous");
+  const [paysDestination, setPaysDestination] = useState(restoredState?.paysDestination ?? "tous");
+  const [unite, setUnite] = useState(restoredState?.unite ?? "tous");
+  const [categorie, setCategorie] = useState(restoredState?.categorie ?? "tous");
+  const [groupeFamille, setGroupeFamille] = useState(restoredState?.groupeFamille ?? "tous");
+  const [famille, setFamille] = useState(restoredState?.famille ?? "tous");
+  const [sousFamille, setSousFamille] = useState(restoredState?.sousFamille ?? "tous");
+  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>(restoredState?.fournisseurSelections ?? []);
+  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>(restoredState?.fournisseurSelections ?? []);
+  const [portefeuille, setPortefeuille] = useState(restoredState?.portefeuille ?? "tous");
 
   // État recherche fournisseur
   const [fournisseurSearch, setFournisseurSearch] = useState("");
@@ -394,20 +415,22 @@ export default function CoursMatieresPremieres() {
   // États recherche et sélection
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedMatieres, setSelectedMatieres] = useState<MatierePremiere[]>([
-    matieresPremieres[0],
-    matieresPremieres[4],
-  ]);
+  const [selectedMatieres, setSelectedMatieres] = useState<MatierePremiere[]>(
+    restoredState?.selectedMatieres ?? [
+      matieresPremieres[0],
+      matieresPremieres[4],
+    ]
+  );
 
   // États graphiques
-  const [periodeGraphique, setPeriodeGraphique] = useState<"mois" | "semaine" | "jour">("mois");
-  const [base100, setBase100] = useState(false);
+  const [periodeGraphique, setPeriodeGraphique] = useState<"mois" | "semaine" | "jour">(restoredState?.periodeGraphique ?? "mois");
+  const [base100, setBase100] = useState(restoredState?.base100 ?? false);
   const [evolutionDateRange, setEvolutionDateRange] = useState([0, 100]);
   const [legendOpacityEvolution, setLegendOpacityEvolution] = useState<Record<string, boolean>>({});
 
   const [periodeAnnuelle, setPeriodeAnnuelle] = useState("mois");
-  const [base100Annuel, setBase100Annuel] = useState(false);
-  const [matiereSelectionneeAnnuelle, setMatiereSelectionneeAnnuelle] = useState("FAR01");
+  const [base100Annuel, setBase100Annuel] = useState(restoredState?.base100Annuel ?? false);
+  const [matiereSelectionneeAnnuelle, setMatiereSelectionneeAnnuelle] = useState(restoredState?.matiereSelectionneeAnnuelle ?? "FAR01");
   const [selectedYears, setSelectedYears] = useState(["2019", "2020", "2021", "2022", "2023", "2024", "2025"]);
   const [annuelDateRange, setAnnuelDateRange] = useState([0, 100]);
   const [legendOpacityAnnual, setLegendOpacityAnnual] = useState<Record<string, boolean>>({});
@@ -555,6 +578,33 @@ export default function CoursMatieresPremieres() {
       }
     }
   }, [selectedMatieres, matiereSelectionneeAnnuelle]);
+
+  // Sauvegarder l'état de la page à chaque changement
+  useEffect(() => {
+    const pageState: CoursMatieresPageState = {
+      paysDestination,
+      unite,
+      categorie,
+      groupeFamille,
+      famille,
+      sousFamille,
+      fournisseurSelections,
+      portefeuille,
+      selectedMatieres,
+      periodeGraphique,
+      base100,
+      base100Annuel,
+      matiereSelectionneeAnnuelle,
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('page-state-cours-matieres', JSON.stringify(pageState));
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'état:', error);
+      }
+    }
+  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseurSelections, portefeuille, selectedMatieres, periodeGraphique, base100, base100Annuel, matiereSelectionneeAnnuelle]);
 
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = useMemo(() => {

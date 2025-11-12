@@ -62,6 +62,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePeriodMode } from "@/hooks/usePeriodMode";
 import { SwitchIcon } from "@/components/ui/switch-icon";
+import { usePageState, useRestoredPageState } from "@/hooks/usePageState";
 
 // Lazy load heavy components - Command and Calendar
 const LazyCalendar = dynamic(
@@ -121,6 +122,23 @@ interface NavigationHistoryItem {
   portefeuilleSelections: string[];
 }
 
+// Interface pour l'état de la page à persister
+interface AnalyseValeurPageState {
+  perimetre: PerimetreType;
+  filters: Record<string, string>;
+  fournisseurSelections: string[];
+  paysSelections: string[];
+  portefeuilleSelections: string[];
+  comparisonMode: boolean;
+  comparedElements: {
+    id: string;
+    name: string;
+    filters: Record<string, string>;
+  }[];
+  comparisonByPerimeter: Record<string, typeof comparedElements>;
+  rechercheValue: string;
+}
+
 // Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
 const filterDisplayableFilters = (
   filters: Record<string, string>
@@ -143,8 +161,11 @@ function AnalyseValeurContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [comparisonMode, setComparisonMode] = useState(false);
-  const [perimetre, setPerimetre] = useState<PerimetreType>("Marché");
+  // Restaurer l'état sauvegardé
+  const restoredState = useRestoredPageState<AnalyseValeurPageState>('analyse-valeur');
+
+  const [comparisonMode, setComparisonMode] = useState(restoredState?.comparisonMode ?? false);
+  const [perimetre, setPerimetre] = useState<PerimetreType>(restoredState?.perimetre ?? "Marché");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(2024, 10, 11),
     to: new Date(2024, 10, 14),
@@ -153,33 +174,33 @@ function AnalyseValeurContent() {
 
   // States pour le combobox
   const [openRecherche, setOpenRecherche] = useState(false);
-  const [rechercheValue, setRechercheValue] = useState("");
+  const [rechercheValue, setRechercheValue] = useState(restoredState?.rechercheValue ?? "");
   const [searchInputValue, setSearchInputValue] = useState("");
 
   // States pour la multi-sélection des fournisseurs
   const [fournisseurSelections, setFournisseurSelections] = useState<string[]>(
-    []
+    restoredState?.fournisseurSelections ?? []
   );
   const [tempFournisseurSelections, setTempFournisseurSelections] = useState<
     string[]
-  >([]);
+  >(restoredState?.fournisseurSelections ?? []);
   const [openFournisseur, setOpenFournisseur] = useState(false);
   const [fournisseurSearch, setFournisseurSearch] = useState("");
 
   // States pour la multi-sélection des pays
-  const [paysSelections, setPaysSelections] = useState<string[]>([]);
-  const [tempPaysSelections, setTempPaysSelections] = useState<string[]>([]);
+  const [paysSelections, setPaysSelections] = useState<string[]>(restoredState?.paysSelections ?? []);
+  const [tempPaysSelections, setTempPaysSelections] = useState<string[]>(restoredState?.paysSelections ?? []);
   const [openPays, setOpenPays] = useState(false);
   const [paysSearch, setPaysSearch] = useState("");
 
   // States pour la multi-sélection des portefeuilles
-  const [portefeuilleSelections, setPortefeuilleSelections] = useState<string[]>([]);
-  const [tempPortefeuilleSelections, setTempPortefeuilleSelections] = useState<string[]>([]);
+  const [portefeuilleSelections, setPortefeuilleSelections] = useState<string[]>(restoredState?.portefeuilleSelections ?? []);
+  const [tempPortefeuilleSelections, setTempPortefeuilleSelections] = useState<string[]>(restoredState?.portefeuilleSelections ?? []);
   const [openPortefeuille, setOpenPortefeuille] = useState(false);
   const [portefeuilleSearch, setPortefeuilleSearch] = useState("");
 
   // States pour les filtres dynamiques
-  const [filters, setFilters] = useState<Record<string, string>>({
+  const [filters, setFilters] = useState<Record<string, string>>(restoredState?.filters ?? {
     pays: "tous",
     marche: "tous",
     marcheDetaille: "tous",
@@ -207,11 +228,11 @@ function AnalyseValeurContent() {
       name: string;
       filters: Record<string, string>;
     }[]
-  >([]);
+  >(restoredState?.comparedElements ?? []);
 
   const [comparisonByPerimeter, setComparisonByPerimeter] = useState<
     Record<string, typeof comparedElements>
-  >({
+  >(restoredState?.comparisonByPerimeter ?? {
     Marché: [],
     "Marché détaillé": [],
     Catégorie: [],
@@ -345,8 +366,34 @@ function AnalyseValeurContent() {
     [router]
   );
 
-  // Initialiser depuis les URL params à chaque changement d'URL
+  // Sauvegarder l'état de la page à chaque changement
   useEffect(() => {
+    const pageState: AnalyseValeurPageState = {
+      perimetre,
+      filters,
+      fournisseurSelections,
+      paysSelections,
+      portefeuilleSelections,
+      comparisonMode,
+      comparedElements,
+      comparisonByPerimeter,
+      rechercheValue,
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('page-state-analyse-valeur', JSON.stringify(pageState));
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'état:', error);
+      }
+    }
+  }, [perimetre, filters, fournisseurSelections, paysSelections, portefeuilleSelections, comparisonMode, comparedElements, comparisonByPerimeter, rechercheValue]);
+
+  // Initialiser depuis les URL params à chaque changement d'URL (uniquement si pas d'état restauré)
+  useEffect(() => {
+    // Ne pas écraser l'état restauré
+    if (restoredState) return;
+
     const perimetreParam = searchParams.get("perimetre");
     if (perimetreParam) {
       // Valider que le périmètre est valide
@@ -423,7 +470,7 @@ function AnalyseValeurContent() {
         console.error("Error parsing elements from URL:", e);
       }
     }
-  }, [searchParams, perimetre]); // S'exécuter à chaque changement des paramètres URL
+  }, [searchParams, perimetre, restoredState]); // S'exécuter à chaque changement des paramètres URL
 
   // States pour le tri
   const [sortColumn, setSortColumn] = useState<string | null>(null);
