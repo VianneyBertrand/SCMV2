@@ -60,6 +60,8 @@ import {
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { usePeriodMode } from "@/hooks/usePeriodMode";
+import { SwitchIcon } from "@/components/ui/switch-icon";
 
 // Lazy load heavy components - Command and Calendar
 const LazyCalendar = dynamic(
@@ -188,6 +190,9 @@ function AnalyseValeurContent() {
     fournisseur: "tous",
     portefeuille: "tous",
   });
+
+  // Mode période CAD/CAM pour CA
+  const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca-analyse-valeur');
 
   // Historique de navigation
   const [navigationHistory, setNavigationHistory] = useState<
@@ -853,6 +858,31 @@ function AnalyseValeurContent() {
       subLevelCounts: calculateSubLevelCounts(perimetre, item, activeFilters),
     }));
   }, [sortedData, perimetre, filters]);
+
+  // Générer des données CAD/CAM alternatives pour le CA
+  const caDataByMode = useMemo(() => {
+    const dataMap = new Map();
+    dataWithSubLevelCounts.forEach((item) => {
+      // Valeurs CAD = valeurs actuelles
+      const cadValue = item.ca.valeur;
+      const cadEvolution = item.ca.evolution;
+
+      // Générer des valeurs CAM légèrement différentes (simulées)
+      const cadValueNum = parseFloat(cadValue.replace(/[^\d.-]/g, ''));
+      const camValueNum = cadValueNum * 1.15; // +15% pour CAM
+      const camValue = `${camValueNum.toFixed(2)} M€`;
+
+      const cadEvolutionNum = parseFloat(cadEvolution.replace(/[^\d.-]/g, ''));
+      const camEvolutionNum = cadEvolutionNum + 0.5; // +0.5% pour CAM
+      const camEvolution = `${camEvolutionNum >= 0 ? '+' : ''}${camEvolutionNum.toFixed(2)}%`;
+
+      dataMap.set(item.label, {
+        CAD: { valeur: cadValue, evolution: cadEvolution },
+        CAM: { valeur: camValue, evolution: camEvolution }
+      });
+    });
+    return dataMap;
+  }, [dataWithSubLevelCounts]);
 
   return (
     <main className="w-full px-[50px] py-4">
@@ -1694,6 +1724,15 @@ function AnalyseValeurContent() {
                 <TableHead className="w-[180px]">
                   <div className="flex items-center gap-2">
                     CA
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCAMode();
+                      }}
+                      className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                    >
+                      {caMode} <SwitchIcon className="w-4 h-3.5" />
+                    </button>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-[#121212]" />
@@ -1929,16 +1968,18 @@ function AnalyseValeurContent() {
                       {/* CA */}
                       <TableCell>
                         <div className="flex flex-col">
-                          <div className="font-medium">{row.ca.valeur}</div>
+                          <div className="font-medium">
+                            {caDataByMode.get(row.label)?.[caMode]?.valeur || row.ca.valeur}
+                          </div>
                           <div
                             className={cn(
                               "font-medium",
-                              row.ca.evolution.startsWith("+")
+                              (caDataByMode.get(row.label)?.[caMode]?.evolution || row.ca.evolution).startsWith("+")
                                 ? "text-green-600"
                                 : "text-red-600"
                             )}
                           >
-                            {row.ca.evolution}
+                            {caDataByMode.get(row.label)?.[caMode]?.evolution || row.ca.evolution}
                           </div>
                         </div>
                       </TableCell>
