@@ -75,14 +75,21 @@ interface HeatmapRectProps {
   categoryPercentage?: string
   style?: React.CSSProperties
   totalPA?: string // PA total pour calculer la valorisation
+  lastUpdate?: string // Date de dernière mise à jour
 }
 
-function HeatmapRect({ label, percentage, evolution, color, className, href, type, categoryPercentage, style, totalPA }: HeatmapRectProps) {
+function HeatmapRect({ label, percentage, evolution, color, className, href, type, categoryPercentage, style, totalPA, lastUpdate }: HeatmapRectProps) {
   // Calculer la valorisation en euros
   const valorisation = useMemo(() => {
     if (!totalPA) return null
     return calculateValorisation(percentage, totalPA)
   }, [percentage, totalPA])
+
+  // Calculer l'impact en % (évolution)
+  const impact = useMemo(() => {
+    if (!evolution) return '+0.00%'
+    return evolution
+  }, [evolution])
 
   return (
     <TooltipProvider>
@@ -99,30 +106,15 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
             </span>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-2">
+        <TooltipContent side="top" sideOffset={-50} className="max-w-xs">
+          <div className="space-y-1">
             <p className="font-semibold">{label}</p>
-            <div className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1">
-              <span className="text-sm">% du coût total</span>
-              <span className="text-sm font-medium">{percentage}</span>
-              {type !== 'total' && categoryPercentage && (
-                <>
-                  <span className="text-sm select-none">% du total {type === 'mpa' ? 'MPA' : 'MPI'}</span>
-                  <span className="text-sm font-medium">{categoryPercentage}</span>
-                </>
-              )}
-              {valorisation && (
-                <>
-                  <span className="text-sm select-none">Valorisation</span>
-                  <span className="text-sm font-medium">{valorisation}</span>
-                </>
-              )}
-              <span className="text-sm">% d&apos;évolution</span>
-              <span className="text-sm font-medium">{evolution}</span>
-              <span className="text-sm">% impact sur le prix</span>
-              <span className="text-sm font-medium">{evolution}</span>
-            </div>
-            <p className="text-xs text-muted-foreground pt-1">Source : Mintech</p>
+            <p>Répartition : {percentage} du PA total</p>
+            <p>Valorisation : {valorisation || 'N/A'}</p>
+            <p>Evolution : {evolution}</p>
+            <p>Impact : {impact}</p>
+            <p>Dernière mise à jour : {lastUpdate || '12/11/25'}</p>
+            <p className="text-xs text-muted-foreground">Source : Mintech</p>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -780,6 +772,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                         href={item.href}
                         type={heatmapData.type}
                         totalPA={totalPA}
+                        lastUpdate="12/11/25"
                         style={{ width: `${percentage}%` }}
                       />
                     )
@@ -814,6 +807,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                     type={heatmapData.type}
                     categoryPercentage={items[0].categoryPercentage}
                     totalPA={totalPA}
+                    lastUpdate="12/11/25"
                     style={{ width: `${(percentages[0] / total) * 100}%` }}
                   />
                   {/* Sucre (deuxième plus grand - centre) */}
@@ -827,6 +821,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                     type={heatmapData.type}
                     categoryPercentage={items[1].categoryPercentage}
                     totalPA={totalPA}
+                    lastUpdate="12/11/25"
                     style={{ width: `${(percentages[1] / total) * 100}%` }}
                   />
                   {/* Colonne droite avec Sel, Lait, etc. (plus petits) */}
@@ -843,6 +838,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                         type={heatmapData.type}
                         categoryPercentage={items[2].categoryPercentage}
                         totalPA={totalPA}
+                        lastUpdate="12/11/25"
                         style={{ width: `${(percentages[2] / topRowTotal) * 100}%` }}
                       />
                       <HeatmapRect
@@ -855,6 +851,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                         type={heatmapData.type}
                         categoryPercentage={items[3].categoryPercentage}
                         totalPA={totalPA}
+                        lastUpdate="12/11/25"
                         style={{ width: `${(percentages[3] / topRowTotal) * 100}%` }}
                       />
                     </div>
@@ -874,6 +871,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                             type={heatmapData.type}
                             categoryPercentage={items[idx].categoryPercentage}
                             totalPA={totalPA}
+                            lastUpdate="12/11/25"
                             style={{ width: `${(percentages[idx] / bottomRowTotal) * 100}%` }}
                           />
                         )
@@ -906,6 +904,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                     type={heatmapData.type}
                     categoryPercentage={items[0].categoryPercentage}
                     totalPA={totalPA}
+                    lastUpdate="12/11/25"
                     style={{ width: `${(percentages[0] / total) * 100}%` }}
                   />
                   {/* Transport (large centre) */}
@@ -919,6 +918,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                     type={heatmapData.type}
                     categoryPercentage={items[1].categoryPercentage}
                     totalPA={totalPA}
+                    lastUpdate="12/11/25"
                     style={{ width: `${(percentages[1] / total) * 100}%` }}
                   />
                   {/* Colonne droite avec Emballage et Main d'oeuvre */}
@@ -933,6 +933,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                       type={heatmapData.type}
                       categoryPercentage={items[2].categoryPercentage}
                       totalPA={totalPA}
+                      lastUpdate="12/11/25"
                       style={{ height: `${(percentages[2] / rightGroupTotal) * 100}%` }}
                     />
                     <HeatmapRect
@@ -945,6 +946,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                       type={heatmapData.type}
                       categoryPercentage={items[3].categoryPercentage}
                       totalPA={totalPA}
+                      lastUpdate="12/11/25"
                       style={{ height: `${(percentages[3] / rightGroupTotal) * 100}%` }}
                     />
                   </div>

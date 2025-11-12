@@ -4,6 +4,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
+import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { ArrowLeft } from "lucide-react"
 import { PeriodFilter } from "@/components/shared/period-filter"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -15,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Info } from "lucide-react"
+import { Info, RefreshCw } from "lucide-react"
 import { getPerimetreData, type PerimetreType } from "@/lib/data/perimetre-data"
 
 // Lazy load heavy comparison components with Recharts
@@ -37,6 +38,10 @@ const filterDisplayableFilters = (filters: Record<string, string>): Record<strin
 function ComparaisonContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+
+  // Modes période CAD/CAM pour CA et Volume
+  const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca-comparaison')
+  const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume-comparaison')
 
   const [elements, setElements] = useState<{
     id: string
@@ -104,11 +109,23 @@ function ComparaisonContent() {
         return null
       }
 
+      // Valeurs fixes CAD/CAM pour CA
+      const caData = {
+        CAD: { value: element.ca.valeur, evolution: element.ca.evolution },
+        CAM: { value: "1254.00 M€", evolution: "+3.20%" }
+      }
+
+      // Valeurs fixes CAD/CAM pour Volume
+      const volumeData = {
+        CAD: { value: "287", evolution: "+4.32%" },
+        CAM: { value: "315", evolution: "+4.85%" }
+      }
+
       return {
-        ca: element.ca.valeur,
-        caEvolution: element.ca.evolution,
-        volume: '287', // TODO: Ajouter volume aux données
-        volumeEvolution: '+4.32%',
+        ca: caData[caMode].value,
+        caEvolution: caData[caMode].evolution,
+        volume: volumeData[volumeMode].value,
+        volumeEvolution: volumeData[volumeMode].evolution,
         volumeTonne: '145.3', // TODO: Ajouter volume tonne
         volumeTonneEvolution: '+4.12%',
         mpa: element.mpa.valeur,
@@ -256,11 +273,49 @@ function ComparaisonContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {getMetrics().map((metric) => (
+                  {getMetrics().map((metric) => {
+                    const hasMode = metric.label === "CA" || metric.label === "Volume (UVC)"
+                    const mode = metric.label === "CA" ? caMode : volumeMode
+                    const toggleMode = metric.label === "CA" ? toggleCAMode : toggleVolumeMode
+
+                    return (
                     <TableRow key={metric.key}>
                       <TableCell className="font-bold">
                         <div className="flex items-center gap-2">
-                          {metric.label}
+                          {hasMode ? (
+                            <div className="inline-flex items-center gap-1">
+                              {metric.label.replace(" (UVC)", "")}
+                              {metric.label.includes("(UVC)") && <span className="text-xs text-gray-500">(UVC)</span>}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      toggleMode()
+                                    }}
+                                    className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-0.5"
+                                  >
+                                    {mode} <RefreshCw className="w-2.5 h-2.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="space-y-1">
+                                    <p className="font-semibold">{mode === 'CAD' ? 'Cumul À Date' : 'Cumul Année Mobile'}</p>
+                                    <p className="text-xs">
+                                      {mode === 'CAD'
+                                        ? '1er janvier 2025 → aujourd\'hui'
+                                        : '12 derniers mois glissants'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Cliquez pour voir {mode === 'CAD' ? 'CAM' : 'CAD'}
+                                    </p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          ) : (
+                            metric.label
+                          )}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Info className="h-4 w-4 text-[#121212] cursor-help" />
@@ -296,7 +351,8 @@ function ComparaisonContent() {
                         )
                       })}
                     </TableRow>
-                  ))}
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

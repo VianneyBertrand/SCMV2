@@ -33,11 +33,12 @@ import {
   type PerimetreType
 } from "@/lib/data/perimetre-data"
 import { calculateValorisation } from "@/lib/utils"
-import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download, ChevronsUpDown, RotateCcw } from "lucide-react"
+import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download, ChevronsUpDown, RotateCcw, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMemo, useState, Suspense } from "react"
 import dynamic from 'next/dynamic'
+import { usePeriodMode } from "@/hooks/usePeriodMode"
 
 // Import Recharts components directly
 import {
@@ -63,14 +64,21 @@ interface HeatmapRectProps {
   type: 'total' | 'mpa' | 'mpi'
   categoryPercentage?: string
   totalPA?: string // PA total pour calculer la valorisation
+  lastUpdate?: string // Date de dernière mise à jour
 }
 
-function HeatmapRect({ label, percentage, evolution, color, className, href, type, categoryPercentage, totalPA }: HeatmapRectProps) {
+function HeatmapRect({ label, percentage, evolution, color, className, href, type, categoryPercentage, totalPA, lastUpdate }: HeatmapRectProps) {
   // Calculer la valorisation en euros
   const valorisation = useMemo(() => {
     if (!totalPA) return null
     return calculateValorisation(percentage, totalPA)
   }, [percentage, totalPA])
+
+  // Calculer l'impact en % (évolution)
+  const impact = useMemo(() => {
+    if (!evolution) return '+0.00%'
+    return evolution
+  }, [evolution])
 
   const content = (
     <>
@@ -101,30 +109,15 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
             </div>
           )}
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-2">
+        <TooltipContent side="top" sideOffset={-50} className="max-w-xs">
+          <div className="space-y-1">
             <p className="font-semibold">{label}</p>
-            <div className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1">
-              <span className="text-sm">% du coût total</span>
-              <span className="text-sm font-medium">{percentage}</span>
-              {type !== 'total' && categoryPercentage && (
-                <>
-                  <span className="text-sm">% du total {type === 'mpa' ? 'MPA' : 'MPI'}</span>
-                  <span className="text-sm font-medium">{categoryPercentage}</span>
-                </>
-              )}
-              {valorisation && (
-                <>
-                  <span className="text-sm">Valorisation</span>
-                  <span className="text-sm font-medium">{valorisation}</span>
-                </>
-              )}
-              <span className="text-sm">% d&apos;évolution</span>
-              <span className="text-sm font-medium">{evolution}</span>
-              <span className="text-sm">% impact sur le prix</span>
-              <span className="text-sm font-medium">{evolution}</span>
-            </div>
-            <p className="text-xs text-muted-foreground pt-1">Source : Mintech</p>
+            <p>Répartition : {percentage} du PA total</p>
+            <p>Valorisation : {valorisation || 'N/A'}</p>
+            <p>Evolution : {evolution}</p>
+            <p>Impact : {impact}</p>
+            <p>Dernière mise à jour : {lastUpdate || '12/11/25'}</p>
+            <p className="text-xs text-muted-foreground">Source : Mintech</p>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -180,6 +173,10 @@ function DetailContent() {
   // Récupérer les paramètres de l'URL
   const perimetre = (searchParams.get('perimetre') as PerimetreType) || "Marché"
   const label = searchParams.get('label') || ""
+
+  // Modes période CAD/CAM pour CA et Volume
+  const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca-detail')
+  const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume-detail')
 
   // États pour Structure de coût
   const [costSubTab, setCostSubTab] = useState<'total' | 'mpa' | 'mpi'>('total')
@@ -332,18 +329,34 @@ function DetailContent() {
   const kpiCards = useMemo(() => {
     if (!currentItem) return []
 
+    // Valeurs fixes CAD/CAM pour CA Total
+    const caData = {
+      CAD: { value: currentItem.ca.valeur, evolution: currentItem.ca.evolution },
+      CAM: { value: "1254.00 M€", evolution: "+3.20%" }
+    }
+
+    // Valeurs fixes CAD/CAM pour Volume
+    const volumeData = {
+      CAD: { value: "287.932", evolution: "+2.63%" },
+      CAM: { value: "316.725", evolution: "+3.10%" }
+    }
+
     const baseCards = [
       {
         label: "CA Total",
-        value: currentItem.ca.valeur,
-        evolution: currentItem.ca.evolution,
-        tooltip: "Chiffre d'affaires total de la période"
+        value: caData[caMode].value,
+        evolution: caData[caMode].evolution,
+        tooltip: "Chiffre d'affaires total de la période",
+        mode: caMode,
+        onToggleMode: toggleCAMode
       },
       {
         label: "Volume (UVC)",
-        value: "287.932", // Statique pour l'instant
-        evolution: "+2.63%",
-        tooltip: "Volume total en unités de vente consommateur"
+        value: volumeData[volumeMode].value,
+        evolution: volumeData[volumeMode].evolution,
+        tooltip: "Volume total en unités de vente consommateur",
+        mode: volumeMode,
+        onToggleMode: toggleVolumeMode
       },
       {
         label: "MPA",
@@ -378,7 +391,7 @@ function DetailContent() {
     ]
 
     return baseCards
-  }, [currentItem, perimetre])
+  }, [currentItem, perimetre, caMode, volumeMode, toggleCAMode, toggleVolumeMode])
 
   // Cartes spécifiques au produit (PA unitaire, PV, marges)
   const productCards = useMemo(() => {
@@ -1374,10 +1387,49 @@ function DetailContent() {
                 ? (isPositive ? 'text-red-600' : 'text-green-600')
                 : (isPositive ? 'text-green-600' : 'text-red-600')
 
+              const hasMode = card.label === "CA Total" || card.label === "Volume (UVC)"
+
               return (
                 <Card key={card.label} className="p-4 rounded shadow-none">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm font-medium">{card.label}</span>
+                    <span className="text-sm font-medium">
+                      {hasMode ? (
+                        <div className="inline-flex items-center gap-1">
+                          {card.label.replace(" (UVC)", "")}
+                          {card.label.includes("(UVC)") && <span className="text-xs text-gray-500">(UVC)</span>}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    card.onToggleMode?.()
+                                  }}
+                                  className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-0.5"
+                                >
+                                  {card.mode} <RefreshCw className="w-2.5 h-2.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <p className="font-semibold">{card.mode === 'CAD' ? 'Cumul À Date' : 'Cumul Année Mobile'}</p>
+                                  <p className="text-xs">
+                                    {card.mode === 'CAD'
+                                      ? '1er janvier 2025 → aujourd\'hui'
+                                      : '12 derniers mois glissants'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Cliquez pour voir {card.mode === 'CAD' ? 'CAM' : 'CAD'}
+                                  </p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      ) : (
+                        card.label
+                      )}
+                    </span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
@@ -1480,6 +1532,7 @@ function DetailContent() {
                       className="flex-[34] h-full"
                       type="total"
                       totalPA={currentItem.evoPa.valeur}
+                      lastUpdate="12/11/25"
                     />
                     <HeatmapRect
                       label={paysHeatmapData[1].label}
@@ -1489,6 +1542,7 @@ function DetailContent() {
                       className="flex-[25] h-full"
                       type="total"
                       totalPA={currentItem.evoPa.valeur}
+                      lastUpdate="12/11/25"
                     />
                     <div className="flex-[41] flex flex-col gap-1">
                       <HeatmapRect
@@ -1498,6 +1552,8 @@ function DetailContent() {
                         color={getColorFromEvolution(paysHeatmapData[2].evolution)}
                         className="flex-[14] w-full"
                         type="total"
+                        totalPA={currentItem.evoPa.valeur}
+                        lastUpdate="12/11/25"
                       />
                       <div className="flex-[27] flex gap-1">
                         <HeatmapRect
@@ -1507,6 +1563,8 @@ function DetailContent() {
                           color={getColorFromEvolution(paysHeatmapData[3].evolution)}
                           className="flex-[8] h-full"
                           type="total"
+                          totalPA={currentItem.evoPa.valeur}
+                          lastUpdate="12/11/25"
                         />
                         <HeatmapRect
                           label={paysHeatmapData[4].label}
@@ -1515,6 +1573,8 @@ function DetailContent() {
                           color={getColorFromEvolution(paysHeatmapData[4].evolution)}
                           className="flex-[4] h-full"
                           type="total"
+                          totalPA={currentItem.evoPa.valeur}
+                          lastUpdate="12/11/25"
                         />
                         <HeatmapRect
                           label={paysHeatmapData[5].label}
@@ -1523,6 +1583,8 @@ function DetailContent() {
                           color={getColorFromEvolution(paysHeatmapData[5].evolution)}
                           className="flex-[2] h-full"
                           type="total"
+                          totalPA={currentItem.evoPa.valeur}
+                          lastUpdate="12/11/25"
                         />
                       </div>
                     </div>
@@ -1557,6 +1619,7 @@ function DetailContent() {
                       className="flex-[21] h-full"
                       type="total"
                       totalPA={currentItem.evoPa.valeur}
+                      lastUpdate="12/11/25"
                     />
                     <HeatmapRect
                       label={fournisseurHeatmapData[1].label}
@@ -1566,6 +1629,7 @@ function DetailContent() {
                       className="flex-[19] h-full"
                       type="total"
                       totalPA={currentItem.evoPa.valeur}
+                      lastUpdate="12/11/25"
                     />
                     <HeatmapRect
                       label={fournisseurHeatmapData[2].label}
@@ -1575,6 +1639,7 @@ function DetailContent() {
                       className="flex-[8.5] h-full"
                       type="total"
                       totalPA={currentItem.evoPa.valeur}
+                      lastUpdate="12/11/25"
                     />
                   </div>
                 </div>
@@ -1646,6 +1711,8 @@ function DetailContent() {
                                 className="h-full"
                                 href={item.href}
                                 type={heatmapData.type}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
                               />
                             </div>
                           ))}
@@ -1666,6 +1733,8 @@ function DetailContent() {
                             href={items[0].href}
                             type={heatmapData.type}
                             categoryPercentage={items[0].categoryPercentage}
+                            totalPA={currentItem.evoPa.valeur}
+                            lastUpdate="12/11/25"
                           />
                           {/* Sucre (deuxième plus grand - centre) */}
                           <HeatmapRect
@@ -1677,6 +1746,8 @@ function DetailContent() {
                             href={items[1].href}
                             type={heatmapData.type}
                             categoryPercentage={items[1].categoryPercentage}
+                            totalPA={currentItem.evoPa.valeur}
+                            lastUpdate="12/11/25"
                           />
                           {/* Colonne droite avec Sel, Lait, etc. (plus petits) */}
                           <div className="w-[28%] flex flex-col gap-1">
@@ -1691,6 +1762,8 @@ function DetailContent() {
                                 href={items[2].href}
                                 type={heatmapData.type}
                                 categoryPercentage={items[2].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
                               />
                               <HeatmapRect
                                 label={items[3].label}
@@ -1701,6 +1774,8 @@ function DetailContent() {
                                 href={items[3].href}
                                 type={heatmapData.type}
                                 categoryPercentage={items[3].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
                               />
                             </div>
                             {/* Ligne du bas avec Beurre, Huile, Oeufs */}
@@ -1714,6 +1789,8 @@ function DetailContent() {
                                 href={items[4].href}
                                 type={heatmapData.type}
                                 categoryPercentage={items[4].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
                               />
                               <HeatmapRect
                                 label={items[5].label}
@@ -1724,6 +1801,8 @@ function DetailContent() {
                                 href={items[5].href}
                                 type={heatmapData.type}
                                 categoryPercentage={items[5].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
                               />
                               <HeatmapRect
                                 label={items[6].label}
@@ -1734,6 +1813,8 @@ function DetailContent() {
                                 href={items[6].href}
                                 type={heatmapData.type}
                                 categoryPercentage={items[6].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
                               />
                             </div>
                           </div>
@@ -1754,6 +1835,8 @@ function DetailContent() {
                             href={items[0].href}
                             type={heatmapData.type}
                             categoryPercentage={items[0].categoryPercentage}
+                            totalPA={currentItem.evoPa.valeur}
+                            lastUpdate="12/11/25"
                           />
                           {/* Transport (large centre) */}
                           <HeatmapRect
@@ -1765,6 +1848,8 @@ function DetailContent() {
                             href={items[1].href}
                             type={heatmapData.type}
                             categoryPercentage={items[1].categoryPercentage}
+                            totalPA={currentItem.evoPa.valeur}
+                            lastUpdate="12/11/25"
                           />
                           {/* Colonne droite avec Emballage et Main d'oeuvre */}
                           <div className="flex-[14] flex flex-col gap-1">
@@ -1777,6 +1862,8 @@ function DetailContent() {
                               href={items[2].href}
                               type={heatmapData.type}
                               categoryPercentage={items[2].categoryPercentage}
+                              totalPA={currentItem.evoPa.valeur}
+                              lastUpdate="12/11/25"
                             />
                             <HeatmapRect
                               label={items[3].label}
@@ -1787,6 +1874,8 @@ function DetailContent() {
                               href={items[3].href}
                               type={heatmapData.type}
                               categoryPercentage={items[3].categoryPercentage}
+                              totalPA={currentItem.evoPa.valeur}
+                              lastUpdate="12/11/25"
                             />
                           </div>
                         </div>

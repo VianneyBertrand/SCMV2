@@ -44,10 +44,11 @@ import {
 } from "@/lib/data/perimetre-data"
 import { cn, calculateValorisation } from "@/lib/utils"
 import { PORTEFEUILLE_CATEGORIE_MAP, PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles"
-import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Eye, Info, X } from "lucide-react"
+import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Eye, Info, X, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { usePeriodMode } from "@/hooks/usePeriodMode"
 
 // Composant Heatmap Rectangle réutilisable
 interface HeatmapRectProps {
@@ -58,14 +59,21 @@ interface HeatmapRectProps {
   className?: string
   href: string
   totalPA?: string // PA total pour calculer la valorisation
+  lastUpdate?: string // Date de dernière mise à jour
 }
 
-function HeatmapRect({ label, percentage, evolution, color, className, href, totalPA }: HeatmapRectProps) {
+function HeatmapRect({ label, percentage, evolution, color, className, href, totalPA, lastUpdate }: HeatmapRectProps) {
   // Calculer la valorisation en euros
   const valorisation = useMemo(() => {
     if (!totalPA) return null
     return calculateValorisation(percentage, totalPA)
   }, [percentage, totalPA])
+
+  // Calculer l'impact en % (évolution)
+  const impact = useMemo(() => {
+    if (!evolution) return '+0.00%'
+    return evolution
+  }, [evolution])
 
   return (
     <TooltipProvider>
@@ -86,8 +94,10 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, tot
           <div className="space-y-1">
             <p className="font-semibold">{label}</p>
             <p>Répartition : {percentage} du PA total</p>
-            {valorisation && <p>Valorisation : {valorisation}</p>}
-            <p>Évolution : {evolution}</p>
+            <p>Valorisation : {valorisation || 'N/A'}</p>
+            <p>Evolution : {evolution}</p>
+            <p>Impact : {impact}</p>
+            <p>Dernière mise à jour : {lastUpdate || '12/11/25'}</p>
             <p className="text-xs text-muted-foreground">Source : Mintech</p>
           </div>
         </TooltipContent>
@@ -241,6 +251,10 @@ function OpportunityTable({ title, perimetre, items, activeFilters = {} }: Oppor
 export default function AccueilPage() {
   const router = useRouter()
 
+  // Modes période CAD/CAM pour CA et Volume
+  const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca')
+  const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume')
+
   // State pour le portefeuille sélectionné
   const [selectedPortefeuille, setSelectedPortefeuille] = useState<string>("tous")
 
@@ -309,18 +323,34 @@ export default function AccueilPage() {
   const kpiCards = useMemo(() => {
     if (!categorieData) return []
 
+    // Valeurs fixes CAD/CAM pour CA
+    const caData = {
+      CAD: { value: categorieData.ca.valeur, evolution: categorieData.ca.evolution },
+      CAM: { value: "1254.00 M€", evolution: "+3.20%" }
+    }
+
+    // Valeurs fixes CAD/CAM pour Volume
+    const volumeData = {
+      CAD: { value: "287.932", evolution: "+2.63%" },
+      CAM: { value: "316.725", evolution: "+3.10%" }
+    }
+
     return [
       {
         label: "CA",
-        value: categorieData.ca.valeur,
-        evolution: categorieData.ca.evolution,
-        tooltip: "Chiffre d'affaires total de la période"
+        value: caData[caMode].value,
+        evolution: caData[caMode].evolution,
+        tooltip: "Chiffre d'affaires total de la période",
+        mode: caMode,
+        onToggleMode: toggleCAMode
       },
       {
         label: "Volume (UVC)",
-        value: "287.932", // Statique pour l'instant
-        evolution: "+2.63%",
-        tooltip: "Volume total en unités de vente consommateur"
+        value: volumeData[volumeMode].value,
+        evolution: volumeData[volumeMode].evolution,
+        tooltip: "Volume total en unités de vente consommateur",
+        mode: volumeMode,
+        onToggleMode: toggleVolumeMode
       },
       {
         label: "MPA",
@@ -353,7 +383,7 @@ export default function AccueilPage() {
         tooltip: "Opportunité d'optimisation identifiée"
       },
     ]
-  }, [categorieData])
+  }, [categorieData, caMode, volumeMode, toggleCAMode, toggleVolumeMode])
 
   // Calculer les comptages pour le périmètre Marché
   const navigationLinks = useMemo(() => {
@@ -596,10 +626,49 @@ export default function AccueilPage() {
             color = isPositive ? 'text-green-600' : 'text-red-600'
           }
 
+          const hasMode = card.label === "CA" || card.label === "Volume (UVC)"
+
           return (
             <Card key={card.label} className="p-4 rounded shadow-none">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium">{card.label}</span>
+                <span className="text-sm font-medium">
+                  {hasMode ? (
+                    <div className="inline-flex items-center gap-1">
+                      {card.label.replace(" (UVC)", "")}
+                      {card.label.includes("(UVC)") && <span className="text-xs text-gray-500">(UVC)</span>}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                card.onToggleMode?.()
+                              }}
+                              className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-0.5"
+                            >
+                              {card.mode} <RefreshCw className="w-2.5 h-2.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="space-y-1">
+                              <p className="font-semibold">{card.mode === 'CAD' ? 'Cumul À Date' : 'Cumul Année Mobile'}</p>
+                              <p className="text-xs">
+                                {card.mode === 'CAD'
+                                  ? '1er janvier 2025 → aujourd\'hui'
+                                  : '12 derniers mois glissants'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Cliquez pour voir {card.mode === 'CAD' ? 'CAM' : 'CAD'}
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  ) : (
+                    card.label
+                  )}
+                </span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
@@ -653,7 +722,7 @@ export default function AccueilPage() {
                       color={paysData[0].color}
                       className="h-full"
                       href={`/detail?perimetre=Pays&label=${encodeURIComponent(paysData[0].label)}`}
-                      totalPA={categorieData.evoPa.valeur}
+                      totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                     />
                   </div>
                   {/* Deuxième pays */}
@@ -665,7 +734,7 @@ export default function AccueilPage() {
                       color={paysData[1].color}
                       className="h-full"
                       href={`/detail?perimetre=Pays&label=${encodeURIComponent(paysData[1].label)}`}
-                      totalPA={categorieData.evoPa.valeur}
+                      totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                     />
                   </div>
                   {/* Colonne droite avec les autres pays */}
@@ -680,7 +749,7 @@ export default function AccueilPage() {
                             color={paysData[2].color}
                             className="w-full h-full"
                             href={`/detail?perimetre=Pays&label=${encodeURIComponent(paysData[2].label)}`}
-                            totalPA={categorieData.evoPa.valeur}
+                            totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                           />
                         </div>
                       )}
@@ -695,7 +764,7 @@ export default function AccueilPage() {
                                 color={pays.color}
                                 className="h-full"
                                 href={`/detail?perimetre=Pays&label=${encodeURIComponent(pays.label)}`}
-                                totalPA={categorieData.evoPa.valeur}
+                                totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                               />
                             </div>
                           ))}
@@ -743,7 +812,7 @@ export default function AccueilPage() {
                   })()}
                   className="h-full"
                   href="/detail/mpa"
-                  totalPA={categorieData.evoPa.valeur}
+                  totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                 />
               </div>
               {/* MPI - deuxième */}
@@ -763,7 +832,7 @@ export default function AccueilPage() {
                   })()}
                   className="h-full"
                   href="/detail/mpi"
-                  totalPA={categorieData.evoPa.valeur}
+                  totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                 />
               </div>
               {/* Autre - le plus petit */}
@@ -775,7 +844,7 @@ export default function AccueilPage() {
                   color="bg-gray-400"
                   className="h-full"
                   href="/detail/autre"
-                  totalPA={categorieData.evoPa.valeur}
+                  totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                 />
               </div>
             </div>
@@ -812,7 +881,7 @@ export default function AccueilPage() {
                 color="bg-[#F57A7E]"
                 className="flex-[7.5] h-full"
                 href="/detail?perimetre=Catégorie&label=SURGELE VIANDES LEGUMES"
-                totalPA={categorieData.evoPa.valeur}
+                totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
               />
               {/* SURGELES GLACES PPI */}
               <HeatmapRect
@@ -822,7 +891,7 @@ export default function AccueilPage() {
                 color="bg-[#8EE2BF]"
                 className="flex-[6.3] h-full"
                 href="/detail?perimetre=Catégorie&label=SURGELES GLACES PPI"
-                totalPA={categorieData.evoPa.valeur}
+                totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
               />
               {/* LAIT BEURRE CREME */}
               <HeatmapRect
@@ -832,7 +901,7 @@ export default function AccueilPage() {
                 color="bg-[#2FB67E]"
                 className="flex-[6] h-full"
                 href="/detail?perimetre=Catégorie&label=LAIT BEURRE CREME"
-                totalPA={categorieData.evoPa.valeur}
+                totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
               />
               {/* Colonne droite avec les 6 petits */}
               <div className="flex-[18] flex flex-col gap-1">
@@ -844,7 +913,7 @@ export default function AccueilPage() {
                   color="bg-[#8EE2BF]"
                   className="flex-[5.5] w-full"
                   href="/detail?perimetre=Catégorie&label=SURGELE POISSON PLATS CUIS POT"
-                  totalPA={categorieData.evoPa.valeur}
+                  totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                 />
                 {/* Ligne avec TRAITEUR et ULTRAFAIS */}
                 <div className="flex-[6.5] flex gap-1">
@@ -855,7 +924,7 @@ export default function AccueilPage() {
                     color="bg-[#F0FAF6]"
                     className="flex-[3.9] h-full"
                     href="/detail?perimetre=Catégorie&label=TRAITEUR"
-                    totalPA={categorieData.evoPa.valeur}
+                    totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                   />
                   <HeatmapRect
                     label="ULTRAFAIS"
@@ -864,7 +933,7 @@ export default function AccueilPage() {
                     color="bg-[#F0FAF6]"
                     className="flex-[3.7] h-full"
                     href="/detail?perimetre=Catégorie&label=ULTRAFAIS"
-                    totalPA={categorieData.evoPa.valeur}
+                    totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                   />
                 </div>
                 {/* Ligne du bas avec FROMAGES, SAUCISSERIE, VOLAILLE */}
@@ -876,7 +945,7 @@ export default function AccueilPage() {
                     color="bg-[#F0FAF6]"
                     className="flex-[3.3] h-full"
                     href="/detail?perimetre=Catégorie&label=FROMAGES"
-                    totalPA={categorieData.evoPa.valeur}
+                    totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                   />
                   <HeatmapRect
                     label="SAUCISSERIE"
@@ -885,7 +954,7 @@ export default function AccueilPage() {
                     color="bg-[#8EE2BF]"
                     className="flex-[2.6] h-full"
                     href="/detail?perimetre=Catégorie&label=SAUCISSERIE"
-                    totalPA={categorieData.evoPa.valeur}
+                    totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                   />
                   <HeatmapRect
                     label="VOLAILLE CHARCUTERIE"
@@ -894,7 +963,7 @@ export default function AccueilPage() {
                     color="bg-[#F0FAF6]"
                     className="flex-[2] h-full"
                     href="/detail?perimetre=Catégorie&label=VOLAILLE CHARCUTERIE"
-                    totalPA={categorieData.evoPa.valeur}
+                    totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                   />
                 </div>
               </div>
@@ -923,7 +992,7 @@ export default function AccueilPage() {
                         color={getColorFromEvolution(item.ca.evolution)}
                         className="flex-1 h-full"
                         href={`/detail?perimetre=Famille&label=${encodeURIComponent(item.label)}`}
-                        totalPA={categorieData.evoPa.valeur}
+                        totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                       />
                     )
                   })}
@@ -961,7 +1030,7 @@ export default function AccueilPage() {
                       color={fournisseursData[0].color}
                       className="h-full"
                       href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[0].label)}`}
-                      totalPA={categorieData.evoPa.valeur}
+                      totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                     />
                   </div>
                   {/* Deuxième fournisseur */}
@@ -973,7 +1042,7 @@ export default function AccueilPage() {
                       color={fournisseursData[1].color}
                       className="h-full"
                       href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[1].label)}`}
-                      totalPA={categorieData.evoPa.valeur}
+                      totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                     />
                   </div>
                   {/* Troisième fournisseur */}
@@ -986,7 +1055,7 @@ export default function AccueilPage() {
                         color={fournisseursData[2].color}
                         className="h-full"
                         href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[2].label)}`}
-                        totalPA={categorieData.evoPa.valeur}
+                        totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                       />
                     </div>
                   )}
@@ -1002,7 +1071,7 @@ export default function AccueilPage() {
                             color={fournisseursData[3].color}
                             className="w-full h-full"
                             href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[3].label)}`}
-                            totalPA={categorieData.evoPa.valeur}
+                            totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                           />
                         </div>
                       )}
@@ -1015,7 +1084,7 @@ export default function AccueilPage() {
                             color={fournisseursData[4].color}
                             className="w-full h-full"
                             href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseursData[4].label)}`}
-                            totalPA={categorieData.evoPa.valeur}
+                            totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                           />
                         </div>
                       )}
@@ -1031,7 +1100,7 @@ export default function AccueilPage() {
                                 color={fournisseur.color}
                                 className="h-full"
                                 href={`/detail?perimetre=Fournisseur&label=${encodeURIComponent(fournisseur.label)}`}
-                                totalPA={categorieData.evoPa.valeur}
+                                totalPA={categorieData.evoPa.valeur} lastUpdate="12/11/25"
                               />
                             </div>
                           ))}
