@@ -187,6 +187,7 @@ function AnalyseValeurContent() {
     groupeFamille: "tous",
     famille: "tous",
     sousFamille: "tous",
+    produit: "tous",
     fournisseur: "tous",
     portefeuille: "tous",
   });

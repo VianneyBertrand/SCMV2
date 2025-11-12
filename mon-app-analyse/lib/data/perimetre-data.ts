@@ -29,7 +29,8 @@ export type FilterType =
   | "categorie"
   | "groupeFamille"
   | "famille"
-  | "sousFamille";
+  | "sousFamille"
+  | "produit";
 
 // Hiérarchie des périmètres produits
 const productHierarchy: PerimetreType[] = [
@@ -50,7 +51,7 @@ export const perimetreToFilterKey: Record<PerimetreType, FilterType | null> = {
   "Groupe Famille": "groupeFamille",
   "Famille": "famille",
   "Sous Famille": "sousFamille",
-  "Produit": null,
+  "Produit": "produit",
   "Fournisseur": "fournisseur",
   "Portefeuille": "portefeuille",
   "Pays": "pays",
