@@ -185,18 +185,11 @@ const genCout = (ca: number, index: number, mpaVal: number, mpiVal: number): Met
 
 // Génération de l'opportunité
 const genOpp = (pa: number, coutTheo: number, index: number): Metric => {
-  // 30% des éléments ont opportunité = 0
-  const hasOpp = randRange(0, 1, index * 9.87) > 0.3;
-
-  if (!hasOpp) {
-    return m("0€", "0.00%");
-  }
-
-  // Opportunité = PA - Coût théorique (si positif)
+  // Opportunité = PA - Coût théorique (si positif, sinon 0)
   const opp = Math.max(0, pa - coutTheo);
 
   if (opp === 0) {
-    return m("0€", "0.00%");
+    return m("0.00€", "0.00%");
   }
 
   // Evo opportunité = baisse potentielle négociable (toujours négatif)
@@ -232,9 +225,8 @@ const generateCoherentMetrics = (baseCA: number, index: number, categorie: strin
   const mpaVal = extractNumericValue(mpa);
   const mpiVal = extractNumericValue(mpi);
 
-  // 3. Calculer PA (Partie Achats = CA * (1 - (MPA + MPI) / 100))
-  const paRatio = 1 - ((mpaVal + mpiVal) / 100);
-  const paVal = caVal * paRatio;
+  // 3. Calculer PA (PA = CA / 1.6)
+  const paVal = caVal / 1.6;
   const evoPa = m(`${Math.round(paVal).toLocaleString('fr-FR')}€`, genEvolution(index + 300));
 
   // 4. Calculer coût théorique (similaire au PA mais avec une légère variation)

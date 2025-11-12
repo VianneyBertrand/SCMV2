@@ -450,7 +450,8 @@ const adjustDataForFilters = (
     const newMPI = Math.min(100, Math.max(0, mpiValue + mpiAdjustment));
     const newPA = pa.value * caMultiplier;
     const newCout = cout.value * caMultiplier;
-    const newOpp = Math.max(0, opp.value * caMultiplier);
+    // Opportunité = PA - PA théorique, si négatif alors 0
+    const newOpp = Math.max(0, newPA - newCout);
 
     return {
       ...item,
