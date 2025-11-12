@@ -19,6 +19,9 @@ import {
 import { Info, Download, ChevronDown, ChevronUp, RotateCcw } from "lucide-react"
 import dynamic from 'next/dynamic'
 import { CurveIcon } from "@/components/ui/curve-icon"
+import { useVolumeUnit } from "@/hooks/useVolumeUnit"
+import { usePeriodMode } from "@/hooks/usePeriodMode"
+import { SwitchIcon } from "@/components/ui/switch-icon"
 
 // Import Recharts components directly
 import {
@@ -135,6 +138,12 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
   const showTable = showTableProp ?? showTableLocal
   const setShowTable = setShowTableProp ?? setShowTableLocal
   const [base100, setBase100] = useState(false)
+
+  // Mode unité UVC/Tonne pour Volume
+  const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-comparaison-cost-structure')
+
+  // Mode période CAD/CAM pour la colonne Volume
+  const { mode: volumeTableMode, toggleMode: toggleVolumeTableMode } = usePeriodMode('period-mode-volume-table-comparaison')
 
   const [legendOpacity, setLegendOpacity] = useState<Record<string, boolean>>({
     MPA: true,
@@ -1412,13 +1421,57 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                   <TableHead className="font-semibold pl-4 bg-gray-50" style={{ minWidth: '250px' }}>
                     Nom
                   </TableHead>
-                  {costSubTab === 'total' && <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>Volume</TableHead>}
-                  {costSubTab === 'total' && <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>Volume (UVC)</TableHead>}
+                  {costSubTab === 'total' && (
+                    <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>
+                      <div className="flex items-center gap-2">
+                        Volume
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleVolumeUnit()
+                          }}
+                          className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                        >
+                          {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleVolumeTableMode()
+                          }}
+                          className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                        >
+                          {volumeTableMode} <SwitchIcon className="w-4 h-3.5" />
+                        </button>
+                      </div>
+                    </TableHead>
+                  )}
                   {costSubTab === 'total' && <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>Part Volume</TableHead>}
                   {costSubTab === 'mpa' && (
                     <>
-                      <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>Volume</TableHead>
-                      <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>Volume (UVC)</TableHead>
+                      <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>
+                        <div className="flex items-center gap-2">
+                          Volume
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleVolumeUnit()
+                            }}
+                            className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                          >
+                            {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleVolumeTableMode()
+                            }}
+                            className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                          >
+                            {volumeTableMode} <SwitchIcon className="w-4 h-3.5" />
+                          </button>
+                        </div>
+                      </TableHead>
                       <TableHead className="font-semibold bg-gray-50" style={{ minWidth: '120px' }}>Part Volume</TableHead>
                     </>
                   )}
@@ -1455,13 +1508,11 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                         </div>
                       </div>
                     </TableCell>
-                    {costSubTab === 'total' && <TableCell>{row.volume}</TableCell>}
-                    {costSubTab === 'total' && <TableCell>{row.volumeUVC}</TableCell>}
+                    {costSubTab === 'total' && <TableCell>{volumeUnit === 'UVC' ? row.volumeUVC : row.volume}</TableCell>}
                     {costSubTab === 'total' && <TableCell>{row.partVolume}</TableCell>}
                     {costSubTab === 'mpa' && (
                       <>
-                        <TableCell>{row.volume}</TableCell>
-                        <TableCell>{row.volumeUVC}</TableCell>
+                        <TableCell>{volumeUnit === 'UVC' ? row.volumeUVC : row.volume}</TableCell>
                         <TableCell>{row.partVolume}</TableCell>
                       </>
                     )}

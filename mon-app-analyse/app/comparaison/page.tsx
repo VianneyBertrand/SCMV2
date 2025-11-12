@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { usePeriodMode } from "@/hooks/usePeriodMode"
+import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 import { ArrowLeft } from "lucide-react"
 import { PeriodFilter } from "@/components/shared/period-filter"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -43,6 +44,9 @@ function ComparaisonContent() {
   // Modes période CAD/CAM pour CA et Volume
   const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca-comparaison')
   const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume-comparaison')
+
+  // Mode unité UVC/Tonne pour Volume
+  const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-comparaison')
 
   const [elements, setElements] = useState<{
     id: string
@@ -116,19 +120,25 @@ function ComparaisonContent() {
         CAM: { value: "1254.00 M€", evolution: "+3.20%" }
       }
 
-      // Valeurs fixes CAD/CAM pour Volume
+      // Valeurs fixes CAD/CAM et UVC/Tonne pour Volume
       const volumeData = {
-        CAD: { value: "287", evolution: "+4.32%" },
-        CAM: { value: "315", evolution: "+4.85%" }
+        UVC: {
+          CAD: { value: "287", evolution: "+4.32%" },
+          CAM: { value: "315", evolution: "+4.85%" }
+        },
+        Tonne: {
+          CAD: { value: "45.123", evolution: "+4.10%" },
+          CAM: { value: "49.876", evolution: "+4.55%" }
+        }
       }
 
       return {
         ca: caData[caMode].value,
         caEvolution: caData[caMode].evolution,
-        volume: volumeData[volumeMode].value,
-        volumeEvolution: volumeData[volumeMode].evolution,
-        volumeTonne: '145.3', // TODO: Ajouter volume tonne
-        volumeTonneEvolution: '+4.12%',
+        volume: volumeData[volumeUnit][volumeMode].value,
+        volumeEvolution: volumeData[volumeUnit][volumeMode].evolution,
+        volumeTonne: volumeData['Tonne'][volumeMode].value,
+        volumeTonneEvolution: volumeData['Tonne'][volumeMode].evolution,
         mpa: element.mpa.valeur,
         mpaEvolution: element.mpa.evolution,
         mpi: element.mpi.valeur,
@@ -158,8 +168,7 @@ function ComparaisonContent() {
     if (perimetre === 'produit') {
       return [
         { label: 'CA', key: 'ca' },
-        { label: 'Volume (UVC)', key: 'volume' },
-        { label: 'Volume (Tonne)', key: 'volumeTonne' },
+        { label: 'Volume', key: 'volume' },
         { label: 'MPA', key: 'mpa' },
         { label: 'MPI', key: 'mpi' },
         { label: 'PV', key: 'pv' },
@@ -174,7 +183,7 @@ function ComparaisonContent() {
 
     return [
       { label: 'CA', key: 'ca' },
-      { label: 'Volume (UVC)', key: 'volume' },
+      { label: 'Volume', key: 'volume' },
       { label: 'MPA', key: 'mpa' },
       { label: 'MPI', key: 'mpi' },
       { label: 'PA', key: 'pa' },
@@ -275,7 +284,8 @@ function ComparaisonContent() {
                 </TableHeader>
                 <TableBody>
                   {getMetrics().map((metric) => {
-                    const hasMode = metric.label === "CA" || metric.label === "Volume (UVC)"
+                    const hasMode = metric.label === "CA" || metric.label === "Volume"
+                    const hasUnit = metric.label === "Volume"
                     const mode = metric.label === "CA" ? caMode : volumeMode
                     const toggleMode = metric.label === "CA" ? toggleCAMode : toggleVolumeMode
 
@@ -285,8 +295,18 @@ function ComparaisonContent() {
                         <div className="flex items-center gap-2">
                           {hasMode ? (
                             <div className="inline-flex items-center gap-1">
-                              {metric.label.replace(" (UVC)", "")}
-                              {metric.label.includes("(UVC)") && <span className="text-xs text-gray-500">(UVC)</span>}
+                              {metric.label}
+                              {hasUnit && (
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    toggleVolumeUnit()
+                                  }}
+                                  className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                                >
+                                  {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => {
                                   e.preventDefault()

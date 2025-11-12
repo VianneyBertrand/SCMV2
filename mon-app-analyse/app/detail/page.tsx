@@ -185,6 +185,9 @@ function DetailContent() {
   // Mode unité UVC/Tonne pour Volume
   const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-detail')
 
+  // Mode période CAD/CAM pour les tableaux de structure de coût (colonne Volume)
+  const { mode: volumeTableMode, toggleMode: toggleVolumeTableMode } = usePeriodMode('period-mode-volume-table-detail')
+
   // États pour Structure de coût
   const [costSubTab, setCostSubTab] = useState<'total' | 'mpa' | 'mpi'>('total')
   const [visibleItems, setVisibleItems] = useState<Record<string, boolean>>({
@@ -2371,6 +2374,15 @@ function DetailContent() {
                               >
                                 {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
                               </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleVolumeTableMode()
+                                }}
+                                className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                              >
+                                {volumeTableMode} <SwitchIcon className="w-4 h-3.5" />
+                              </button>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
@@ -2422,6 +2434,15 @@ function DetailContent() {
                                   className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
                                 >
                                   {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleVolumeTableMode()
+                                  }}
+                                  className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                                >
+                                  {volumeTableMode} <SwitchIcon className="w-4 h-3.5" />
                                 </button>
                                 <TooltipProvider>
                                   <Tooltip>
