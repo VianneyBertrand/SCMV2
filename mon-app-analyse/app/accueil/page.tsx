@@ -93,14 +93,16 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, tot
           </Link>
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={-50} className="max-w-xs">
-          <div className="space-y-1">
-            <p className="font-semibold">{label}</p>
-            <p>Répartition : {percentage} du PA total</p>
-            <p>Valorisation : {valorisation || 'N/A'}</p>
-            <p>Evolution : {evolution}</p>
-            <p>Impact : {impact}</p>
-            <p>Dernière mise à jour : {lastUpdate || '12/11/25'}</p>
-            <p className="text-xs text-muted-foreground">Source : Mintech</p>
+          <div>
+            <p className="font-semibold mb-4">{label}</p>
+            <div className="space-y-1">
+              <p>Répartition : {percentage} du PA total</p>
+              <p>Valorisation : {valorisation || 'N/A'}</p>
+              <p>Evolution : {evolution}</p>
+              <p>Impact : {impact}</p>
+              <p>Dernière mise à jour : {lastUpdate || '12/11/25'}</p>
+              <p className="text-xs text-muted-foreground">Source : Mintech</p>
+            </div>
           </div>
         </TooltipContent>
       </Tooltip>

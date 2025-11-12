@@ -112,14 +112,16 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
           )}
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={-50} className="max-w-xs">
-          <div className="space-y-1">
-            <p className="font-semibold">{label}</p>
-            <p>Répartition : {percentage} du PA total</p>
-            <p>Valorisation : {valorisation || 'N/A'}</p>
-            <p>Evolution : {evolution}</p>
-            <p>Impact : {impact}</p>
-            <p>Dernière mise à jour : {lastUpdate || '12/11/25'}</p>
-            <p className="text-xs text-muted-foreground">Source : Mintech</p>
+          <div>
+            <p className="font-semibold mb-4">{label}</p>
+            <div className="space-y-1">
+              <p>Répartition : {percentage} du PA total</p>
+              <p>Valorisation : {valorisation || 'N/A'}</p>
+              <p>Evolution : {evolution}</p>
+              <p>Impact : {impact}</p>
+              <p>Dernière mise à jour : {lastUpdate || '12/11/25'}</p>
+              <p className="text-xs text-muted-foreground">Source : Mintech</p>
+            </div>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -2356,38 +2358,26 @@ function DetailContent() {
                         {costSubTab === 'total' && (
                           <TableHead
                             className="font-semibold cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('volume')}
+                            onClick={() => handleSort(volumeUnit === 'UVC' ? 'volumeUVC' : 'volume')}
                           >
                             <div className="flex items-center gap-2">
                               Volume
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleVolumeUnit()
+                                }}
+                                className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                              >
+                                {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                              </button>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <Info className="h-4 w-4 text-[#121212]" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Volume de l&apos;élément</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
-                            </div>
-                          </TableHead>
-                        )}
-                        {costSubTab === 'total' && (
-                          <TableHead
-                            className="font-semibold cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('volumeUVC')}
-                          >
-                            <div className="flex items-center gap-2">
-                              Volume (UVC)
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Info className="h-4 w-4 text-[#121212]" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Volume en UVC (Unité de Vente Consommateur)</p>
+                                    <p>Volume en {volumeUnit === 'UVC' ? 'UVC (Unité de Vente Consommateur)' : 'Tonnes'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -2420,36 +2410,26 @@ function DetailContent() {
                           <>
                             <TableHead
                               className="font-semibold cursor-pointer hover:bg-gray-100"
-                              onClick={() => handleSort('volume')}
+                              onClick={() => handleSort(volumeUnit === 'UVC' ? 'volumeUVC' : 'volume')}
                             >
                               <div className="flex items-center gap-2">
                                 Volume
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleVolumeUnit()
+                                  }}
+                                  className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                                >
+                                  {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                                </button>
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger>
                                       <Info className="h-4 w-4 text-[#121212]" />
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p>Volume de l&apos;élément</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
-                              </div>
-                            </TableHead>
-                            <TableHead
-                              className="font-semibold cursor-pointer hover:bg-gray-100"
-                              onClick={() => handleSort('volumeUVC')}
-                            >
-                              <div className="flex items-center gap-2">
-                                Volume (UVC)
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4 text-[#121212]" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Volume en UVC (Unité de Vente Consommateur)</p>
+                                      <p>Volume en {volumeUnit === 'UVC' ? 'UVC (Unité de Vente Consommateur)' : 'Tonnes'}</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -2665,13 +2645,11 @@ function DetailContent() {
                               </div>
                             </div>
                           </TableCell>
-                          {costSubTab === 'total' && <TableCell>{row.volume}</TableCell>}
-                          {costSubTab === 'total' && <TableCell>{row.volumeUVC}</TableCell>}
+                          {costSubTab === 'total' && <TableCell>{volumeUnit === 'UVC' ? row.volumeUVC : row.volume}</TableCell>}
                           {costSubTab === 'total' && <TableCell>{row.partVolume}</TableCell>}
                           {costSubTab === 'mpa' && (
                             <>
-                              <TableCell>{row.volume}</TableCell>
-                              <TableCell>{row.volumeUVC}</TableCell>
+                              <TableCell>{volumeUnit === 'UVC' ? row.volumeUVC : row.volume}</TableCell>
                               <TableCell>{row.partVolume}</TableCell>
                             </>
                           )}
