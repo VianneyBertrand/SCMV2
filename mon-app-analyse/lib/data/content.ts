@@ -58,6 +58,8 @@ export interface PerimetreItem {
   // Prix de vente (uniquement pour les produits)
   pv?: Metric;
   pvLeclerc?: Metric;
+  // EAN (uniquement pour les produits) - 13 chiffres
+  ean?: string;
   // Relations hiérarchiques
   marche?: string;
   marcheDetaille?: string;
@@ -80,6 +82,16 @@ const randRange = (min: number, max: number, seed: number = 0): number => {
   const x = Math.sin(seed) * 10000;
   const rand = x - Math.floor(x);
   return min + rand * (max - min);
+};
+
+// Fonction pour générer un code EAN-13 aléatoire (13 chiffres)
+const generateEAN = (seed: number): string => {
+  let ean = '';
+  for (let i = 0; i < 13; i++) {
+    const digit = Math.floor(randRange(0, 10, seed * (i + 1) * 7.89));
+    ean += digit.toString();
+  }
+  return ean;
 };
 
 // Fonction pour déterminer MPA/MPI selon la catégorie
@@ -763,6 +775,7 @@ const generateProducts = (): PerimetreItem[] => {
         ...generateCoherentMetrics(productCA, productCounter, sf.categorie || ""),
         pv: prixVente.pv,
         pvLeclerc: prixVente.pvLeclerc,
+        ean: generateEAN(productCounter),
         marche: sf.marche,
         marcheDetaille: sf.marcheDetaille,
         categorie: sf.categorie,

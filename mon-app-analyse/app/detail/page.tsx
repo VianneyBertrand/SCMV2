@@ -1326,7 +1326,13 @@ function DetailContent() {
       {/* Titre + Simuler + Date */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-[40px] font-bold">{label}</h1>
+          <div>
+            <h1 className="text-[40px] font-bold">{label}</h1>
+            {/* EAN (uniquement pour les produits) */}
+            {perimetre === "Produit" && currentItem?.ean && (
+              <div className="text-[14px]" style={{ color: '#454545' }}>{currentItem.ean}</div>
+            )}
+          </div>
           <Button variant="ghost" size="sm" className="!text-[#0970E6] gap-2 hover:!text-[#075bb3] text-[16px] font-bold">
             <Pencil className="w-5 h-5 text-[#0970E6]" />
             Simuler

@@ -96,6 +96,8 @@ export interface PerimetreItem {
   margePvLcl?: MetricDisplay;
   margePvc?: MetricDisplay;
   margeMoyenneCategorielle?: string;
+  // EAN (uniquement pour les produits) - 13 chiffres
+  ean?: string;
   // Relations hiérarchiques pour le filtrage
   marche?: string;
   marcheDetaille?: string;
@@ -332,6 +334,7 @@ const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => 
       margePvLcl: margePvLcl,
       margePvc: margePvc,
       margeMoyenneCategorielle: margeMoyenneCategorielle,
+      ean: item.ean,
       marche: item.marche,
       marcheDetaille: item.marcheDetaille,
       categorie: item.categorie,

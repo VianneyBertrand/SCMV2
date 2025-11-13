@@ -279,8 +279,9 @@ export default function AccueilPage() {
   // Restaurer l'état sauvegardé
   const restoredState = useRestoredPageState<AccueilPageState>('accueil');
 
-  // Modes période CAD/CAM pour CA et Volume
-  const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca')
+  // Modes période CAD/CAM pour CA (ancien PA), CA théorique (ancien PA théorique) et Volume
+  const { mode: paMode, toggleMode: togglePAMode } = usePeriodMode('period-mode-pa')
+  const { mode: paTheoriqueMode, toggleMode: togglePATheoriqueMode } = usePeriodMode('period-mode-pa-theorique')
   const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume')
 
   // Mode unité UVC/Tonne pour Volume
@@ -366,14 +367,20 @@ export default function AccueilPage() {
     }
   }, [selectedPortefeuille, selectedCategorie])
 
-  // Données KPI (7 cards) - récupérées dynamiquement selon le portefeuille
+  // Données KPI (6 cards) - récupérées dynamiquement selon le portefeuille
   const kpiCards = useMemo(() => {
     if (!categorieData) return []
 
-    // Valeurs fixes CAD/CAM pour CA
-    const caData = {
-      CAD: { value: categorieData.ca.valeur, evolution: categorieData.ca.evolution },
-      CAM: { value: "1254.00 M€", evolution: "+3.20%" }
+    // Valeurs fixes CAD/CAM pour CA (ancien PA)
+    const paData = {
+      CAD: { value: categorieData.evoPa.valeur, evolution: categorieData.evoPa.evolution },
+      CAM: { value: "1054.00 M€", evolution: "+2.80%" }
+    }
+
+    // Valeurs fixes CAD/CAM pour CA théorique (ancien PA théorique)
+    const paTheoriqueData = {
+      CAD: { value: categorieData.coutTheorique.valeur, evolution: categorieData.coutTheorique.evolution },
+      CAM: { value: "980.00 M€", evolution: "+2.50%" }
     }
 
     // Valeurs fixes CAD/CAM et UVC/Tonne pour Volume
@@ -390,14 +397,6 @@ export default function AccueilPage() {
 
     return [
       {
-        label: "CA",
-        value: caData[caMode].value,
-        evolution: caData[caMode].evolution,
-        tooltip: "Chiffre d'affaires total de la période",
-        mode: caMode,
-        onToggleMode: toggleCAMode
-      },
-      {
         label: "Volume",
         value: volumeData[volumeUnit][volumeMode].value,
         evolution: volumeData[volumeUnit][volumeMode].evolution,
@@ -408,28 +407,30 @@ export default function AccueilPage() {
         onToggleUnit: toggleVolumeUnit
       },
       {
-        label: "MPA",
+        label: "MP",
         value: categorieData.mpa.valeur,
         evolution: categorieData.mpa.evolution,
         tooltip: "Marge en pourcentage des achats"
       },
       {
-        label: "MPI",
+        label: "Emballage",
         value: categorieData.mpi.valeur,
         evolution: categorieData.mpi.evolution,
         tooltip: "Marge en pourcentage des ventes (indice)"
       },
       {
-        label: "PA",
-        value: categorieData.evoPa.valeur,
-        evolution: categorieData.evoPa.evolution,
-        tooltip: "Prix d'achat total"
+        label: "CA",
+        value: paData[paMode].value,
+        evolution: paData[paMode].evolution,
+        tooltip: "Chiffre d'affaires total de la période",
+        mode: paMode,
+        onToggleMode: togglePAMode
       },
       {
-        label: "PA théorique",
-        value: categorieData.coutTheorique.valeur,
-        evolution: categorieData.coutTheorique.evolution,
-        tooltip: "Prix d'achat théorique calculé"
+        label: "CA théorique",
+        value: paTheoriqueData[paTheoriqueMode].value,
+        evolution: paTheoriqueData[paTheoriqueMode].evolution,
+        tooltip: "Chiffre d'affaires théorique calculé"
       },
       {
         label: "Opportunité",
@@ -438,7 +439,7 @@ export default function AccueilPage() {
         tooltip: "Opportunité d'optimisation identifiée"
       },
     ]
-  }, [categorieData, caMode, volumeMode, volumeUnit, toggleCAMode, toggleVolumeMode, toggleVolumeUnit])
+  }, [categorieData, paMode, paTheoriqueMode, volumeMode, volumeUnit, togglePAMode, togglePATheoriqueMode, toggleVolumeMode, toggleVolumeUnit])
 
   // Calculer les comptages pour le périmètre Marché
   const navigationLinks = useMemo(() => {
@@ -663,14 +664,14 @@ export default function AccueilPage() {
         )}
       </div>
 
-      {/* 7 Cards KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-4" style={{ marginBottom: '40px' }}>
+      {/* 6 Cards KPI */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4" style={{ marginBottom: '40px' }}>
         {kpiCards.map((card) => {
           const isPositive = card.evolution?.startsWith('+')
           // Pour la card Opportunité, toujours afficher en vert (c'est le % de baisse du prix à demander)
           const isOpportunity = card.label === "Opportunité"
-          // Logique inversée pour MPA, MPI, PA, PA théorique
-          const isInversed = ["MPA", "MPI", "PA", "PA théorique"].includes(card.label)
+          // Logique inversée pour MP, Emballage, CA, CA théorique
+          const isInversed = ["MP", "Emballage", "CA", "CA théorique"].includes(card.label)
 
           let color = 'text-green-600'
           if (isOpportunity) {
@@ -751,10 +752,10 @@ export default function AccueilPage() {
       {/* 4 Blocs Heatmap - Grid 2x2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ marginBottom: '56px' }}>
 
-        {/* Bloc A - Répartition PA par pays */}
+        {/* Bloc A - Répartition CA par pays */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">Répartition PA par pays</h2>
+            <h2 className="text-[16px] font-medium">Répartition CA par pays</h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
@@ -905,11 +906,11 @@ export default function AccueilPage() {
           </div>
         </div>
 
-        {/* Bloc C - Répartition PA par catégorie/famille */}
+        {/* Bloc C - Répartition CA par catégorie/famille */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-[16px] font-medium">
-              {selectedPortefeuille === "tous" ? "Répartition PA par catégorie" : "Répartition PA par famille"}
+              {selectedPortefeuille === "tous" ? "Répartition CA par catégorie" : "Répartition CA par famille"}
             </h2>
             <TooltipProvider>
               <Tooltip>
@@ -1056,10 +1057,10 @@ export default function AccueilPage() {
           </div>
         </div>
 
-        {/* Bloc D - Répartition PA par fournisseur */}
+        {/* Bloc D - Répartition CA par fournisseur */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">Répartition PA par fournisseur</h2>
+            <h2 className="text-[16px] font-medium">Répartition CA par fournisseur</h2>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>

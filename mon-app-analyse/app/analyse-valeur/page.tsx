@@ -59,7 +59,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePeriodMode } from "@/hooks/usePeriodMode";
 import { SwitchIcon } from "@/components/ui/switch-icon";
 import { usePageState, useRestoredPageState } from "@/hooks/usePageState";
@@ -161,11 +161,12 @@ function AnalyseValeurContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Restaurer l'état sauvegardé
-  const restoredState = useRestoredPageState<AnalyseValeurPageState>('analyse-valeur');
+  // Ref pour tracker les searchParams précédents et éviter les restaurations multiples
+  const previousSearchParamsRef = useRef<string | null>(null);
 
-  const [comparisonMode, setComparisonMode] = useState(restoredState?.comparisonMode ?? false);
-  const [perimetre, setPerimetre] = useState<PerimetreType>(restoredState?.perimetre ?? "Marché");
+  // Initialiser avec des valeurs par défaut (pas de sessionStorage)
+  const [comparisonMode, setComparisonMode] = useState(false);
+  const [perimetre, setPerimetre] = useState<PerimetreType>("Marché");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(2024, 10, 11),
     to: new Date(2024, 10, 14),
@@ -174,33 +175,29 @@ function AnalyseValeurContent() {
 
   // States pour le combobox
   const [openRecherche, setOpenRecherche] = useState(false);
-  const [rechercheValue, setRechercheValue] = useState(restoredState?.rechercheValue ?? "");
+  const [rechercheValue, setRechercheValue] = useState("");
   const [searchInputValue, setSearchInputValue] = useState("");
 
   // States pour la multi-sélection des fournisseurs
-  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>(
-    restoredState?.fournisseurSelections ?? []
-  );
-  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<
-    string[]
-  >(restoredState?.fournisseurSelections ?? []);
+  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>([]);
+  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>([]);
   const [openFournisseur, setOpenFournisseur] = useState(false);
   const [fournisseurSearch, setFournisseurSearch] = useState("");
 
   // States pour la multi-sélection des pays
-  const [paysSelections, setPaysSelections] = useState<string[]>(restoredState?.paysSelections ?? []);
-  const [tempPaysSelections, setTempPaysSelections] = useState<string[]>(restoredState?.paysSelections ?? []);
+  const [paysSelections, setPaysSelections] = useState<string[]>([]);
+  const [tempPaysSelections, setTempPaysSelections] = useState<string[]>([]);
   const [openPays, setOpenPays] = useState(false);
   const [paysSearch, setPaysSearch] = useState("");
 
   // States pour la multi-sélection des portefeuilles
-  const [portefeuilleSelections, setPortefeuilleSelections] = useState<string[]>(restoredState?.portefeuilleSelections ?? []);
-  const [tempPortefeuilleSelections, setTempPortefeuilleSelections] = useState<string[]>(restoredState?.portefeuilleSelections ?? []);
+  const [portefeuilleSelections, setPortefeuilleSelections] = useState<string[]>([]);
+  const [tempPortefeuilleSelections, setTempPortefeuilleSelections] = useState<string[]>([]);
   const [openPortefeuille, setOpenPortefeuille] = useState(false);
   const [portefeuilleSearch, setPortefeuilleSearch] = useState("");
 
   // States pour les filtres dynamiques
-  const [filters, setFilters] = useState<Record<string, string>>(restoredState?.filters ?? {
+  const [filters, setFilters] = useState<Record<string, string>>({
     pays: "tous",
     marche: "tous",
     marcheDetaille: "tous",
@@ -212,9 +209,6 @@ function AnalyseValeurContent() {
     fournisseur: "tous",
     portefeuille: "tous",
   });
-
-  // Mode période CAD/CAM pour CA
-  const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca-analyse-valeur');
 
   // Historique de navigation
   const [navigationHistory, setNavigationHistory] = useState<
@@ -228,11 +222,11 @@ function AnalyseValeurContent() {
       name: string;
       filters: Record<string, string>;
     }[]
-  >(restoredState?.comparedElements ?? []);
+  >([]);
 
   const [comparisonByPerimeter, setComparisonByPerimeter] = useState<
     Record<string, typeof comparedElements>
-  >(restoredState?.comparisonByPerimeter ?? {
+  >({
     Marché: [],
     "Marché détaillé": [],
     Catégorie: [],
@@ -316,6 +310,105 @@ function AnalyseValeurContent() {
     );
   };
 
+  // Restaurer l'état depuis sessionStorage OU depuis URL params
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const currentSearchParams = searchParams.toString();
+
+    // Ne restaurer que si les searchParams ont changé (évite les restaurations multiples)
+    if (previousSearchParamsRef.current === currentSearchParams) return;
+    previousSearchParamsRef.current = currentSearchParams;
+
+    const hasUrlParams = currentSearchParams.length > 0;
+
+    // Si on a des URL params, les utiliser (priorité aux URL params)
+    if (hasUrlParams) {
+      const perimetreParam = searchParams.get("perimetre");
+      if (perimetreParam) {
+        const validPerimetres: PerimetreType[] = [
+          "Marché", "Marché détaillé", "Catégorie", "Groupe Famille",
+          "Famille", "Sous Famille", "Produit", "Fournisseur", "Portefeuille",
+        ];
+        if (validPerimetres.includes(perimetreParam as PerimetreType)) {
+          setPerimetre(perimetreParam as PerimetreType);
+        }
+      }
+
+      // Lire les filtres depuis l'URL
+      const newFilters: Record<string, string> = { ...filters };
+      let hasFilters = false;
+
+      const filterKeys: FilterType[] = [
+        "pays", "marche", "marcheDetaille", "categorie",
+        "groupeFamille", "famille", "sousFamille", "fournisseur", "portefeuille",
+      ];
+
+      filterKeys.forEach((key) => {
+        const value = searchParams.get(key);
+        if (value && value !== "tous") {
+          newFilters[key] = value;
+          hasFilters = true;
+        }
+      });
+
+      if (hasFilters) {
+        setFilters(newFilters);
+      }
+
+      // Restaurer le mode comparaison si présent dans l'URL
+      const comparisonModeParam = searchParams.get("comparisonMode");
+      const elementsParam = searchParams.get("elements");
+
+      if (comparisonModeParam === "true" && elementsParam) {
+        try {
+          const decodedElements = JSON.parse(decodeURIComponent(elementsParam));
+          setComparisonMode(true);
+          setComparedElements(decodedElements);
+          setComparisonByPerimeter((prev) => ({
+            ...prev,
+            [perimetreParam || perimetre]: decodedElements,
+          }));
+        } catch (e) {
+          console.error("Error parsing elements from URL:", e);
+        }
+      }
+    }
+    // Sinon, restaurer depuis sessionStorage (navigation depuis le menu)
+    else {
+      try {
+        const savedState = sessionStorage.getItem('page-state-analyse-valeur');
+        if (savedState) {
+          const parsed: AnalyseValeurPageState = JSON.parse(savedState);
+
+          // Restaurer tous les états depuis sessionStorage
+          if (parsed.perimetre) setPerimetre(parsed.perimetre);
+          if (parsed.filters) setFilters(parsed.filters);
+          if (parsed.fournisseurSelections) {
+            setFournisseurSelections(parsed.fournisseurSelections);
+            setTempFournisseurSelections(parsed.fournisseurSelections);
+          }
+          if (parsed.paysSelections) {
+            setPaysSelections(parsed.paysSelections);
+            setTempPaysSelections(parsed.paysSelections);
+          }
+          if (parsed.portefeuilleSelections) {
+            setPortefeuilleSelections(parsed.portefeuilleSelections);
+            setTempPortefeuilleSelections(parsed.portefeuilleSelections);
+          }
+          if (parsed.comparisonMode !== undefined) setComparisonMode(parsed.comparisonMode);
+          if (parsed.comparedElements) setComparedElements(parsed.comparedElements);
+          if (parsed.comparisonByPerimeter) setComparisonByPerimeter(parsed.comparisonByPerimeter);
+          if (parsed.rechercheValue) setRechercheValue(parsed.rechercheValue);
+
+          console.log('État restauré depuis sessionStorage:', parsed);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la restauration de l\'état:', error);
+      }
+    }
+  }, [searchParams]); // S'exécuter à chaque changement de searchParams
+
   useEffect(() => {
     if (comparisonMode) {
       const saved = comparisonByPerimeter[perimetre] || [];
@@ -388,89 +481,6 @@ function AnalyseValeurContent() {
       }
     }
   }, [perimetre, filters, fournisseurSelections, paysSelections, portefeuilleSelections, comparisonMode, comparedElements, comparisonByPerimeter, rechercheValue]);
-
-  // Initialiser depuis les URL params à chaque changement d'URL (uniquement si pas d'état restauré)
-  useEffect(() => {
-    // Ne pas écraser l'état restauré
-    if (restoredState) return;
-
-    const perimetreParam = searchParams.get("perimetre");
-    if (perimetreParam) {
-      // Valider que le périmètre est valide
-      const validPerimetres: PerimetreType[] = [
-        "Marché",
-        "Marché détaillé",
-        "Catégorie",
-        "Groupe Famille",
-        "Famille",
-        "Sous Famille",
-        "Produit",
-        "Fournisseur",
-        "Portefeuille",
-      ];
-
-      if (validPerimetres.includes(perimetreParam as PerimetreType)) {
-        setPerimetre(perimetreParam as PerimetreType);
-      }
-    }
-
-    // Lire tous les filtres depuis les URL params
-    const newFilters: Record<string, string> = {
-      pays: "tous",
-      marche: "tous",
-      marcheDetaille: "tous",
-      categorie: "tous",
-      groupeFamille: "tous",
-      famille: "tous",
-      sousFamille: "tous",
-      fournisseur: "tous",
-      portefeuille: "tous",
-    };
-    let hasFilters = false;
-
-    const filterKeys: FilterType[] = [
-      "pays",
-      "marche",
-      "marcheDetaille",
-      "categorie",
-      "groupeFamille",
-      "famille",
-      "sousFamille",
-      "fournisseur",
-      "portefeuille",
-    ];
-
-    filterKeys.forEach((key) => {
-      const value = searchParams.get(key);
-      if (value && value !== "tous") {
-        newFilters[key] = value;
-        hasFilters = true;
-      }
-    });
-
-    if (hasFilters) {
-      setFilters(newFilters);
-    }
-
-    // Restaurer le mode comparaison si on revient de la page comparaison
-    const comparisonModeParam = searchParams.get("comparisonMode");
-    const elementsParam = searchParams.get("elements");
-
-    if (comparisonModeParam === "true" && elementsParam) {
-      try {
-        const decodedElements = JSON.parse(decodeURIComponent(elementsParam));
-        setComparisonMode(true);
-        setComparedElements(decodedElements);
-        // Mettre à jour comparisonByPerimeter pour éviter qu'il soit écrasé
-        setComparisonByPerimeter((prev) => ({
-          ...prev,
-          [perimetreParam || perimetre]: decodedElements,
-        }));
-      } catch (e) {
-        console.error("Error parsing elements from URL:", e);
-      }
-    }
-  }, [searchParams, perimetre, restoredState]); // S'exécuter à chaque changement des paramètres URL
 
   // States pour le tri
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -906,31 +916,6 @@ function AnalyseValeurContent() {
       subLevelCounts: calculateSubLevelCounts(perimetre, item, activeFilters),
     }));
   }, [sortedData, perimetre, filters]);
-
-  // Générer des données CAD/CAM alternatives pour le CA
-  const caDataByMode = useMemo(() => {
-    const dataMap = new Map();
-    dataWithSubLevelCounts.forEach((item) => {
-      // Valeurs CAD = valeurs actuelles
-      const cadValue = item.ca.valeur;
-      const cadEvolution = item.ca.evolution;
-
-      // Générer des valeurs CAM légèrement différentes (simulées)
-      const cadValueNum = parseFloat(cadValue.replace(/[^\d.-]/g, ''));
-      const camValueNum = cadValueNum * 1.15; // +15% pour CAM
-      const camValue = `${camValueNum.toFixed(2)} M€`;
-
-      const cadEvolutionNum = parseFloat(cadEvolution.replace(/[^\d.-]/g, ''));
-      const camEvolutionNum = cadEvolutionNum + 0.5; // +0.5% pour CAM
-      const camEvolution = `${camEvolutionNum >= 0 ? '+' : ''}${camEvolutionNum.toFixed(2)}%`;
-
-      dataMap.set(item.label, {
-        CAD: { valeur: cadValue, evolution: cadEvolution },
-        CAM: { valeur: camValue, evolution: camEvolution }
-      });
-    });
-    return dataMap;
-  }, [dataWithSubLevelCounts]);
 
   return (
     <main className="w-full px-[50px] py-4">
@@ -1771,31 +1756,7 @@ function AnalyseValeurContent() {
                 </TableHead>
                 <TableHead className="w-[180px]">
                   <div className="flex items-center gap-2">
-                    CA
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleCAMode();
-                      }}
-                      className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
-                    >
-                      {caMode} <SwitchIcon className="w-4 h-3.5" />
-                    </button>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-[#121212]" />
-                      </TooltipTrigger>
-                      <TooltipContent>Chiffre d&apos;affaires</TooltipContent>
-                    </Tooltip>
-                    <ChevronsUpDown
-                      className="h-4 w-4 cursor-pointer text-[#121212]"
-                      onClick={() => handleSort("ca")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead className="w-[180px]">
-                  <div className="flex items-center gap-2">
-                    MPA
+                    MP
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-[#121212]" />
@@ -1810,7 +1771,7 @@ function AnalyseValeurContent() {
                 </TableHead>
                 <TableHead className="w-[180px]">
                   <div className="flex items-center gap-2">
-                    MPI
+                    Emballage
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-[#121212]" />
@@ -1825,15 +1786,15 @@ function AnalyseValeurContent() {
                 </TableHead>
                 <TableHead className="w-[180px]">
                   <div className="flex items-center gap-2">
-                    PA
+                    {perimetre === "Produit" ? "PA" : "CA"}
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-[#121212]" />
                       </TooltipTrigger>
                       <TooltipContent>
                         {perimetre === "Produit"
-                          ? "Prix Achat unitaire"
-                          : "Prix Achat total"}
+                          ? "Prix d'achat unitaire"
+                          : "Chiffre d'affaires total"}
                       </TooltipContent>
                     </Tooltip>
                     <ChevronsUpDown
@@ -1848,7 +1809,7 @@ function AnalyseValeurContent() {
                 </TableHead>
                 <TableHead className="w-[180px]">
                   <div className="flex items-center gap-2">
-                    PA théorique
+                    {perimetre === "Produit" ? "PA théorique" : "CA théorique"}
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-[#121212]" />
@@ -1856,7 +1817,7 @@ function AnalyseValeurContent() {
                       <TooltipContent>
                         {perimetre === "Produit"
                           ? "PA théorique unitaire"
-                          : "PA théorique total"}
+                          : "CA théorique total"}
                       </TooltipContent>
                     </Tooltip>
                     <ChevronsUpDown
@@ -1948,7 +1909,7 @@ function AnalyseValeurContent() {
               {dataWithSubLevelCounts.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={perimetre === "Produit" ? 11 : 8}
+                    colSpan={perimetre === "Produit" ? 10 : 7}
                     className="text-center text-gray-500"
                   >
                     Aucune donnée disponible
@@ -1982,7 +1943,13 @@ function AnalyseValeurContent() {
                       <TableCell className="pl-4">
                         <div className="flex flex-col gap-2">
                           {/* Titre en haut */}
-                          <div className="font-bold">{row.label}</div>
+                          <div>
+                            <div className="font-bold">{row.label}</div>
+                            {/* EAN (uniquement pour les produits) */}
+                            {perimetre === "Produit" && row.ean && (
+                              <div className="text-[12px]" style={{ color: '#454545' }}>{row.ean}</div>
+                            )}
+                          </div>
 
                           {/* Liens horizontaux en dessous */}
                           {subLevels.length > 0 && (
@@ -2013,26 +1980,7 @@ function AnalyseValeurContent() {
                         </div>
                       </TableCell>
 
-                      {/* CA */}
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <div className="font-medium">
-                            {caDataByMode.get(row.label)?.[caMode]?.valeur || row.ca.valeur}
-                          </div>
-                          <div
-                            className={cn(
-                              "font-medium",
-                              (caDataByMode.get(row.label)?.[caMode]?.evolution || row.ca.evolution).startsWith("+")
-                                ? "text-green-600"
-                                : "text-red-600"
-                            )}
-                          >
-                            {caDataByMode.get(row.label)?.[caMode]?.evolution || row.ca.evolution}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* MPA */}
+                      {/* MP */}
                       <TableCell>
                         <div className="flex flex-col">
                           <div className="font-medium">{row.mpa.valeur}</div>
@@ -2049,7 +1997,7 @@ function AnalyseValeurContent() {
                         </div>
                       </TableCell>
 
-                      {/* MPI */}
+                      {/* Emballage */}
                       <TableCell>
                         <div className="flex flex-col">
                           <div className="font-medium">{row.mpi.valeur}</div>
@@ -2066,7 +2014,7 @@ function AnalyseValeurContent() {
                         </div>
                       </TableCell>
 
-                      {/* PA */}
+                      {/* CA */}
                       <TableCell>
                         <div className="flex flex-col">
                           <div className="font-medium">
@@ -2092,7 +2040,7 @@ function AnalyseValeurContent() {
                         </div>
                       </TableCell>
 
-                      {/* PA théorique */}
+                      {/* CA théorique */}
                       <TableCell>
                         <div className="flex flex-col">
                           <div className="font-medium">
