@@ -476,7 +476,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
     title: "Analyse par Marché",
     description: "Vue d'ensemble des performances par marché",
     availableFilters: ["pays", "fournisseur", "portefeuille"],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Marché détaillé", "Catégorie", "Groupe Famille"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Marché"]);
@@ -489,7 +489,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
     title: "Analyse par Marché détaillé",
     description: "Performance par marché détaillé",
     availableFilters: ["pays", "fournisseur", "portefeuille", "marche"],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Marché", "Catégorie", "Groupe Famille"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Marché détaillé"]);
@@ -508,7 +508,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "marche",
       "marcheDetaille",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Marché détaillé", "Groupe Famille", "Famille"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Catégorie"]);
@@ -528,7 +528,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "marcheDetaille",
       "categorie",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Catégorie", "Famille", "Sous Famille"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Groupe Famille"]);
@@ -549,7 +549,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "categorie",
       "groupeFamille",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Groupe Famille", "Sous Famille", "Produit"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Famille"]);
@@ -571,7 +571,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "groupeFamille",
       "famille",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Famille", "Produit"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Sous Famille"]);
@@ -594,7 +594,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "famille",
       "sousFamille",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Sous Famille", "Famille"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Produit"]);
@@ -617,7 +617,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "famille",
       "sousFamille",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Marché", "Catégorie", "Portefeuille"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Fournisseur"]);
@@ -640,7 +640,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "famille",
       "sousFamille",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Marché", "Fournisseur"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Portefeuille"]);
@@ -663,7 +663,7 @@ export const perimetreConfigs: Record<PerimetreType, PerimetreConfig> = {
       "famille",
       "sousFamille",
     ],
-    columns: ["CA", "MPA", "MPI", "PA", "Coût théorique", "Opportunités"],
+    columns: ["CA", "MP", "Emballage", "PA", "Coût théorique", "Opportunités"],
     linkedPerimetres: ["Marché", "Catégorie", "Fournisseur"],
     getItems: (filters) => {
       const data = convertToPageFormat(perimetreData["Pays"]);

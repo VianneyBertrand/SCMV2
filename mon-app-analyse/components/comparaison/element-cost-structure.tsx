@@ -113,7 +113,7 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
           <div>
             <p className="font-semibold mb-4">{label}</p>
             <div className="space-y-1">
-              <p>Répartition : {percentage} du PA total</p>
+              <p>Répartition : {percentage} du CA total</p>
               <p>Valorisation : {valorisation || 'N/A'}</p>
               <p>Evolution : {evolution}</p>
               <p>Impact : {impact}</p>
@@ -161,18 +161,16 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
     presure: true,
     'ferments-lactiques': true,
     'creme-fraiche': true,
-    energie: true,
-    transport: true,
-    emballage: true,
-    'main-oeuvre': true,
-    'transport-routier': true,
-    'transport-maritime': true,
-    electricite: true,
-    gaz: true,
-    'salaires-production': true,
-    'salaires-logistique': true,
     'carton-ondule': true,
-    'plastique-emballage': true,
+    polypropylene: true,
+    polyethylene: true,
+    aluminium: true,
+    verre: true,
+    acier: true,
+    'papier-kraft': true,
+    'polystyrene-expanse': true,
+    pet: true,
+    'etiquettes-papier': true,
   })
 
   const [showInLegend, setShowInLegend] = useState<Record<string, boolean>>({
@@ -189,18 +187,16 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
     presure: false,
     'ferments-lactiques': false,
     'creme-fraiche': false,
-    transport: true,
-    energie: true,
-    'main-oeuvre': true,
-    emballage: true,
-    'transport-routier': false,
-    'transport-maritime': false,
-    electricite: false,
-    gaz: false,
-    'salaires-production': false,
-    'salaires-logistique': false,
-    'carton-ondule': false,
-    'plastique-emballage': false,
+    'carton-ondule': true,
+    polypropylene: true,
+    polyethylene: true,
+    aluminium: true,
+    verre: false,
+    acier: false,
+    'papier-kraft': false,
+    'polystyrene-expanse': false,
+    pet: false,
+    'etiquettes-papier': false,
   })
 
 
@@ -247,8 +243,8 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
           layout: 'horizontal',
           type: 'total' as const,
           items: [
-            { label: 'MPA', percentage: mpaValue, evolution: mpaEvolution, color: 'bg-[#F25056]', className: 'flex-1', href: '#' },
-            { label: 'MPI', percentage: mpiValue, evolution: mpiEvolution, color: 'bg-[#2FB67E]', className: 'flex-1', href: '#' },
+            { label: 'MP', percentage: mpaValue, evolution: mpaEvolution, color: 'bg-[#F25056]', className: 'flex-1', href: '#' },
+            { label: 'Emballage', percentage: mpiValue, evolution: mpiEvolution, color: 'bg-[#2FB67E]', className: 'flex-1', href: '#' },
             { label: 'Autre', percentage: autreValue, evolution: '0.00%', color: 'bg-gray-400', className: 'w-1/6', href: '#' },
           ]
         }
@@ -281,29 +277,21 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
           }))
         }
       case 'mpi':
-        // Ajuster proportionnellement les composants MPI détaillés au total MPI réel
-        const baseMpiTotal = 37.43 // Total des valeurs hardcodées
-        const actualMpiTotal = mpiNum
-        const mpiRatio = actualMpiTotal / baseMpiTotal
-
-        const mpiBaseItems = [
-          { label: 'Energie', basePercentage: 18.36, categoryPercentage: '49.05%', evolution: '-4.20%', color: 'bg-[#2FB67E]', href: '#' },
-          { label: 'Transport', basePercentage: 13.37, categoryPercentage: '35.72%', evolution: '-3.80%', color: 'bg-[#8EE2BF]', href: '#' },
-          { label: 'Emballage', basePercentage: 9.67, categoryPercentage: '25.84%', evolution: '-3.10%', color: 'bg-[#F0FAF6]', href: '#' },
-          { label: "Main d'oeuvre", basePercentage: 4.36, categoryPercentage: '11.65%', evolution: '-1.80%', color: 'bg-[#F25056]', href: '#' },
-        ]
-
         return {
           layout: 'complex-mpi',
           type: 'mpi' as const,
-          items: mpiBaseItems.map(item => ({
-            label: item.label,
-            percentage: `${(item.basePercentage * mpiRatio).toFixed(2)}%`,
-            categoryPercentage: item.categoryPercentage,
-            evolution: item.evolution,
-            color: item.color,
-            href: item.href
-          }))
+          items: [
+            { label: 'Carton ondulé', percentage: '22.34%', categoryPercentage: '22.34%', evolution: '+1.20%', color: 'bg-[#F57A7E]', href: '#' },
+            { label: 'Polypropylène', percentage: '16.45%', categoryPercentage: '16.45%', evolution: '-2.30%', color: 'bg-[#2FB67E]', href: '#' },
+            { label: 'Polyéthylène', percentage: '14.28%', categoryPercentage: '14.28%', evolution: '+0.85%', color: 'bg-[#F0FAF6]', href: '#' },
+            { label: 'Aluminium', percentage: '11.92%', categoryPercentage: '11.92%', evolution: '+3.15%', color: 'bg-[#F25056]', href: '#' },
+            { label: 'Verre', percentage: '9.67%', categoryPercentage: '9.67%', evolution: '-1.45%', color: 'bg-[#8EE2BF]', href: '#' },
+            { label: 'Acier', percentage: '8.53%', categoryPercentage: '8.53%', evolution: '+2.70%', color: 'bg-[#F25056]', href: '#' },
+            { label: 'Papier kraft', percentage: '7.21%', categoryPercentage: '7.21%', evolution: '-0.65%', color: 'bg-[#F0FAF6]', href: '#' },
+            { label: 'Polystyrène expansé', percentage: '4.89%', categoryPercentage: '4.89%', evolution: '+1.90%', color: 'bg-[#F57A7E]', href: '#' },
+            { label: 'PET', percentage: '2.76%', categoryPercentage: '2.76%', evolution: '-3.40%', color: 'bg-[#2FB67E]', href: '#' },
+            { label: 'Étiquettes papier', percentage: '1.95%', categoryPercentage: '1.95%', evolution: '+0.55%', color: 'bg-[#F0FAF6]', href: '#' },
+          ]
         }
     }
   }
@@ -311,14 +299,14 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
   // Données graphique
   const getChartData = () => {
     const baseData = [
-      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'energie': 210, 'transport': 430, 'emballage': 250, 'main-oeuvre': 290, 'transport-routier': 425, 'transport-maritime': 435, 'electricite': 215, 'gaz': 205, 'salaires-production': 295, 'salaires-logistique': 285, 'carton-ondule': 255, 'plastique-emballage': 245 },
-      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 225, 'amidon-mais': 230, 'gelatine': 223, 'presure': 227, 'ferments-lactiques': 233, 'creme-fraiche': 237, 'energie': 205, 'transport': 410, 'emballage': 240, 'main-oeuvre': 280, 'transport-routier': 405, 'transport-maritime': 415, 'electricite': 210, 'gaz': 200, 'salaires-production': 285, 'salaires-logistique': 275, 'carton-ondule': 245, 'plastique-emballage': 235 },
-      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'levure': 220, 'amidon-mais': 228, 'gelatine': 220, 'presure': 224, 'ferments-lactiques': 230, 'creme-fraiche': 234, 'energie': 210, 'transport': 405, 'emballage': 235, 'main-oeuvre': 275, 'transport-routier': 400, 'transport-maritime': 410, 'electricite': 212, 'gaz': 203, 'salaires-production': 280, 'salaires-logistique': 270, 'carton-ondule': 240, 'plastique-emballage': 230 },
-      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'levure': 250, 'amidon-mais': 255, 'gelatine': 248, 'presure': 252, 'ferments-lactiques': 258, 'creme-fraiche': 262, 'energie': 230, 'transport': 450, 'emballage': 280, 'main-oeuvre': 310, 'transport-routier': 445, 'transport-maritime': 455, 'electricite': 235, 'gaz': 225, 'salaires-production': 315, 'salaires-logistique': 305, 'carton-ondule': 285, 'plastique-emballage': 275 },
-      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'levure': 280, 'amidon-mais': 285, 'gelatine': 278, 'presure': 282, 'ferments-lactiques': 288, 'creme-fraiche': 292, 'energie': 250, 'transport': 470, 'emballage': 310, 'main-oeuvre': 340, 'transport-routier': 465, 'transport-maritime': 475, 'electricite': 255, 'gaz': 245, 'salaires-production': 345, 'salaires-logistique': 335, 'carton-ondule': 315, 'plastique-emballage': 305 },
-      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'levure': 290, 'amidon-mais': 295, 'gelatine': 288, 'presure': 292, 'ferments-lactiques': 298, 'creme-fraiche': 302, 'energie': 260, 'transport': 480, 'emballage': 320, 'main-oeuvre': 350, 'transport-routier': 475, 'transport-maritime': 485, 'electricite': 265, 'gaz': 255, 'salaires-production': 355, 'salaires-logistique': 345, 'carton-ondule': 325, 'plastique-emballage': 315 },
-      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'energie': 245, 'transport': 465, 'emballage': 305, 'main-oeuvre': 335, 'transport-routier': 460, 'transport-maritime': 470, 'electricite': 250, 'gaz': 240, 'salaires-production': 340, 'salaires-logistique': 330, 'carton-ondule': 310, 'plastique-emballage': 300 },
-      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'energie': 235, 'transport': 475, 'emballage': 315, 'main-oeuvre': 345, 'transport-routier': 470, 'transport-maritime': 480, 'electricite': 240, 'gaz': 230, 'salaires-production': 350, 'salaires-logistique': 340, 'carton-ondule': 320, 'plastique-emballage': 310 },
+      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'carton-ondule': 320, 'polypropylene': 290, 'polyethylene': 270, 'aluminium': 250, 'verre': 230, 'acier': 210, 'papier-kraft': 190, 'polystyrene-expanse': 170, 'pet': 150, 'etiquettes-papier': 130 },
+      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 210, 'amidon-mais': 215, 'gelatine': 208, 'presure': 212, 'ferments-lactiques': 218, 'creme-fraiche': 222, 'carton-ondule': 315, 'polypropylene': 285, 'polyethylene': 265, 'aluminium': 245, 'verre': 225, 'acier': 205, 'papier-kraft': 185, 'polystyrene-expanse': 165, 'pet': 145, 'etiquettes-papier': 125 },
+      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'levure': 205, 'amidon-mais': 210, 'gelatine': 203, 'presure': 207, 'ferments-lactiques': 213, 'creme-fraiche': 217, 'carton-ondule': 310, 'polypropylene': 280, 'polyethylene': 260, 'aluminium': 240, 'verre': 220, 'acier': 202, 'papier-kraft': 183, 'polystyrene-expanse': 163, 'pet': 142, 'etiquettes-papier': 123 },
+      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'levure': 250, 'amidon-mais': 255, 'gelatine': 248, 'presure': 252, 'ferments-lactiques': 258, 'creme-fraiche': 262, 'carton-ondule': 328, 'polypropylene': 298, 'polyethylene': 275, 'aluminium': 255, 'verre': 235, 'acier': 215, 'papier-kraft': 195, 'polystyrene-expanse': 175, 'pet': 155, 'etiquettes-papier': 135 },
+      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'levure': 280, 'amidon-mais': 285, 'gelatine': 278, 'presure': 282, 'ferments-lactiques': 288, 'creme-fraiche': 292, 'carton-ondule': 335, 'polypropylene': 305, 'polyethylene': 282, 'aluminium': 260, 'verre': 240, 'acier': 220, 'papier-kraft': 200, 'polystyrene-expanse': 180, 'pet': 160, 'etiquettes-papier': 140 },
+      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'levure': 290, 'amidon-mais': 295, 'gelatine': 288, 'presure': 292, 'ferments-lactiques': 298, 'creme-fraiche': 302, 'carton-ondule': 340, 'polypropylene': 310, 'polyethylene': 287, 'aluminium': 265, 'verre': 245, 'acier': 223, 'papier-kraft': 203, 'polystyrene-expanse': 183, 'pet': 162, 'etiquettes-papier': 142 },
+      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'carton-ondule': 333, 'polypropylene': 303, 'polyethylene': 280, 'aluminium': 258, 'verre': 238, 'acier': 218, 'papier-kraft': 198, 'polystyrene-expanse': 178, 'pet': 158, 'etiquettes-papier': 138 },
+      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'carton-ondule': 325, 'polypropylene': 295, 'polyethylene': 273, 'aluminium': 252, 'verre': 232, 'acier': 212, 'papier-kraft': 192, 'polystyrene-expanse': 172, 'pet': 152, 'etiquettes-papier': 132 },
     ]
 
     // Si base 100 est activé, normaliser les données
@@ -353,7 +341,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
         return [
           {
             id: 'MPA',
-            name: 'MPA',
+            name: 'MP',
             volume: '7023.42T',
             volumeUVC: '258 UVC',
             partVolume: '49.25%',
@@ -365,7 +353,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
           },
           {
             id: 'MPI',
-            name: 'MPI',
+            name: 'Emballage',
             volume: '7032.42T',
             volumeUVC: '258 UVC',
             partVolume: '50.75%',
@@ -579,138 +567,105 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
         ]
       case 'mpi':
         return [
-          // Moyennes
-          {
-            id: 'transport',
-            name: 'Moyenne transport',
-            cost: '0.035M€',
-            partCost: '25%',
-            evolution: '+3.35%',
-            color: '#E91E63',
-            isMain: true,
-            category: 'transport'
-          },
-          {
-            id: 'energie',
-            name: 'Moyenne energie',
-            cost: '0.028M€',
-            partCost: '20%',
-            evolution: '+2.15%',
-            color: '#00BCD4',
-            isMain: true,
-            category: 'energie'
-          },
-          {
-            id: 'main-oeuvre',
-            name: "Moyenne main d'oeuvre",
-            cost: '0.042M€',
-            partCost: '30%',
-            evolution: '+1.85%',
-            color: '#4CAF50',
-            isMain: true,
-            category: 'main-oeuvre'
-          },
-          {
-            id: 'emballage',
-            name: 'Moyenne emballage',
-            cost: '0.035M€',
-            partCost: '25%',
-            evolution: '+2.75%',
-            color: '#FF9800',
-            isMain: true,
-            category: 'emballage'
-          },
-          // Transport
-          {
-            id: 'transport-routier',
-            name: 'Transport routier',
-            subLabel: 'TRA01',
-            cost: '0.020M€',
-            partCost: '14.3%',
-            evolution: '+3.20%',
-            color: '#F48FB1',
-            isMain: true,
-            category: 'transport'
-          },
-          {
-            id: 'transport-maritime',
-            name: 'Transport maritime',
-            subLabel: 'TRA02',
-            cost: '0.015M€',
-            partCost: '10.7%',
-            evolution: '+3.50%',
-            color: '#F06292',
-            isMain: true,
-            category: 'transport'
-          },
-          // Energie
-          {
-            id: 'electricite',
-            name: 'Électricité',
-            subLabel: 'ENE01',
-            cost: '0.016M€',
-            partCost: '11.4%',
-            evolution: '+2.10%',
-            color: '#80DEEA',
-            isMain: true,
-            category: 'energie'
-          },
-          {
-            id: 'gaz',
-            name: 'Gaz naturel',
-            subLabel: 'ENE02',
-            cost: '0.012M€',
-            partCost: '8.6%',
-            evolution: '+2.20%',
-            color: '#4DD0E1',
-            isMain: true,
-            category: 'energie'
-          },
-          // Main d'oeuvre
-          {
-            id: 'salaires-production',
-            name: 'Salaires production',
-            subLabel: 'MO01',
-            cost: '0.025M€',
-            partCost: '17.9%',
-            evolution: '+1.80%',
-            color: '#A5D6A7',
-            isMain: true,
-            category: 'main-oeuvre'
-          },
-          {
-            id: 'salaires-logistique',
-            name: 'Salaires logistique',
-            subLabel: 'MO02',
-            cost: '0.017M€',
-            partCost: '12.1%',
-            evolution: '+1.90%',
-            color: '#81C784',
-            isMain: true,
-            category: 'main-oeuvre'
-          },
-          // Emballage
           {
             id: 'carton-ondule',
             name: 'Carton ondulé',
-            subLabel: 'EMB01',
-            cost: '0.020M€',
-            partCost: '14.3%',
-            evolution: '+2.80%',
-            color: '#FFCC80',
-            isMain: true,
-            category: 'emballage'
+            subLabel: 'MP01',
+            cost: '0.067M€',
+            partCost: '22.34%',
+            evolution: '+1.20%',
+            color: '#FF6B6B',
+            isMain: true
           },
           {
-            id: 'plastique-emballage',
-            name: 'Film plastique',
-            subLabel: 'EMB02',
-            cost: '0.015M€',
-            partCost: '10.7%',
+            id: 'polypropylene',
+            name: 'Polypropylène',
+            subLabel: 'MP02',
+            cost: '0.049M€',
+            partCost: '16.45%',
+            evolution: '-2.30%',
+            color: '#4ECDC4',
+            isMain: true
+          },
+          {
+            id: 'polyethylene',
+            name: 'Polyéthylène',
+            subLabel: 'MP03',
+            cost: '0.043M€',
+            partCost: '14.28%',
+            evolution: '+0.85%',
+            color: '#45B7D1',
+            isMain: true
+          },
+          {
+            id: 'aluminium',
+            name: 'Aluminium',
+            subLabel: 'MP04',
+            cost: '0.036M€',
+            partCost: '11.92%',
+            evolution: '+3.15%',
+            color: '#F7B731',
+            isMain: true
+          },
+          {
+            id: 'verre',
+            name: 'Verre',
+            subLabel: 'MP05',
+            cost: '0.029M€',
+            partCost: '9.67%',
+            evolution: '-1.45%',
+            color: '#5F27CD',
+            isMain: true
+          },
+          {
+            id: 'acier',
+            name: 'Acier',
+            subLabel: 'MP06',
+            cost: '0.026M€',
+            partCost: '8.53%',
             evolution: '+2.70%',
-            color: '#FFB74D',
-            isMain: true,
-            category: 'emballage'
+            color: '#00D2D3',
+            isMain: true
+          },
+          {
+            id: 'papier-kraft',
+            name: 'Papier kraft',
+            subLabel: 'MP07',
+            cost: '0.022M€',
+            partCost: '7.21%',
+            evolution: '-0.65%',
+            color: '#FD79A8',
+            isMain: true
+          },
+          {
+            id: 'polystyrene-expanse',
+            name: 'Polystyrène expansé',
+            subLabel: 'MP08',
+            cost: '0.015M€',
+            partCost: '4.89%',
+            evolution: '+1.90%',
+            color: '#A29BFE',
+            isMain: true
+          },
+          {
+            id: 'pet',
+            name: 'PET',
+            subLabel: 'MP09',
+            cost: '0.008M€',
+            partCost: '2.76%',
+            evolution: '-3.40%',
+            color: '#6C5CE7',
+            isMain: true
+          },
+          {
+            id: 'etiquettes-papier',
+            name: 'Étiquettes papier',
+            subLabel: 'MP10',
+            cost: '0.006M€',
+            partCost: '1.95%',
+            evolution: '+0.55%',
+            color: '#FD79A8',
+            isMain: true
           },
         ]
       default:
@@ -749,13 +704,13 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
           onClick={() => setCostSubTab('mpa')}
           className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${costSubTab === 'mpa' ? 'bg-blue text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}
         >
-          MPA
+          MP
         </button>
         <button
           onClick={() => setCostSubTab('mpi')}
           className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${costSubTab === 'mpi' ? 'bg-blue text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}
         >
-          MPI
+          Emballage
         </button>
       </div>
 
@@ -892,74 +847,143 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                 </div>
               )
             } else if (heatmapData.layout === 'complex-mpi') {
-              // Layout MPI : avec tailles proportionnelles
+              // Layout MPI : 10 emballages en grille complexe
               const items = heatmapData.items
-              // Calculer les pourcentages numériques
-              const percentages = items.map(item => parseFloat(item.percentage.replace('%', '')))
-              const total = percentages.reduce((a, b) => a + b, 0)
-
-              // Colonne droite : Emballage + Main d'oeuvre
-              const rightGroupTotal = percentages[2] + percentages[3]
-              const rightGroupWidth = (rightGroupTotal / total) * 100
-
               return (
                 <div className="flex gap-1 h-[320px]">
-                  {/* Energie (très large gauche) */}
+                  {/* Carton ondulé (plus grand - gauche) */}
                   <HeatmapRect
                     label={items[0].label}
                     percentage={items[0].percentage}
                     evolution={items[0].evolution}
                     color={items[0].color}
-                    className="h-full"
+                    className="flex-1 h-full"
                     href={items[0].href}
                     type={heatmapData.type}
                     categoryPercentage={items[0].categoryPercentage}
                     totalPA={totalPA}
                     lastUpdate="12/11/25"
-                    style={{ width: `${(percentages[0] / total) * 100}%` }}
                   />
-                  {/* Transport (large centre) */}
+                  {/* Polypropylène (deuxième plus grand - centre) */}
                   <HeatmapRect
                     label={items[1].label}
                     percentage={items[1].percentage}
                     evolution={items[1].evolution}
                     color={items[1].color}
-                    className="h-full"
+                    className="w-[28%] h-full"
                     href={items[1].href}
                     type={heatmapData.type}
                     categoryPercentage={items[1].categoryPercentage}
                     totalPA={totalPA}
                     lastUpdate="12/11/25"
-                    style={{ width: `${(percentages[1] / total) * 100}%` }}
                   />
-                  {/* Colonne droite avec Emballage et Main d'oeuvre */}
-                  <div className="flex flex-col gap-1" style={{ width: `${rightGroupWidth}%` }}>
-                    <HeatmapRect
-                      label={items[2].label}
-                      percentage={items[2].percentage}
-                      evolution={items[2].evolution}
-                      color={items[2].color}
-                      className="w-full"
-                      href={items[2].href}
-                      type={heatmapData.type}
-                      categoryPercentage={items[2].categoryPercentage}
-                      totalPA={totalPA}
-                      lastUpdate="12/11/25"
-                      style={{ height: `${(percentages[2] / rightGroupTotal) * 100}%` }}
-                    />
-                    <HeatmapRect
-                      label={items[3].label}
-                      percentage={items[3].percentage}
-                      evolution={items[3].evolution}
-                      color={items[3].color}
-                      className="w-full"
-                      href={items[3].href}
-                      type={heatmapData.type}
-                      categoryPercentage={items[3].categoryPercentage}
-                      totalPA={totalPA}
-                      lastUpdate="12/11/25"
-                      style={{ height: `${(percentages[3] / rightGroupTotal) * 100}%` }}
-                    />
+                  {/* Colonne droite avec les 8 autres emballages */}
+                  <div className="w-[35%] flex flex-col gap-1">
+                    {/* Première ligne : Polyéthylène et Aluminium */}
+                    <div className="flex gap-1 h-[33%]">
+                      <HeatmapRect
+                        label={items[2].label}
+                        percentage={items[2].percentage}
+                        evolution={items[2].evolution}
+                        color={items[2].color}
+                        className="flex-1 h-full"
+                        href={items[2].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[2].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                      <HeatmapRect
+                        label={items[3].label}
+                        percentage={items[3].percentage}
+                        evolution={items[3].evolution}
+                        color={items[3].color}
+                        className="flex-1 h-full"
+                        href={items[3].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[3].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                    </div>
+                    {/* Deuxième ligne : Verre, Acier, Papier kraft */}
+                    <div className="flex gap-1 h-[33%]">
+                      <HeatmapRect
+                        label={items[4].label}
+                        percentage={items[4].percentage}
+                        evolution={items[4].evolution}
+                        color={items[4].color}
+                        className="flex-1 h-full"
+                        href={items[4].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[4].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                      <HeatmapRect
+                        label={items[5].label}
+                        percentage={items[5].percentage}
+                        evolution={items[5].evolution}
+                        color={items[5].color}
+                        className="flex-1 h-full"
+                        href={items[5].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[5].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                      <HeatmapRect
+                        label={items[6].label}
+                        percentage={items[6].percentage}
+                        evolution={items[6].evolution}
+                        color={items[6].color}
+                        className="flex-1 h-full"
+                        href={items[6].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[6].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                    </div>
+                    {/* Troisième ligne : Polystyrène expansé, PET, Étiquettes papier */}
+                    <div className="flex gap-1 flex-1">
+                      <HeatmapRect
+                        label={items[7].label}
+                        percentage={items[7].percentage}
+                        evolution={items[7].evolution}
+                        color={items[7].color}
+                        className="flex-1 h-full"
+                        href={items[7].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[7].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                      <HeatmapRect
+                        label={items[8].label}
+                        percentage={items[8].percentage}
+                        evolution={items[8].evolution}
+                        color={items[8].color}
+                        className="flex-1 h-full"
+                        href={items[8].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[8].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                      <HeatmapRect
+                        label={items[9].label}
+                        percentage={items[9].percentage}
+                        evolution={items[9].evolution}
+                        color={items[9].color}
+                        className="flex-1 h-full"
+                        href={items[9].href}
+                        type={heatmapData.type}
+                        categoryPercentage={items[9].categoryPercentage}
+                        totalPA={totalPA}
+                        lastUpdate="12/11/25"
+                      />
+                    </div>
                   </div>
                 </div>
               )
@@ -1015,7 +1039,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                   onClick={() => toggleLegendOpacity('MPA')}
                 >
                   <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
-                  <span className="text-sm select-none">MPA</span>
+                  <span className="text-sm select-none">MP</span>
                 </div>
                 <div
                   className="flex items-center gap-2 cursor-pointer"
@@ -1023,7 +1047,7 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                   onClick={() => toggleLegendOpacity('MPI')}
                 >
                   <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
-                  <span className="text-sm select-none">MPI</span>
+                  <span className="text-sm select-none">Emballage</span>
                 </div>
               </>
             )}
@@ -1165,133 +1189,104 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
 
             {costSubTab === 'mpi' && (
               <>
-                {/* Moyennes */}
-                {showInLegend.transport && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity.transport ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('transport')}
-                  >
-                    <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
-                    <span className="text-sm font-semibold select-none">Moyenne transport</span>
-                  </div>
-                )}
-                {showInLegend.energie && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity.energie ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('energie')}
-                  >
-                    <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
-                    <span className="text-sm font-semibold select-none">Moyenne energie</span>
-                  </div>
-                )}
-                {showInLegend['main-oeuvre'] && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity['main-oeuvre'] ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('main-oeuvre')}
-                  >
-                    <CurveIcon color="#4CAF50" className="w-[30px] h-[14px]" />
-                    <span className="text-sm font-semibold select-none">Moyenne main d&apos;oeuvre</span>
-                  </div>
-                )}
-                {showInLegend.emballage && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity.emballage ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('emballage')}
-                  >
-                    <CurveIcon color="#FF9800" className="w-[30px] h-[14px]" />
-                    <span className="text-sm font-semibold select-none">Moyenne emballage</span>
-                  </div>
-                )}
-
-                {/* Transport items */}
-                {showInLegend['transport-routier'] && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity['transport-routier'] ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('transport-routier')}
-                  >
-                    <CurveIcon color="#F48FB1" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">Transport routier</span>
-                  </div>
-                )}
-                {showInLegend['transport-maritime'] && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity['transport-maritime'] ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('transport-maritime')}
-                  >
-                    <CurveIcon color="#F06292" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">Transport maritime</span>
-                  </div>
-                )}
-
-                {/* Energie items */}
-                {showInLegend.electricite && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity.electricite ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('electricite')}
-                  >
-                    <CurveIcon color="#80DEEA" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">Électricité</span>
-                  </div>
-                )}
-                {showInLegend.gaz && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity.gaz ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('gaz')}
-                  >
-                    <CurveIcon color="#4DD0E1" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">Gaz naturel</span>
-                  </div>
-                )}
-
-                {/* Main d'oeuvre items */}
-                {showInLegend['salaires-production'] && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity['salaires-production'] ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('salaires-production')}
-                  >
-                    <CurveIcon color="#81C784" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">Salaires production</span>
-                  </div>
-                )}
-                {showInLegend['salaires-logistique'] && (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity['salaires-logistique'] ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('salaires-logistique')}
-                  >
-                    <CurveIcon color="#66BB6A" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">Salaires logistique</span>
-                  </div>
-                )}
-
-                {/* Emballage items */}
                 {showInLegend['carton-ondule'] && (
                   <div
                     className="flex items-center gap-2 cursor-pointer"
                     style={{ opacity: legendOpacity['carton-ondule'] ? 1 : 0.4 }}
                     onClick={() => toggleLegendOpacity('carton-ondule')}
                   >
-                    <CurveIcon color="#FFB74D" className="w-[30px] h-[14px]" />
+                    <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
                     <span className="text-sm select-none">Carton ondulé</span>
                   </div>
                 )}
-                {showInLegend['plastique-emballage'] && (
+                {showInLegend.polypropylene && (
                   <div
                     className="flex items-center gap-2 cursor-pointer"
-                    style={{ opacity: legendOpacity['plastique-emballage'] ? 1 : 0.4 }}
-                    onClick={() => toggleLegendOpacity('plastique-emballage')}
+                    style={{ opacity: legendOpacity.polypropylene ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('polypropylene')}
                   >
-                    <CurveIcon color="#FFA726" className="w-[30px] h-[14px]" />
-                    <span className="text-sm select-none">Film plastique</span>
+                    <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Polypropylène</span>
+                  </div>
+                )}
+                {showInLegend.polyethylene && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity.polyethylene ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('polyethylene')}
+                  >
+                    <CurveIcon color="#4CAF50" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Polyéthylène</span>
+                  </div>
+                )}
+                {showInLegend.aluminium && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity.aluminium ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('aluminium')}
+                  >
+                    <CurveIcon color="#FF9800" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Aluminium</span>
+                  </div>
+                )}
+                {showInLegend.verre && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity.verre ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('verre')}
+                  >
+                    <CurveIcon color="#9C27B0" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Verre</span>
+                  </div>
+                )}
+                {showInLegend.acier && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity.acier ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('acier')}
+                  >
+                    <CurveIcon color="#607D8B" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Acier</span>
+                  </div>
+                )}
+                {showInLegend['papier-kraft'] && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity['papier-kraft'] ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('papier-kraft')}
+                  >
+                    <CurveIcon color="#795548" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Papier kraft</span>
+                  </div>
+                )}
+                {showInLegend['polystyrene-expanse'] && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity['polystyrene-expanse'] ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('polystyrene-expanse')}
+                  >
+                    <CurveIcon color="#FFEB3B" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Polystyrène expansé</span>
+                  </div>
+                )}
+                {showInLegend.pet && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity.pet ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('pet')}
+                  >
+                    <CurveIcon color="#FFC107" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">PET</span>
+                  </div>
+                )}
+                {showInLegend['etiquettes-papier'] && (
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    style={{ opacity: legendOpacity['etiquettes-papier'] ? 1 : 0.4 }}
+                    onClick={() => toggleLegendOpacity('etiquettes-papier')}
+                  >
+                    <CurveIcon color="#FF5722" className="w-[30px] h-[14px]" />
+                    <span className="text-sm select-none">Étiquettes papier</span>
                   </div>
                 )}
               </>
@@ -1363,27 +1358,16 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
 
               {costSubTab === 'mpi' && (
                 <>
-                  {/* Moyennes */}
-                  <Line type="monotone" dataKey="transport" stroke="#E91E63" strokeWidth={2} dot={false} hide={!legendOpacity.transport} />
-                  <Line type="monotone" dataKey="energie" stroke="#00BCD4" strokeWidth={2} dot={false} hide={!legendOpacity.energie} />
-                  <Line type="monotone" dataKey="main-oeuvre" stroke="#4CAF50" strokeWidth={2} dot={false} hide={!legendOpacity['main-oeuvre']} />
-                  <Line type="monotone" dataKey="emballage" stroke="#FF9800" strokeWidth={2} dot={false} hide={!legendOpacity.emballage} />
-
-                  {/* Transport items */}
-                  <Line type="monotone" dataKey="transport-routier" stroke="#F48FB1" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['transport-routier']} />
-                  <Line type="monotone" dataKey="transport-maritime" stroke="#F06292" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['transport-maritime']} />
-
-                  {/* Energie items */}
-                  <Line type="monotone" dataKey="electricite" stroke="#80DEEA" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.electricite} />
-                  <Line type="monotone" dataKey="gaz" stroke="#4DD0E1" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.gaz} />
-
-                  {/* Main d'oeuvre items */}
-                  <Line type="monotone" dataKey="salaires-production" stroke="#81C784" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['salaires-production']} />
-                  <Line type="monotone" dataKey="salaires-logistique" stroke="#66BB6A" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['salaires-logistique']} />
-
-                  {/* Emballage items */}
-                  <Line type="monotone" dataKey="carton-ondule" stroke="#FFB74D" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['carton-ondule']} />
-                  <Line type="monotone" dataKey="plastique-emballage" stroke="#FFA726" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['plastique-emballage']} />
+                  <Line type="monotone" dataKey="carton-ondule" stroke="#E91E63" strokeWidth={2} dot={false} hide={!legendOpacity['carton-ondule']} />
+                  <Line type="monotone" dataKey="polypropylene" stroke="#00BCD4" strokeWidth={2} dot={false} hide={!legendOpacity.polypropylene} />
+                  <Line type="monotone" dataKey="polyethylene" stroke="#4CAF50" strokeWidth={2} dot={false} hide={!legendOpacity.polyethylene} />
+                  <Line type="monotone" dataKey="aluminium" stroke="#FF9800" strokeWidth={2} dot={false} hide={!legendOpacity.aluminium} />
+                  <Line type="monotone" dataKey="verre" stroke="#9C27B0" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.verre} />
+                  <Line type="monotone" dataKey="acier" stroke="#607D8B" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.acier} />
+                  <Line type="monotone" dataKey="papier-kraft" stroke="#795548" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['papier-kraft']} />
+                  <Line type="monotone" dataKey="polystyrene-expanse" stroke="#FFEB3B" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['polystyrene-expanse']} />
+                  <Line type="monotone" dataKey="pet" stroke="#FFC107" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.pet} />
+                  <Line type="monotone" dataKey="etiquettes-papier" stroke="#FF5722" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['etiquettes-papier']} />
                 </>
               )}
               <Brush

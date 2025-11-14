@@ -117,7 +117,7 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, tot
           <div>
             <p className="font-semibold mb-4">{label}</p>
             <div className="space-y-1">
-              <p>Répartition : {percentage} du PA total</p>
+              <p>Répartition : {percentage} du CA total</p>
               <p>Valorisation : {valorisation || 'N/A'}</p>
               <p>Evolution : {evolution}</p>
               <p>Impact : {impact}</p>
@@ -635,7 +635,7 @@ export default function AccueilPage() {
                 variant="outline"
                 className="w-auto justify-between border-gray-200 bg-white font-normal shadow-none gap-2"
               >
-                13/12/2024 - 14/12/2024
+                01/01/2025 - 13/11/2025
                 <CalendarIcon className="h-4 w-4 text-blue-500" />
               </Button>
             </div>
@@ -682,13 +682,13 @@ export default function AccueilPage() {
             color = isPositive ? 'text-green-600' : 'text-red-600'
           }
 
-          const hasMode = card.label === "CA" || card.label === "Volume"
+          const hasMode = false
           const hasUnit = card.label === "Volume"
 
           return (
             <Card key={card.label} className="p-4 rounded shadow-none">
               <div className="flex items-center gap-2 mb-3">
-                {hasMode ? (
+                {hasMode || hasUnit ? (
                   <div className="inline-flex items-center gap-2">
                     <span className="text-sm font-medium">{card.label}</span>
                     {hasUnit && (
@@ -702,15 +702,17 @@ export default function AccueilPage() {
                         {card.unit} <SwitchIcon className="w-4 h-3.5" />
                       </button>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault()
-                        card.onToggleMode?.()
-                      }}
-                      className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
-                    >
-                      {card.mode} <SwitchIcon className="w-4 h-3.5" />
-                    </button>
+                    {hasMode && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          card.onToggleMode?.()
+                        }}
+                        className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                      >
+                        {card.mode} <SwitchIcon className="w-4 h-3.5" />
+                      </button>
+                    )}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
@@ -856,7 +858,7 @@ export default function AccueilPage() {
               {/* MPA - le plus gros */}
               <div style={{ flex: parseFloat(categorieData.mpa.valeur) }} className="h-full">
                 <HeatmapRect
-                  label="MPA"
+                  label="MP"
                   percentage={categorieData.mpa.valeur}
                   evolution={categorieData.mpa.evolution}
                   color={(() => {
@@ -875,7 +877,7 @@ export default function AccueilPage() {
               {/* MPI - deuxième */}
               <div style={{ flex: parseFloat(categorieData.mpi.valeur) }} className="h-full">
                 <HeatmapRect
-                  label="MPI"
+                  label="Emballage"
                   percentage={categorieData.mpi.valeur}
                   evolution={categorieData.mpi.evolution}
                   color={(() => {
@@ -1332,7 +1334,7 @@ export default function AccueilPage() {
                   variant="outline"
                   className="w-auto justify-between border-gray-200 bg-white font-normal shadow-none gap-2"
                 >
-                  13/12/2024 - 14/12/2024
+                  01/01/2025 - 13/11/2025
                   <CalendarIcon className="h-4 w-4 text-blue-500" />
                 </Button>
               </div>

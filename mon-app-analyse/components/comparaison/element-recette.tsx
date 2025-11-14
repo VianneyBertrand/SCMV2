@@ -119,7 +119,7 @@ export function ElementRecette({
                 : 'bg-[#F2F2F2] text-black font-medium'
             }`}
           >
-            MPA
+            MP
           </button>
           <button
             onClick={() => setRecetteSubTab('mpi')}
@@ -129,7 +129,7 @@ export function ElementRecette({
                 : 'bg-[#F2F2F2] text-black font-medium'
             }`}
           >
-            MPI
+            Emballage
           </button>
         </div>
         <Button variant="ghost" size="icon" className="p-0">

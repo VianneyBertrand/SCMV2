@@ -169,8 +169,8 @@ function ComparaisonContent() {
       return [
         { label: 'CA', key: 'ca' },
         { label: 'Volume', key: 'volume' },
-        { label: 'MPA', key: 'mpa' },
-        { label: 'MPI', key: 'mpi' },
+        { label: 'MP', key: 'mpa' },
+        { label: 'Emballage', key: 'mpi' },
         { label: 'PV', key: 'pv' },
         { label: 'PV LCL', key: 'pvLcl' },
         { label: 'Marge PV', key: 'margePv' },
@@ -184,8 +184,8 @@ function ComparaisonContent() {
     return [
       { label: 'CA', key: 'ca' },
       { label: 'Volume', key: 'volume' },
-      { label: 'MPA', key: 'mpa' },
-      { label: 'MPI', key: 'mpi' },
+      { label: 'MP', key: 'mpa' },
+      { label: 'Emballage', key: 'mpi' },
       { label: 'PA', key: 'pa' },
       { label: 'PA théorique', key: 'coutTheorique' },
       { label: 'Opportunité', key: 'opportunite' },

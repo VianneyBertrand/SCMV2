@@ -706,7 +706,7 @@ export default function CoursMatieresPremieres() {
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-auto justify-between border-gray-200 bg-white text-[16px] font-medium font-ubuntu shadow-none">
-                  11/12/2024 - 14/12/2024
+                  01/01/2025 - 13/11/2025
                   <CalendarIcon className="h-4 w-4 text-blue" />
                 </Button>
               </PopoverTrigger>

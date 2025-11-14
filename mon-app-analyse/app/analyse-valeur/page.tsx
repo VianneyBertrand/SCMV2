@@ -1093,7 +1093,7 @@ function AnalyseValeurContent() {
                   variant="outline"
                   className="w-auto justify-between border-gray-200 bg-white hover:bg-white font-normal shadow-none"
                 >
-                  11/12/2024 - 14/12/2024
+                  01/01/2025 - 13/11/2025
                   <CalendarIcon className="h-4 w-4 text-blue" />
                 </Button>
               </PopoverTrigger>

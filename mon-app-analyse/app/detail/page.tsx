@@ -115,7 +115,7 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
           <div>
             <p className="font-semibold mb-4">{label}</p>
             <div className="space-y-1">
-              <p>Répartition : {percentage} du PA total</p>
+              <p>Répartition : {percentage} du CA total</p>
               <p>Valorisation : {valorisation || 'N/A'}</p>
               <p>Evolution : {evolution}</p>
               <p>Impact : {impact}</p>
@@ -178,8 +178,7 @@ function DetailContent() {
   const perimetre = (searchParams.get('perimetre') as PerimetreType) || "Marché"
   const label = searchParams.get('label') || ""
 
-  // Modes période CAD/CAM pour CA et Volume
-  const { mode: caMode, toggleMode: toggleCAMode } = usePeriodMode('period-mode-ca-detail')
+  // Mode période CAD/CAM pour Volume
   const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume-detail')
 
   // Mode unité UVC/Tonne pour Volume
@@ -208,23 +207,27 @@ function DetailContent() {
     'presure': true,
     'ferments-lactiques': true,
     'creme-fraiche': true,
-    // MPI - moyennes
-    'energie': true,
-    'transport': true,
-    'emballage': true,
-    'main-oeuvre': true,
-    // MPI - Transport
-    'transport-routier': true,
-    'transport-maritime': true,
-    // MPI - Energie
-    'electricite': true,
-    'gaz': true,
-    // MPI - Main d'oeuvre
-    'salaires-production': true,
-    'salaires-logistique': true,
-    // MPI - Emballage
+    // MPI - 20 emballages
     'carton-ondule': true,
-    'plastique-emballage': true,
+    'polypropylene': true,
+    'polyethylene': true,
+    'aluminium': true,
+    'verre': true,
+    'acier': true,
+    'papier-kraft': true,
+    'polystyrene-expanse': true,
+    'pet': true,
+    'etiquettes-papier': true,
+    'bouchons-plastique': true,
+    'film-etirable': true,
+    'encres-impression': true,
+    'colles-adhesifs': true,
+    'ruban-adhesif': true,
+    'palettes-bois': true,
+    'housses-thermoretractables': true,
+    'sachets-zip': true,
+    'capsules-metal': true,
+    'opercules-aluminium': true,
   })
   const [legendOpacity, setLegendOpacity] = useState<Record<string, boolean>>({
     MPA: true,
@@ -242,23 +245,17 @@ function DetailContent() {
     'presure': true,
     'ferments-lactiques': true,
     'creme-fraiche': true,
-    // MPI - moyennes
-    'energie': true,
-    'transport': true,
-    'emballage': true,
-    'main-oeuvre': true,
-    // MPI - Transport
-    'transport-routier': true,
-    'transport-maritime': true,
-    // MPI - Energie
-    'electricite': true,
-    'gaz': true,
-    // MPI - Main d'oeuvre
-    'salaires-production': true,
-    'salaires-logistique': true,
-    // MPI - Emballage
+    // MPI - 10 emballages (4 actifs, 6 inactifs)
     'carton-ondule': true,
-    'plastique-emballage': true,
+    'polypropylene': true,
+    'polyethylene': true,
+    'aluminium': true,
+    'verre': false,
+    'acier': false,
+    'papier-kraft': false,
+    'polystyrene-expanse': false,
+    'pet': false,
+    'etiquettes-papier': false,
   })
   // État pour contrôler l'affichage des légendes via checkboxes
   const [showInLegend, setShowInLegend] = useState<Record<string, boolean>>({
@@ -276,19 +273,28 @@ function DetailContent() {
     'presure': false,
     'ferments-lactiques': false,
     'creme-fraiche': false,
-    // MPI - moyennes + 2 par catégorie
-    'transport': true,
-    'energie': true,
-    'main-oeuvre': true,
-    'emballage': true,
-    'transport-routier': true,
-    'transport-maritime': true,
-    'electricite': true,
-    'gaz': true,
-    'salaires-production': true,
-    'salaires-logistique': true,
+    // MPI - 10 emballages affichés dans le graphique
     'carton-ondule': true,
-    'plastique-emballage': true,
+    'polypropylene': true,
+    'polyethylene': true,
+    'aluminium': true,
+    'verre': true,
+    'acier': true,
+    'papier-kraft': true,
+    'polystyrene-expanse': true,
+    'pet': true,
+    'etiquettes-papier': true,
+    // MPI - 10 emballages non affichés dans le graphique
+    'bouchons-plastique': false,
+    'film-etirable': false,
+    'encres-impression': false,
+    'colles-adhesifs': false,
+    'ruban-adhesif': false,
+    'palettes-bois': false,
+    'housses-thermoretractables': false,
+    'sachets-zip': false,
+    'capsules-metal': false,
+    'opercules-aluminium': false,
   })
   const [base100, setBase100] = useState(false)
   const [dateRange, setDateRange] = useState([0, 100])
@@ -339,12 +345,6 @@ function DetailContent() {
   const kpiCards = useMemo(() => {
     if (!currentItem) return []
 
-    // Valeurs fixes CAD/CAM pour CA Total
-    const caData = {
-      CAD: { value: currentItem.ca.valeur, evolution: currentItem.ca.evolution },
-      CAM: { value: "1254.00 M€", evolution: "+3.20%" }
-    }
-
     // Valeurs fixes CAD/CAM et UVC/Tonne pour Volume
     const volumeData = {
       UVC: {
@@ -359,14 +359,6 @@ function DetailContent() {
 
     const baseCards = [
       {
-        label: "CA Total",
-        value: caData[caMode].value,
-        evolution: caData[caMode].evolution,
-        tooltip: "Chiffre d'affaires total de la période",
-        mode: caMode,
-        onToggleMode: toggleCAMode
-      },
-      {
         label: "Volume",
         value: volumeData[volumeUnit][volumeMode].value,
         evolution: volumeData[volumeUnit][volumeMode].evolution,
@@ -377,31 +369,31 @@ function DetailContent() {
         onToggleUnit: toggleVolumeUnit
       },
       {
-        label: "MPA",
+        label: "MP",
         value: currentItem.mpa.valeur,
         evolution: currentItem.mpa.evolution,
         tooltip: "Marge en pourcentage des achats"
       },
       {
-        label: "MPI",
+        label: "Emballage",
         value: currentItem.mpi.valeur,
         evolution: currentItem.mpi.evolution,
         tooltip: "Marge en pourcentage des ventes (indice)"
       },
       {
-        label: "PA total",
+        label: "CA",
         value: currentItem.evoPa.valeur,
         evolution: currentItem.evoPa.evolution,
         tooltip: "Prix d'achat total"
       },
       {
-        label: "PA total théorique",
+        label: "CA total",
         value: currentItem.coutTheorique.valeur,
         evolution: currentItem.coutTheorique.evolution,
         tooltip: "Prix d'achat théorique total calculé"
       },
       {
-        label: "Opportunité totale",
+        label: "Opportunité",
         value: currentItem.opportunites.valeur,
         evolution: currentItem.opportunites.evolution,
         tooltip: "Opportunité totale d'optimisation identifiée"
@@ -409,7 +401,7 @@ function DetailContent() {
     ]
 
     return baseCards
-  }, [currentItem, perimetre, caMode, volumeMode, volumeUnit, toggleCAMode, toggleVolumeMode, toggleVolumeUnit])
+  }, [currentItem, perimetre, volumeMode, volumeUnit, toggleVolumeMode, toggleVolumeUnit])
 
   // Cartes spécifiques au produit (PA unitaire, PV, marges)
   const productCards = useMemo(() => {
@@ -601,8 +593,8 @@ function DetailContent() {
           layout: 'horizontal',
           type: 'total' as const,
           items: [
-            { label: 'MPA', percentage: currentItem.mpa.valeur, evolution: currentItem.mpa.evolution, color: getMPAColor(), className: 'flex-1', href: '/detail?perimetre=MPA' },
-            { label: 'MPI', percentage: currentItem.mpi.valeur, evolution: currentItem.mpi.evolution, color: getMPIColor(), className: 'flex-1', href: '/detail?perimetre=MPI' },
+            { label: 'MP', percentage: currentItem.mpa.valeur, evolution: currentItem.mpa.evolution, color: getMPAColor(), className: 'flex-1', href: '/detail?perimetre=MPA' },
+            { label: 'Emballage', percentage: currentItem.mpi.valeur, evolution: currentItem.mpi.evolution, color: getMPIColor(), className: 'flex-1', href: '/detail?perimetre=MPI' },
             { label: 'Autre', percentage: `${autreValue}%`, evolution: '+0.00%', color: 'bg-gray-400', className: 'w-1/6', href: '/detail?perimetre=Autre' },
           ]
         }
@@ -625,10 +617,16 @@ function DetailContent() {
           layout: 'complex-mpi',
           type: 'mpi' as const,
           items: [
-            { label: 'Energie', percentage: '18.36%', categoryPercentage: '49.05%', evolution: '-4.20%', color: 'bg-[#2FB67E]', href: '/detail?item=energie' },
-            { label: 'Transport', percentage: '13.37%', categoryPercentage: '35.72%', evolution: '-3.80%', color: 'bg-[#8EE2BF]', href: '/detail?item=transport' },
-            { label: 'Emballage', percentage: '9.67%', categoryPercentage: '25.84%', evolution: '-3.10%', color: 'bg-[#F0FAF6]', href: '/detail?item=emballage' },
-            { label: "Main d'oeuvre", percentage: '4.36%', categoryPercentage: '11.65%', evolution: '-1.80%', color: 'bg-[#F25056]', href: '/detail?item=main-oeuvre' },
+            { label: 'Carton ondulé', percentage: '22.34%', categoryPercentage: '22.34%', evolution: '+1.20%', color: 'bg-[#F57A7E]', href: '/detail?item=carton-ondule' },
+            { label: 'Polypropylène', percentage: '16.45%', categoryPercentage: '16.45%', evolution: '-2.30%', color: 'bg-[#2FB67E]', href: '/detail?item=polypropylene' },
+            { label: 'Polyéthylène', percentage: '14.28%', categoryPercentage: '14.28%', evolution: '+0.85%', color: 'bg-[#F0FAF6]', href: '/detail?item=polyethylene' },
+            { label: 'Aluminium', percentage: '11.92%', categoryPercentage: '11.92%', evolution: '+3.15%', color: 'bg-[#F25056]', href: '/detail?item=aluminium' },
+            { label: 'Verre', percentage: '9.67%', categoryPercentage: '9.67%', evolution: '-1.45%', color: 'bg-[#8EE2BF]', href: '/detail?item=verre' },
+            { label: 'Acier', percentage: '8.53%', categoryPercentage: '8.53%', evolution: '+2.70%', color: 'bg-[#F25056]', href: '/detail?item=acier' },
+            { label: 'Papier kraft', percentage: '7.21%', categoryPercentage: '7.21%', evolution: '-0.65%', color: 'bg-[#F0FAF6]', href: '/detail?item=papier-kraft' },
+            { label: 'Polystyrène expansé', percentage: '4.89%', categoryPercentage: '4.89%', evolution: '+1.90%', color: 'bg-[#F57A7E]', href: '/detail?item=polystyrene-expanse' },
+            { label: 'PET', percentage: '2.76%', categoryPercentage: '2.76%', evolution: '-3.40%', color: 'bg-[#2FB67E]', href: '/detail?item=pet' },
+            { label: 'Étiquettes papier', percentage: '1.95%', categoryPercentage: '1.95%', evolution: '+0.55%', color: 'bg-[#F0FAF6]', href: '/detail?item=etiquettes-papier' },
           ]
         }
     }
@@ -637,15 +635,15 @@ function DetailContent() {
   // Données graphique
   const getChartData = () => {
     const baseData = [
-      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'energie': 210, 'transport': 430, 'emballage': 250, 'main-oeuvre': 290, 'transport-routier': 425, 'transport-maritime': 435, 'electricite': 215, 'gaz': 205, 'salaires-production': 295, 'salaires-logistique': 285, 'carton-ondule': 255, 'plastique-emballage': 245 },
-      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 210, 'amidon-mais': 215, 'gelatine': 208, 'presure': 212, 'ferments-lactiques': 218, 'creme-fraiche': 222, 'energie': 205, 'transport': 410, 'emballage': 240, 'main-oeuvre': 280, 'transport-routier': 405, 'transport-maritime': 415, 'electricite': 210, 'gaz': 200, 'salaires-production': 285, 'salaires-logistique': 275, 'carton-ondule': 245, 'plastique-emballage': 235 },
-      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'levure': 205, 'amidon-mais': 210, 'gelatine': 203, 'presure': 207, 'ferments-lactiques': 213, 'creme-fraiche': 217, 'energie': 210, 'transport': 405, 'emballage': 235, 'main-oeuvre': 275, 'transport-routier': 400, 'transport-maritime': 410, 'electricite': 212, 'gaz': 208, 'salaires-production': 280, 'salaires-logistique': 270, 'carton-ondule': 240, 'plastique-emballage': 230 },
-      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'levure': 250, 'amidon-mais': 255, 'gelatine': 248, 'presure': 252, 'ferments-lactiques': 258, 'creme-fraiche': 262, 'energie': 230, 'transport': 450, 'emballage': 280, 'main-oeuvre': 310, 'transport-routier': 445, 'transport-maritime': 455, 'electricite': 235, 'gaz': 225, 'salaires-production': 315, 'salaires-logistique': 305, 'carton-ondule': 285, 'plastique-emballage': 275 },
-      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'levure': 280, 'amidon-mais': 285, 'gelatine': 278, 'presure': 282, 'ferments-lactiques': 288, 'creme-fraiche': 292, 'energie': 250, 'transport': 470, 'emballage': 310, 'main-oeuvre': 340, 'transport-routier': 465, 'transport-maritime': 475, 'electricite': 255, 'gaz': 245, 'salaires-production': 345, 'salaires-logistique': 335, 'carton-ondule': 315, 'plastique-emballage': 305 },
-      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'levure': 290, 'amidon-mais': 295, 'gelatine': 288, 'presure': 292, 'ferments-lactiques': 298, 'creme-fraiche': 302, 'energie': 260, 'transport': 480, 'emballage': 320, 'main-oeuvre': 350, 'transport-routier': 475, 'transport-maritime': 485, 'electricite': 265, 'gaz': 255, 'salaires-production': 355, 'salaires-logistique': 345, 'carton-ondule': 325, 'plastique-emballage': 315 },
-      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'energie': 245, 'transport': 465, 'emballage': 305, 'main-oeuvre': 335, 'transport-routier': 460, 'transport-maritime': 470, 'electricite': 250, 'gaz': 240, 'salaires-production': 340, 'salaires-logistique': 330, 'carton-ondule': 310, 'plastique-emballage': 300 },
-      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'energie': 235, 'transport': 475, 'emballage': 315, 'main-oeuvre': 345, 'transport-routier': 470, 'transport-maritime': 480, 'electricite': 240, 'gaz': 230, 'salaires-production': 350, 'salaires-logistique': 340, 'carton-ondule': 320, 'plastique-emballage': 310 },
-      { date: '2025-04', MPA: 430, MPI: 310, 'farine-ble': 405, 'sucre': 395, 'sel': 445, 'lait': 415, 'beurre': 325, 'huile': 335, 'oeufs': 315, 'levure': 305, 'amidon-mais': 310, 'gelatine': 303, 'presure': 307, 'ferments-lactiques': 313, 'creme-fraiche': 317, 'energie': 255, 'transport': 485, 'emballage': 325, 'main-oeuvre': 355, 'transport-routier': 480, 'transport-maritime': 490, 'electricite': 260, 'gaz': 250, 'salaires-production': 360, 'salaires-logistique': 350, 'carton-ondule': 330, 'plastique-emballage': 320 },
+      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'carton-ondule': 320, 'polypropylene': 290, 'polyethylene': 270, 'aluminium': 250, 'verre': 230, 'acier': 210, 'papier-kraft': 190, 'polystyrene-expanse': 170, 'pet': 150, 'etiquettes-papier': 130 },
+      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 210, 'amidon-mais': 215, 'gelatine': 208, 'presure': 212, 'ferments-lactiques': 218, 'creme-fraiche': 222, 'carton-ondule': 315, 'polypropylene': 285, 'polyethylene': 265, 'aluminium': 245, 'verre': 225, 'acier': 205, 'papier-kraft': 185, 'polystyrene-expanse': 165, 'pet': 145, 'etiquettes-papier': 125 },
+      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'levure': 205, 'amidon-mais': 210, 'gelatine': 203, 'presure': 207, 'ferments-lactiques': 213, 'creme-fraiche': 217, 'carton-ondule': 310, 'polypropylene': 280, 'polyethylene': 260, 'aluminium': 240, 'verre': 220, 'acier': 202, 'papier-kraft': 183, 'polystyrene-expanse': 163, 'pet': 142, 'etiquettes-papier': 123 },
+      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'levure': 250, 'amidon-mais': 255, 'gelatine': 248, 'presure': 252, 'ferments-lactiques': 258, 'creme-fraiche': 262, 'carton-ondule': 328, 'polypropylene': 298, 'polyethylene': 275, 'aluminium': 255, 'verre': 235, 'acier': 215, 'papier-kraft': 195, 'polystyrene-expanse': 175, 'pet': 155, 'etiquettes-papier': 135 },
+      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'levure': 280, 'amidon-mais': 285, 'gelatine': 278, 'presure': 282, 'ferments-lactiques': 288, 'creme-fraiche': 292, 'carton-ondule': 335, 'polypropylene': 305, 'polyethylene': 282, 'aluminium': 260, 'verre': 240, 'acier': 220, 'papier-kraft': 200, 'polystyrene-expanse': 180, 'pet': 160, 'etiquettes-papier': 140 },
+      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'levure': 290, 'amidon-mais': 295, 'gelatine': 288, 'presure': 292, 'ferments-lactiques': 298, 'creme-fraiche': 302, 'carton-ondule': 340, 'polypropylene': 310, 'polyethylene': 287, 'aluminium': 265, 'verre': 245, 'acier': 223, 'papier-kraft': 203, 'polystyrene-expanse': 183, 'pet': 162, 'etiquettes-papier': 142 },
+      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'carton-ondule': 333, 'polypropylene': 303, 'polyethylene': 280, 'aluminium': 258, 'verre': 238, 'acier': 218, 'papier-kraft': 198, 'polystyrene-expanse': 178, 'pet': 158, 'etiquettes-papier': 138 },
+      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'carton-ondule': 325, 'polypropylene': 295, 'polyethylene': 273, 'aluminium': 252, 'verre': 232, 'acier': 212, 'papier-kraft': 192, 'polystyrene-expanse': 172, 'pet': 152, 'etiquettes-papier': 132 },
+      { date: '2025-04', MPA: 430, MPI: 310, 'farine-ble': 405, 'sucre': 395, 'sel': 445, 'lait': 415, 'beurre': 325, 'huile': 335, 'oeufs': 315, 'levure': 305, 'amidon-mais': 310, 'gelatine': 303, 'presure': 307, 'ferments-lactiques': 313, 'creme-fraiche': 317, 'carton-ondule': 338, 'polypropylene': 308, 'polyethylene': 285, 'aluminium': 263, 'verre': 243, 'acier': 221, 'papier-kraft': 201, 'polystyrene-expanse': 181, 'pet': 159, 'etiquettes-papier': 139 },
     ]
 
     if (base100) {
@@ -677,7 +675,7 @@ function DetailContent() {
         return [
           {
             id: 'MPA',
-            name: 'MPA',
+            name: 'MP',
             volume: '7023.42T',
             volumeUVC: '258 UVC',
             partVolume: '49.25%',
@@ -689,7 +687,7 @@ function DetailContent() {
           },
           {
             id: 'MPI',
-            name: 'MPI',
+            name: 'Emballage',
             volume: '7032.42T',
             volumeUVC: '258 UVC',
             partVolume: '50.75%',
@@ -899,138 +897,307 @@ function DetailContent() {
         ]
       case 'mpi':
         return [
-          // Moyennes
-          {
-            id: 'transport',
-            name: 'Moyenne transport',
-            cost: '0.035M€',
-            partCost: '25%',
-            evolution: '+3.35%',
-            color: '#E91E63',
-            isMain: true,
-            category: 'transport'
-          },
-          {
-            id: 'energie',
-            name: 'Moyenne energie',
-            cost: '0.028M€',
-            partCost: '20%',
-            evolution: '+2.15%',
-            color: '#00BCD4',
-            isMain: true,
-            category: 'energie'
-          },
-          {
-            id: 'main-oeuvre',
-            name: "Moyenne main d'oeuvre",
-            cost: '0.042M€',
-            partCost: '30%',
-            evolution: '+1.85%',
-            color: '#4CAF50',
-            isMain: true,
-            category: 'main-oeuvre'
-          },
-          {
-            id: 'emballage',
-            name: 'Moyenne emballage',
-            cost: '0.035M€',
-            partCost: '25%',
-            evolution: '+2.75%',
-            color: '#FF9800',
-            isMain: true,
-            category: 'emballage'
-          },
-          // Transport
-          {
-            id: 'transport-routier',
-            name: 'Transport routier',
-            subLabel: 'TRA01',
-            cost: '0.020M€',
-            partCost: '14.3%',
-            evolution: '+3.20%',
-            color: '#F48FB1',
-            isMain: true,
-            category: 'transport'
-          },
-          {
-            id: 'transport-maritime',
-            name: 'Transport maritime',
-            subLabel: 'TRA02',
-            cost: '0.015M€',
-            partCost: '10.7%',
-            evolution: '+3.50%',
-            color: '#F06292',
-            isMain: true,
-            category: 'transport'
-          },
-          // Energie
-          {
-            id: 'electricite',
-            name: 'Électricité',
-            subLabel: 'ENE01',
-            cost: '0.016M€',
-            partCost: '11.4%',
-            evolution: '+2.10%',
-            color: '#80DEEA',
-            isMain: true,
-            category: 'energie'
-          },
-          {
-            id: 'gaz',
-            name: 'Gaz naturel',
-            subLabel: 'ENE02',
-            cost: '0.012M€',
-            partCost: '8.6%',
-            evolution: '+2.20%',
-            color: '#4DD0E1',
-            isMain: true,
-            category: 'energie'
-          },
-          // Main d'oeuvre
-          {
-            id: 'salaires-production',
-            name: 'Salaires production',
-            subLabel: 'MO01',
-            cost: '0.025M€',
-            partCost: '17.9%',
-            evolution: '+1.80%',
-            color: '#A5D6A7',
-            isMain: true,
-            category: 'main-oeuvre'
-          },
-          {
-            id: 'salaires-logistique',
-            name: 'Salaires logistique',
-            subLabel: 'MO02',
-            cost: '0.017M€',
-            partCost: '12.1%',
-            evolution: '+1.90%',
-            color: '#81C784',
-            isMain: true,
-            category: 'main-oeuvre'
-          },
-          // Emballage
+          // 10 emballages cochés (affichés dans le graphique)
           {
             id: 'carton-ondule',
             name: 'Carton ondulé',
-            subLabel: 'EMB01',
-            cost: '0.020M€',
-            partCost: '14.3%',
-            evolution: '+2.80%',
-            color: '#FFCC80',
-            isMain: true,
-            category: 'emballage'
+            subLabel: 'MP01',
+            volume: '1298.5T',
+            volumeUVC: '4850 UVC',
+            partVolume: '18.5%',
+            cost: '0.067M€',
+            partCostTotal: '22.34%',
+            partCostMPI: '33.5%',
+            evolution: '+1.20%',
+            impactTotal: '+0.27%',
+            color: '#FF6B6B',
+            isMain: true
           },
           {
-            id: 'plastique-emballage',
-            name: 'Film plastique',
-            subLabel: 'EMB02',
-            cost: '0.015M€',
-            partCost: '10.7%',
+            id: 'polypropylene',
+            name: 'Polypropylène',
+            subLabel: 'MP02',
+            volume: '996.6T',
+            volumeUVC: '3720 UVC',
+            partVolume: '14.2%',
+            cost: '0.049M€',
+            partCostTotal: '16.45%',
+            partCostMPI: '24.68%',
+            evolution: '-2.30%',
+            impactTotal: '-0.38%',
+            color: '#4ECDC4',
+            isMain: true
+          },
+          {
+            id: 'polyethylene',
+            name: 'Polyéthylène',
+            subLabel: 'MP03',
+            volume: '898.2T',
+            volumeUVC: '3350 UVC',
+            partVolume: '12.8%',
+            cost: '0.043M€',
+            partCostTotal: '14.28%',
+            partCostMPI: '21.42%',
+            evolution: '+0.85%',
+            impactTotal: '+0.12%',
+            color: '#45B7D1',
+            isMain: true
+          },
+          {
+            id: 'aluminium',
+            name: 'Aluminium',
+            subLabel: 'MP04',
+            volume: '722.6T',
+            volumeUVC: '2695 UVC',
+            partVolume: '10.3%',
+            cost: '0.036M€',
+            partCostTotal: '11.92%',
+            partCostMPI: '17.88%',
+            evolution: '+3.15%',
+            impactTotal: '+0.38%',
+            color: '#F7B731',
+            isMain: true
+          },
+          {
+            id: 'verre',
+            name: 'Verre',
+            subLabel: 'MP05',
+            volume: '610.3T',
+            volumeUVC: '2275 UVC',
+            partVolume: '8.7%',
+            cost: '0.029M€',
+            partCostTotal: '9.67%',
+            partCostMPI: '14.51%',
+            evolution: '-1.45%',
+            impactTotal: '-0.14%',
+            color: '#5F27CD',
+            isMain: true
+          },
+          {
+            id: 'acier',
+            name: 'Acier',
+            subLabel: 'MP06',
+            volume: '554.5T',
+            volumeUVC: '2070 UVC',
+            partVolume: '7.9%',
+            cost: '0.026M€',
+            partCostTotal: '8.53%',
+            partCostMPI: '12.80%',
             evolution: '+2.70%',
-            color: '#FFB74D',
-            isMain: true,
-            category: 'emballage'
+            impactTotal: '+0.23%',
+            color: '#00D2D3',
+            isMain: true
+          },
+          {
+            id: 'papier-kraft',
+            name: 'Papier kraft',
+            subLabel: 'MP07',
+            volume: '456.1T',
+            volumeUVC: '1700 UVC',
+            partVolume: '6.5%',
+            cost: '0.022M€',
+            partCostTotal: '7.21%',
+            partCostMPI: '10.82%',
+            evolution: '-0.65%',
+            impactTotal: '-0.05%',
+            color: '#FD79A8',
+            isMain: true
+          },
+          {
+            id: 'polystyrene-expanse',
+            name: 'Polystyrène expansé',
+            subLabel: 'MP08',
+            volume: '379.0T',
+            volumeUVC: '1415 UVC',
+            partVolume: '5.4%',
+            cost: '0.015M€',
+            partCostTotal: '4.89%',
+            partCostMPI: '7.34%',
+            evolution: '+1.90%',
+            impactTotal: '+0.09%',
+            color: '#A29BFE',
+            isMain: true
+          },
+          {
+            id: 'pet',
+            name: 'PET',
+            subLabel: 'MP09',
+            volume: '336.8T',
+            volumeUVC: '1255 UVC',
+            partVolume: '4.8%',
+            cost: '0.008M€',
+            partCostTotal: '2.76%',
+            partCostMPI: '4.14%',
+            evolution: '-3.40%',
+            impactTotal: '-0.09%',
+            color: '#6C5CE7',
+            isMain: true
+          },
+          {
+            id: 'etiquettes-papier',
+            name: 'Étiquettes papier',
+            subLabel: 'MP10',
+            volume: '252.6T',
+            volumeUVC: '940 UVC',
+            partVolume: '3.6%',
+            cost: '0.006M€',
+            partCostTotal: '1.95%',
+            partCostMPI: '2.93%',
+            evolution: '+0.55%',
+            impactTotal: '+0.01%',
+            color: '#FD79A8',
+            isMain: true
+          },
+          // 10 emballages décochés (pas dans le graphique)
+          {
+            id: 'bouchons-plastique',
+            name: 'Bouchons plastique',
+            subLabel: 'MP11',
+            volume: '203.5T',
+            volumeUVC: '760 UVC',
+            partVolume: '2.9%',
+            cost: '0.005M€',
+            partCostTotal: '1.67%',
+            partCostMPI: '2.51%',
+            evolution: '+1.25%',
+            impactTotal: '+0.02%',
+            color: '#74B9FF',
+            isMain: true
+          },
+          {
+            id: 'film-etirable',
+            name: 'Film étirable',
+            subLabel: 'MP12',
+            volume: '161.4T',
+            volumeUVC: '602 UVC',
+            partVolume: '2.3%',
+            cost: '0.004M€',
+            partCostTotal: '1.42%',
+            partCostMPI: '2.13%',
+            evolution: '-0.95%',
+            impactTotal: '-0.01%',
+            color: '#A29BFE',
+            isMain: true
+          },
+          {
+            id: 'encres-impression',
+            name: "Encres d'impression",
+            subLabel: 'MP13',
+            volume: '126.3T',
+            volumeUVC: '470 UVC',
+            partVolume: '1.8%',
+            cost: '0.004M€',
+            partCostTotal: '1.28%',
+            partCostMPI: '1.92%',
+            evolution: '+2.10%',
+            impactTotal: '+0.03%',
+            color: '#FF7675',
+            isMain: true
+          },
+          {
+            id: 'colles-adhesifs',
+            name: 'Colles et adhésifs',
+            subLabel: 'MP14',
+            volume: '105.2T',
+            volumeUVC: '392 UVC',
+            partVolume: '1.5%',
+            cost: '0.003M€',
+            partCostTotal: '1.15%',
+            partCostMPI: '1.73%',
+            evolution: '+0.75%',
+            impactTotal: '+0.01%',
+            color: '#FDCB6E',
+            isMain: true
+          },
+          {
+            id: 'ruban-adhesif',
+            name: 'Ruban adhésif',
+            subLabel: 'MP15',
+            volume: '42.1T',
+            volumeUVC: '157 UVC',
+            partVolume: '0.6%',
+            cost: '0.003M€',
+            partCostTotal: '0.98%',
+            partCostMPI: '1.47%',
+            evolution: '-1.20%',
+            impactTotal: '-0.01%',
+            color: '#00B894',
+            isMain: true
+          },
+          {
+            id: 'palettes-bois',
+            name: 'Palettes bois',
+            subLabel: 'MP16',
+            volume: '105.2T',
+            volumeUVC: '392 UVC',
+            partVolume: '1.5%',
+            cost: '0.002M€',
+            partCostTotal: '0.85%',
+            partCostMPI: '1.28%',
+            evolution: '+1.60%',
+            impactTotal: '+0.01%',
+            color: '#E17055',
+            isMain: true
+          },
+          {
+            id: 'housses-thermoretractables',
+            name: 'Housses thermorétractables',
+            subLabel: 'MP17',
+            volume: '84.1T',
+            volumeUVC: '313 UVC',
+            partVolume: '1.2%',
+            cost: '0.002M€',
+            partCostTotal: '0.72%',
+            partCostMPI: '1.08%',
+            evolution: '-0.45%',
+            impactTotal: '-0.00%',
+            color: '#0984E3',
+            isMain: true
+          },
+          {
+            id: 'sachets-zip',
+            name: 'Sachets zip',
+            subLabel: 'MP18',
+            volume: '63.1T',
+            volumeUVC: '235 UVC',
+            partVolume: '0.9%',
+            cost: '0.002M€',
+            partCostTotal: '0.58%',
+            partCostMPI: '0.87%',
+            evolution: '+0.90%',
+            impactTotal: '+0.01%',
+            color: '#6C5CE7',
+            isMain: true
+          },
+          {
+            id: 'capsules-metal',
+            name: 'Capsules métal',
+            subLabel: 'MP19',
+            volume: '49.0T',
+            volumeUVC: '183 UVC',
+            partVolume: '0.7%',
+            cost: '0.001M€',
+            partCostTotal: '0.45%',
+            partCostMPI: '0.68%',
+            evolution: '+1.35%',
+            impactTotal: '+0.01%',
+            color: '#FD79A8',
+            isMain: true
+          },
+          {
+            id: 'opercules-aluminium',
+            name: 'Opercules aluminium',
+            subLabel: 'MP20',
+            volume: '35.0T',
+            volumeUVC: '130 UVC',
+            partVolume: '0.5%',
+            cost: '0.001M€',
+            partCostTotal: '0.32%',
+            partCostMPI: '0.48%',
+            evolution: '-0.80%',
+            impactTotal: '-0.00%',
+            color: '#FFEAA7',
+            isMain: true
           },
         ]
       default:
@@ -1268,11 +1435,11 @@ function DetailContent() {
       headers,
       rows: [
         {
-          label: "PA total",
+          label: "CA",
           values: baseData.map(d => evolutionBase100 ? d.PA.toFixed(1) : d.PA.toString())
         },
         {
-          label: 'PA total théorique',
+          label: 'CA total',
           values: baseData.map(d => evolutionBase100 ? d['cout-theorique'].toFixed(1) : d['cout-theorique'].toString())
         }
       ]
@@ -1346,7 +1513,7 @@ function DetailContent() {
               variant="outline"
               className="w-auto justify-between border-gray-200 bg-white font-normal shadow-none gap-2"
             >
-              13/12/2024 - 14/12/2024
+              01/01/2025 - 13/11/2025
               <CalendarIcon className="h-4 w-4 text-blue" />
             </Button>
           </div>
@@ -1401,25 +1568,28 @@ function DetailContent() {
             )}
           </div>
 
-          {/* 7 Cards KPI de base */}
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          {/* 6 Cards KPI de base */}
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             {kpiCards.map((card) => {
               const isPositive = card.evolution?.startsWith('+')
               // Logique inversée pour certaines métriques
-              const isInversed = ["MPA", "MPI", "PA total", "PA total théorique", "Opportunité totale"].includes(card.label)
+              const isInversed = ["MP", "Emballage", "CA", "CA total", "CA théorique", "Opportunité"].includes(card.label)
               const color = isInversed
                 ? (isPositive ? 'text-red-600' : 'text-green-600')
                 : (isPositive ? 'text-green-600' : 'text-red-600')
 
-              const hasMode = card.label === "CA Total" || card.label === "Volume"
+              const hasMode = false
               const hasUnit = card.label === "Volume"
+
+              // Pour le périmètre Produit, renommer "CA total" en "CA théorique"
+              const displayLabel = (perimetre === "Produit" && card.label === "CA total") ? "CA théorique" : card.label
 
               return (
                 <Card key={card.label} className="p-4 rounded shadow-none">
                   <div className="flex items-center gap-2 mb-3">
-                    {hasMode ? (
+                    {hasMode || hasUnit ? (
                       <div className="inline-flex items-center gap-2">
-                        <span className="text-sm font-medium">{card.label}</span>
+                        <span className="text-sm font-medium">{displayLabel}</span>
                         {hasUnit && (
                           <button
                             onClick={(e) => {
@@ -1431,15 +1601,17 @@ function DetailContent() {
                             {card.unit} <SwitchIcon className="w-4 h-3.5" />
                           </button>
                         )}
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            card.onToggleMode?.()
-                          }}
-                          className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
-                        >
-                          {card.mode} <SwitchIcon className="w-4 h-3.5" />
-                        </button>
+                        {hasMode && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              card.onToggleMode?.()
+                            }}
+                            className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                          >
+                            {card.mode} <SwitchIcon className="w-4 h-3.5" />
+                          </button>
+                        )}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
@@ -1453,7 +1625,7 @@ function DetailContent() {
                       </div>
                     ) : (
                       <>
-                        <span className="text-sm font-medium">{card.label}</span>
+                        <span className="text-sm font-medium">{displayLabel}</span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
@@ -1679,9 +1851,9 @@ function DetailContent() {
         <TabsContent value="structure-cout" className="space-y-6 mt-10">
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-[20px] font-medium">
-              {costSubTab === 'total' && 'Répartition en valeur des MPA et MPI'}
-              {costSubTab === 'mpa' && 'Répartition en valeur des MPA'}
-              {costSubTab === 'mpi' && 'Répartition en valeur des MPI'}
+              {costSubTab === 'total' && 'Répartition en valeur des MP et Emballage'}
+              {costSubTab === 'mpa' && 'Répartition en valeur des MP'}
+              {costSubTab === 'mpi' && 'Répartition en valeur des emballages'}
             </h2>
             <TooltipProvider>
               <Tooltip>
@@ -1706,13 +1878,13 @@ function DetailContent() {
               onClick={() => setCostSubTab('mpa')}
               className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${costSubTab === 'mpa' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}
             >
-              MPA
+              MP
             </button>
             <button
               onClick={() => setCostSubTab('mpi')}
               className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${costSubTab === 'mpi' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}
             >
-              MPI
+              Emballage
             </button>
           </div>
 
@@ -1847,62 +2019,143 @@ function DetailContent() {
                         </div>
                       )
                     } else if (heatmapData.layout === 'complex-mpi') {
-                      // Layout MPI : Energie large gauche, Transport large centre, Emballage et Main d'oeuvre à droite
+                      // Layout MPI : 10 emballages en grille complexe
                       const items = heatmapData.items
                       return (
                         <div className="flex gap-1 h-[300px]">
-                          {/* Energie (très large gauche) */}
+                          {/* Carton ondulé (plus grand - gauche) */}
                           <HeatmapRect
                             label={items[0].label}
                             percentage={items[0].percentage}
                             evolution={items[0].evolution}
                             color={items[0].color}
-                            className="flex-[18] h-full"
+                            className="flex-1 h-full"
                             href={items[0].href}
                             type={heatmapData.type}
                             categoryPercentage={items[0].categoryPercentage}
                             totalPA={currentItem.evoPa.valeur}
                             lastUpdate="12/11/25"
                           />
-                          {/* Transport (large centre) */}
+                          {/* Polypropylène (deuxième plus grand - centre) */}
                           <HeatmapRect
                             label={items[1].label}
                             percentage={items[1].percentage}
                             evolution={items[1].evolution}
                             color={items[1].color}
-                            className="flex-[13] h-full"
+                            className="w-[28%] h-full"
                             href={items[1].href}
                             type={heatmapData.type}
                             categoryPercentage={items[1].categoryPercentage}
                             totalPA={currentItem.evoPa.valeur}
                             lastUpdate="12/11/25"
                           />
-                          {/* Colonne droite avec Emballage et Main d'oeuvre */}
-                          <div className="flex-[14] flex flex-col gap-1">
-                            <HeatmapRect
-                              label={items[2].label}
-                              percentage={items[2].percentage}
-                              evolution={items[2].evolution}
-                              color={items[2].color}
-                              className="flex-[2] w-full"
-                              href={items[2].href}
-                              type={heatmapData.type}
-                              categoryPercentage={items[2].categoryPercentage}
-                              totalPA={currentItem.evoPa.valeur}
-                              lastUpdate="12/11/25"
-                            />
-                            <HeatmapRect
-                              label={items[3].label}
-                              percentage={items[3].percentage}
-                              evolution={items[3].evolution}
-                              color={items[3].color}
-                              className="flex-[1] w-full"
-                              href={items[3].href}
-                              type={heatmapData.type}
-                              categoryPercentage={items[3].categoryPercentage}
-                              totalPA={currentItem.evoPa.valeur}
-                              lastUpdate="12/11/25"
-                            />
+                          {/* Colonne droite avec les 8 autres emballages */}
+                          <div className="w-[35%] flex flex-col gap-1">
+                            {/* Première ligne : Polyéthylène et Aluminium */}
+                            <div className="flex gap-1 h-[33%]">
+                              <HeatmapRect
+                                label={items[2].label}
+                                percentage={items[2].percentage}
+                                evolution={items[2].evolution}
+                                color={items[2].color}
+                                className="flex-1 h-full"
+                                href={items[2].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[2].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                              <HeatmapRect
+                                label={items[3].label}
+                                percentage={items[3].percentage}
+                                evolution={items[3].evolution}
+                                color={items[3].color}
+                                className="flex-1 h-full"
+                                href={items[3].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[3].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                            </div>
+                            {/* Deuxième ligne : Verre, Acier, Papier kraft */}
+                            <div className="flex gap-1 h-[33%]">
+                              <HeatmapRect
+                                label={items[4].label}
+                                percentage={items[4].percentage}
+                                evolution={items[4].evolution}
+                                color={items[4].color}
+                                className="flex-1 h-full"
+                                href={items[4].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[4].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                              <HeatmapRect
+                                label={items[5].label}
+                                percentage={items[5].percentage}
+                                evolution={items[5].evolution}
+                                color={items[5].color}
+                                className="flex-1 h-full"
+                                href={items[5].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[5].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                              <HeatmapRect
+                                label={items[6].label}
+                                percentage={items[6].percentage}
+                                evolution={items[6].evolution}
+                                color={items[6].color}
+                                className="flex-1 h-full"
+                                href={items[6].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[6].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                            </div>
+                            {/* Troisième ligne : Polystyrène expansé, PET, Étiquettes papier */}
+                            <div className="flex gap-1 flex-1">
+                              <HeatmapRect
+                                label={items[7].label}
+                                percentage={items[7].percentage}
+                                evolution={items[7].evolution}
+                                color={items[7].color}
+                                className="flex-1 h-full"
+                                href={items[7].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[7].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                              <HeatmapRect
+                                label={items[8].label}
+                                percentage={items[8].percentage}
+                                evolution={items[8].evolution}
+                                color={items[8].color}
+                                className="flex-1 h-full"
+                                href={items[8].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[8].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                              <HeatmapRect
+                                label={items[9].label}
+                                percentage={items[9].percentage}
+                                evolution={items[9].evolution}
+                                color={items[9].color}
+                                className="flex-1 h-full"
+                                href={items[9].href}
+                                type={heatmapData.type}
+                                categoryPercentage={items[9].categoryPercentage}
+                                totalPA={currentItem.evoPa.valeur}
+                                lastUpdate="12/11/25"
+                              />
+                            </div>
                           </div>
                         </div>
                       )
@@ -1952,7 +2205,7 @@ function DetailContent() {
                           onClick={() => toggleLegendOpacity('MPA')}
                         >
                           <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
-                          <span className="text-sm select-none">MPA</span>
+                          <span className="text-sm select-none">MP</span>
                         </div>
                         <div
                           className="flex items-center gap-2 cursor-pointer"
@@ -1960,7 +2213,7 @@ function DetailContent() {
                           onClick={() => toggleLegendOpacity('MPI')}
                         >
                           <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
-                          <span className="text-sm select-none">MPI</span>
+                          <span className="text-sm select-none">Emballage</span>
                         </div>
                       </>
                     )}
@@ -2102,133 +2355,105 @@ function DetailContent() {
 
                     {costSubTab === 'mpi' && (
                       <>
-                        {/* Moyennes */}
-                        {showInLegend.transport && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity.transport ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('transport')}
-                          >
-                            <CurveIcon color="#E91E63" className="w-[30px] h-[14px]" />
-                            <span className="text-sm font-semibold select-none">Moyenne transport</span>
-                          </div>
-                        )}
-                        {showInLegend.energie && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity.energie ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('energie')}
-                          >
-                            <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
-                            <span className="text-sm font-semibold select-none">Moyenne energie</span>
-                          </div>
-                        )}
-                        {showInLegend['main-oeuvre'] && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity['main-oeuvre'] ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('main-oeuvre')}
-                          >
-                            <CurveIcon color="#4CAF50" className="w-[30px] h-[14px]" />
-                            <span className="text-sm font-semibold select-none">Moyenne main d&apos;oeuvre</span>
-                          </div>
-                        )}
-                        {showInLegend.emballage && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity.emballage ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('emballage')}
-                          >
-                            <CurveIcon color="#FF9800" className="w-[30px] h-[14px]" />
-                            <span className="text-sm font-semibold select-none">Moyenne emballage</span>
-                          </div>
-                        )}
-
-                        {/* Transport items */}
-                        {showInLegend['transport-routier'] && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity['transport-routier'] ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('transport-routier')}
-                          >
-                            <CurveIcon color="#F48FB1" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Transport routier</span>
-                          </div>
-                        )}
-                        {showInLegend['transport-maritime'] && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity['transport-maritime'] ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('transport-maritime')}
-                          >
-                            <CurveIcon color="#F06292" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Transport maritime</span>
-                          </div>
-                        )}
-
-                        {/* Energie items */}
-                        {showInLegend.electricite && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity.electricite ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('electricite')}
-                          >
-                            <CurveIcon color="#80DEEA" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Électricité</span>
-                          </div>
-                        )}
-                        {showInLegend.gaz && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity.gaz ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('gaz')}
-                          >
-                            <CurveIcon color="#4DD0E1" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Gaz naturel</span>
-                          </div>
-                        )}
-
-                        {/* Main d'oeuvre items */}
-                        {showInLegend['salaires-production'] && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity['salaires-production'] ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('salaires-production')}
-                          >
-                            <CurveIcon color="#81C784" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Salaires production</span>
-                          </div>
-                        )}
-                        {showInLegend['salaires-logistique'] && (
-                          <div
-                            className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity['salaires-logistique'] ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('salaires-logistique')}
-                          >
-                            <CurveIcon color="#66BB6A" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Salaires logistique</span>
-                          </div>
-                        )}
-
-                        {/* Emballage items */}
+                        {/* 10 emballages - 4 actifs + 6 inactifs */}
                         {showInLegend['carton-ondule'] && (
                           <div
                             className="flex items-center gap-2 cursor-pointer"
                             style={{ opacity: legendOpacity['carton-ondule'] ? 1 : 0.4 }}
                             onClick={() => toggleLegendOpacity('carton-ondule')}
                           >
-                            <CurveIcon color="#FFB74D" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Carton ondulé</span>
+                            <CurveIcon color="#FF6B6B" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-medium select-none">Carton ondulé</span>
                           </div>
                         )}
-                        {showInLegend['plastique-emballage'] && (
+                        {showInLegend['polypropylene'] && (
                           <div
                             className="flex items-center gap-2 cursor-pointer"
-                            style={{ opacity: legendOpacity['plastique-emballage'] ? 1 : 0.4 }}
-                            onClick={() => toggleLegendOpacity('plastique-emballage')}
+                            style={{ opacity: legendOpacity['polypropylene'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('polypropylene')}
                           >
-                            <CurveIcon color="#FFA726" className="w-[30px] h-[14px]" />
-                            <span className="text-sm select-none">Film plastique</span>
+                            <CurveIcon color="#4ECDC4" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-medium select-none">Polypropylène</span>
+                          </div>
+                        )}
+                        {showInLegend['polyethylene'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['polyethylene'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('polyethylene')}
+                          >
+                            <CurveIcon color="#45B7D1" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-medium select-none">Polyéthylène</span>
+                          </div>
+                        )}
+                        {showInLegend['aluminium'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['aluminium'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('aluminium')}
+                          >
+                            <CurveIcon color="#F7B731" className="w-[30px] h-[14px]" />
+                            <span className="text-sm font-medium select-none">Aluminium</span>
+                          </div>
+                        )}
+                        {showInLegend['verre'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['verre'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('verre')}
+                          >
+                            <CurveIcon color="#5F27CD" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Verre</span>
+                          </div>
+                        )}
+                        {showInLegend['acier'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['acier'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('acier')}
+                          >
+                            <CurveIcon color="#00D2D3" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Acier</span>
+                          </div>
+                        )}
+                        {showInLegend['papier-kraft'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['papier-kraft'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('papier-kraft')}
+                          >
+                            <CurveIcon color="#FD79A8" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Papier kraft</span>
+                          </div>
+                        )}
+                        {showInLegend['polystyrene-expanse'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['polystyrene-expanse'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('polystyrene-expanse')}
+                          >
+                            <CurveIcon color="#A29BFE" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Polystyrène expansé</span>
+                          </div>
+                        )}
+                        {showInLegend['pet'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['pet'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('pet')}
+                          >
+                            <CurveIcon color="#6C5CE7" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">PET</span>
+                          </div>
+                        )}
+                        {showInLegend['etiquettes-papier'] && (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ opacity: legendOpacity['etiquettes-papier'] ? 1 : 0.4 }}
+                            onClick={() => toggleLegendOpacity('etiquettes-papier')}
+                          >
+                            <CurveIcon color="#FD79A8" className="w-[30px] h-[14px]" />
+                            <span className="text-sm select-none">Étiquettes papier</span>
                           </div>
                         )}
                       </>
@@ -2300,27 +2525,17 @@ function DetailContent() {
 
                       {costSubTab === 'mpi' && (
                         <>
-                          {/* Moyennes */}
-                          <Line type="monotone" dataKey="transport" stroke="#E91E63" strokeWidth={2} dot={false} hide={!legendOpacity.transport} />
-                          <Line type="monotone" dataKey="energie" stroke="#00BCD4" strokeWidth={2} dot={false} hide={!legendOpacity.energie} />
-                          <Line type="monotone" dataKey="main-oeuvre" stroke="#4CAF50" strokeWidth={2} dot={false} hide={!legendOpacity['main-oeuvre']} />
-                          <Line type="monotone" dataKey="emballage" stroke="#FF9800" strokeWidth={2} dot={false} hide={!legendOpacity.emballage} />
-
-                          {/* Transport items */}
-                          <Line type="monotone" dataKey="transport-routier" stroke="#F48FB1" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['transport-routier']} />
-                          <Line type="monotone" dataKey="transport-maritime" stroke="#F06292" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['transport-maritime']} />
-
-                          {/* Energie items */}
-                          <Line type="monotone" dataKey="electricite" stroke="#80DEEA" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.electricite} />
-                          <Line type="monotone" dataKey="gaz" stroke="#4DD0E1" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.gaz} />
-
-                          {/* Main d'oeuvre items */}
-                          <Line type="monotone" dataKey="salaires-production" stroke="#81C784" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['salaires-production']} />
-                          <Line type="monotone" dataKey="salaires-logistique" stroke="#66BB6A" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['salaires-logistique']} />
-
-                          {/* Emballage items */}
-                          <Line type="monotone" dataKey="carton-ondule" stroke="#FFB74D" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['carton-ondule']} />
-                          <Line type="monotone" dataKey="plastique-emballage" stroke="#FFA726" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['plastique-emballage']} />
+                          {/* 10 emballages - 4 actifs (ligne continue) + 6 inactifs (ligne pointillée) */}
+                          <Line type="monotone" dataKey="carton-ondule" stroke="#FF6B6B" strokeWidth={2} dot={false} hide={!legendOpacity['carton-ondule']} />
+                          <Line type="monotone" dataKey="polypropylene" stroke="#4ECDC4" strokeWidth={2} dot={false} hide={!legendOpacity['polypropylene']} />
+                          <Line type="monotone" dataKey="polyethylene" stroke="#45B7D1" strokeWidth={2} dot={false} hide={!legendOpacity['polyethylene']} />
+                          <Line type="monotone" dataKey="aluminium" stroke="#F7B731" strokeWidth={2} dot={false} hide={!legendOpacity['aluminium']} />
+                          <Line type="monotone" dataKey="verre" stroke="#5F27CD" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['verre']} />
+                          <Line type="monotone" dataKey="acier" stroke="#00D2D3" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['acier']} />
+                          <Line type="monotone" dataKey="papier-kraft" stroke="#FD79A8" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['papier-kraft']} />
+                          <Line type="monotone" dataKey="polystyrene-expanse" stroke="#A29BFE" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['polystyrene-expanse']} />
+                          <Line type="monotone" dataKey="pet" stroke="#6C5CE7" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['pet']} />
+                          <Line type="monotone" dataKey="etiquettes-papier" stroke="#FD79A8" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['etiquettes-papier']} />
                         </>
                       )}
                       <Brush
@@ -2484,6 +2699,57 @@ function DetailContent() {
                             </TableHead>
                           </>
                         )}
+                        {costSubTab === 'mpi' && (
+                          <>
+                            <TableHead
+                              className="font-semibold cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort(volumeUnit === 'UVC' ? 'volumeUVC' : 'volume')}
+                            >
+                              <div className="flex items-center gap-2">
+                                Volume
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleVolumeUnit()
+                                  }}
+                                  className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                                >
+                                  {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                                </button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Volume en {volumeUnit === 'UVC' ? 'UVC (Unité de Vente Consommateur)' : 'Tonnes'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                              </div>
+                            </TableHead>
+                            <TableHead
+                              className="font-semibold cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('partVolume')}
+                            >
+                              <div className="flex items-center gap-2">
+                                Part Volume
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Part du volume dans le total</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                              </div>
+                            </TableHead>
+                          </>
+                        )}
                         <TableHead
                           className="font-semibold cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort('cost')}
@@ -2567,25 +2833,46 @@ function DetailContent() {
                           </>
                         )}
                         {costSubTab === 'mpi' && (
-                          <TableHead
-                            className="font-semibold cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('partCost')}
-                          >
-                            <div className="flex items-center gap-2">
-                              Part Coût
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Info className="h-4 w-4 text-[#121212]" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Part du coût dans le total</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                          <>
+                            <TableHead
+                              className="font-semibold cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('partCostTotal')}
+                            >
+                              <div className="flex items-center gap-2">
+                                Part coût total
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Part du coût dans le total</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
-                            </div>
-                          </TableHead>
+                              </div>
+                            </TableHead>
+                            <TableHead
+                              className="font-semibold cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('partCostMPI')}
+                            >
+                              <div className="flex items-center gap-2">
+                                Part coût MPI
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Part du coût dans les MPI</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                              </div>
+                            </TableHead>
+                          </>
                         )}
                         <TableHead
                           className="font-semibold cursor-pointer hover:bg-gray-100"
@@ -2648,6 +2935,27 @@ function DetailContent() {
                             </div>
                           </TableHead>
                         )}
+                        {costSubTab === 'mpi' && (
+                          <TableHead
+                            className="font-semibold cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('impactTotal')}
+                          >
+                            <div className="flex items-center gap-2">
+                              Impact sur coût total
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-[#121212]" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Impact de l&apos;évolution sur le coût total</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                            </div>
+                          </TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2680,6 +2988,12 @@ function DetailContent() {
                               <TableCell>{row.partVolume}</TableCell>
                             </>
                           )}
+                          {costSubTab === 'mpi' && (
+                            <>
+                              <TableCell>{volumeUnit === 'UVC' ? row.volumeUVC : row.volume}</TableCell>
+                              <TableCell>{row.partVolume}</TableCell>
+                            </>
+                          )}
                           <TableCell>{row.cost}</TableCell>
                           {costSubTab === 'total' && <TableCell>{row.partCost}</TableCell>}
                           {costSubTab === 'mpa' && (
@@ -2688,7 +3002,12 @@ function DetailContent() {
                               <TableCell>{row.partCostMPA}</TableCell>
                             </>
                           )}
-                          {costSubTab === 'mpi' && <TableCell>{row.partCost}</TableCell>}
+                          {costSubTab === 'mpi' && (
+                            <>
+                              <TableCell>{row.partCostTotal}</TableCell>
+                              <TableCell>{row.partCostMPI}</TableCell>
+                            </>
+                          )}
                           <TableCell className={row.evolution?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
                             {row.evolution}
                           </TableCell>
@@ -2698,6 +3017,11 @@ function DetailContent() {
                             </TableCell>
                           )}
                           {costSubTab === 'mpa' && (
+                            <TableCell className={row.impactTotal?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
+                              {row.impactTotal}
+                            </TableCell>
+                          )}
+                          {costSubTab === 'mpi' && (
                             <TableCell className={row.impactTotal?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
                               {row.impactTotal}
                             </TableCell>
@@ -2714,8 +3038,8 @@ function DetailContent() {
         <TabsContent value="recette" className="space-y-6 mt-10">
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-[20px] font-medium">
-              {recetteSubTab === 'mpa' && 'Répartition en volume des MPA'}
-              {recetteSubTab === 'mpi' && 'Répartition en volume des MPI'}
+              {recetteSubTab === 'mpa' && 'Répartition en volume des MP'}
+              {recetteSubTab === 'mpi' && 'Répartition en volume des emballages'}
             </h2>
             <TooltipProvider>
               <Tooltip>
@@ -2731,10 +3055,10 @@ function DetailContent() {
           <div className="flex justify-between items-center mb-4">
             <div className="flex gap-0 w-fit">
               <button onClick={() => setRecetteSubTab('mpa')} className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${recetteSubTab === 'mpa' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}>
-                MPA
+                MP
               </button>
               <button onClick={() => setRecetteSubTab('mpi')} className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${recetteSubTab === 'mpi' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}>
-                MPI
+                Emballage
               </button>
             </div>
             <Button variant="ghost" size="icon" className="p-0">
@@ -2979,10 +3303,10 @@ function DetailContent() {
                 {(perimetre === "Produit" ? productCards : kpiCards).filter(card =>
                   perimetre === "Produit"
                     ? ['PA', 'PA théorique', 'PV', 'PV LCL', 'Marge PV', 'Marge PV LCL'].includes(card.label)
-                    : ['PA total', 'PA total théorique'].includes(card.label)
+                    : ['CA', 'CA total'].includes(card.label)
                 ).map(card => {
                   const isPositive = card.evolution?.startsWith('+')
-                  const isInversed = ["PA", "PA théorique", "PA total", "PA total théorique", "Marge PV", "Marge PV LCL"].includes(card.label)
+                  const isInversed = ["PA", "PA théorique", "CA", "CA total", "Marge PV", "Marge PV LCL"].includes(card.label)
                   const color = isInversed
                     ? (isPositive ? 'text-red-600' : 'text-green-600')
                     : (isPositive ? 'text-green-600' : 'text-red-600')
