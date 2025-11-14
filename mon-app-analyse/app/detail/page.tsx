@@ -115,7 +115,7 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
           <div>
             <p className="font-semibold mb-4">{label}</p>
             <div className="space-y-1">
-              <p>Répartition : {percentage} du CA total</p>
+              <p>Répartition : {percentage} du CA théorique</p>
               <p>Valorisation : {valorisation || 'N/A'}</p>
               <p>Evolution : {evolution}</p>
               <p>Impact : {impact}</p>
@@ -177,9 +177,6 @@ function DetailContent() {
   // Récupérer les paramètres de l'URL
   const perimetre = (searchParams.get('perimetre') as PerimetreType) || "Marché"
   const label = searchParams.get('label') || ""
-
-  // Mode période CAD/CAM pour Volume
-  const { mode: volumeMode, toggleMode: toggleVolumeMode } = usePeriodMode('period-mode-volume-detail')
 
   // Mode unité UVC/Tonne pour Volume
   const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-detail')
@@ -345,26 +342,12 @@ function DetailContent() {
   const kpiCards = useMemo(() => {
     if (!currentItem) return []
 
-    // Valeurs fixes CAD/CAM et UVC/Tonne pour Volume
-    const volumeData = {
-      UVC: {
-        CAD: { value: "287.932", evolution: "+2.63%" },
-        CAM: { value: "316.725", evolution: "+3.10%" }
-      },
-      Tonne: {
-        CAD: { value: "45.123", evolution: "+2.50%" },
-        CAM: { value: "49.876", evolution: "+3.05%" }
-      }
-    }
-
     const baseCards = [
       {
         label: "Volume",
-        value: volumeData[volumeUnit][volumeMode].value,
-        evolution: volumeData[volumeUnit][volumeMode].evolution,
+        value: currentItem.volume?.[volumeUnit]?.['CAD']?.valeur || 'N/A',
+        evolution: currentItem.volume?.[volumeUnit]?.['CAD']?.evolution || 'N/A',
         tooltip: `Volume total en ${volumeUnit === 'UVC' ? 'unités de vente consommateur' : 'tonnes'}`,
-        mode: volumeMode,
-        onToggleMode: toggleVolumeMode,
         unit: volumeUnit,
         onToggleUnit: toggleVolumeUnit
       },
@@ -387,7 +370,7 @@ function DetailContent() {
         tooltip: "Prix d'achat total"
       },
       {
-        label: "CA total",
+        label: "CA théorique",
         value: currentItem.coutTheorique.valeur,
         evolution: currentItem.coutTheorique.evolution,
         tooltip: "Prix d'achat théorique total calculé"
@@ -401,7 +384,7 @@ function DetailContent() {
     ]
 
     return baseCards
-  }, [currentItem, perimetre, volumeMode, volumeUnit, toggleVolumeMode, toggleVolumeUnit])
+  }, [currentItem, perimetre, volumeUnit, toggleVolumeUnit])
 
   // Cartes spécifiques au produit (PA unitaire, PV, marges)
   const productCards = useMemo(() => {
@@ -1439,7 +1422,7 @@ function DetailContent() {
           values: baseData.map(d => evolutionBase100 ? d.PA.toFixed(1) : d.PA.toString())
         },
         {
-          label: 'CA total',
+          label: 'CA théorique',
           values: baseData.map(d => evolutionBase100 ? d['cout-theorique'].toFixed(1) : d['cout-theorique'].toString())
         }
       ]
@@ -1573,7 +1556,7 @@ function DetailContent() {
             {kpiCards.map((card) => {
               const isPositive = card.evolution?.startsWith('+')
               // Logique inversée pour certaines métriques
-              const isInversed = ["MP", "Emballage", "CA", "CA total", "CA théorique", "Opportunité"].includes(card.label)
+              const isInversed = ["MP", "Emballage", "CA", "CA théorique", "Opportunité"].includes(card.label)
               const color = isInversed
                 ? (isPositive ? 'text-red-600' : 'text-green-600')
                 : (isPositive ? 'text-green-600' : 'text-red-600')
@@ -1581,8 +1564,7 @@ function DetailContent() {
               const hasMode = false
               const hasUnit = card.label === "Volume"
 
-              // Pour le périmètre Produit, renommer "CA total" en "CA théorique"
-              const displayLabel = (perimetre === "Produit" && card.label === "CA total") ? "CA théorique" : card.label
+              const displayLabel = card.label
 
               return (
                 <Card key={card.label} className="p-4 rounded shadow-none">
@@ -3303,10 +3285,10 @@ function DetailContent() {
                 {(perimetre === "Produit" ? productCards : kpiCards).filter(card =>
                   perimetre === "Produit"
                     ? ['PA', 'PA théorique', 'PV', 'PV LCL', 'Marge PV', 'Marge PV LCL'].includes(card.label)
-                    : ['CA', 'CA total'].includes(card.label)
+                    : ['CA', 'CA théorique'].includes(card.label)
                 ).map(card => {
                   const isPositive = card.evolution?.startsWith('+')
-                  const isInversed = ["PA", "PA théorique", "CA", "CA total", "Marge PV", "Marge PV LCL"].includes(card.label)
+                  const isInversed = ["PA", "PA théorique", "CA", "CA théorique", "Marge PV", "Marge PV LCL"].includes(card.label)
                   const color = isInversed
                     ? (isPositive ? 'text-red-600' : 'text-green-600')
                     : (isPositive ? 'text-green-600' : 'text-red-600')

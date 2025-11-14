@@ -60,7 +60,7 @@ import {
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePeriodMode } from "@/hooks/usePeriodMode";
+import { useVolumeUnit } from "@/hooks/useVolumeUnit";
 import { SwitchIcon } from "@/components/ui/switch-icon";
 import { usePageState, useRestoredPageState } from "@/hooks/usePageState";
 
@@ -237,6 +237,9 @@ function AnalyseValeurContent() {
     Fournisseur: [],
     Portefeuille: [],
   });
+
+  // Hook pour gérer le toggle UVC/Tonne
+  const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-analyse-valeur');
 
   // Fonctions mode comparaison
   const generateElementId = (name: string, filters: Record<string, string>) => {
@@ -664,13 +667,18 @@ function AnalyseValeurContent() {
         const bValue = b.label.toLowerCase();
         const result = aValue.localeCompare(bValue);
         return sortDirection === "asc" ? result : -result;
+      } else if (sortColumn === "volume") {
+        // Tri spécial pour la colonne volume qui dépend de volumeUnit (toujours CAD)
+        const aValue = a.volume?.[volumeUnit]?.['CAD'] ? parseMetricValue(a.volume[volumeUnit]['CAD']) : 0;
+        const bValue = b.volume?.[volumeUnit]?.['CAD'] ? parseMetricValue(b.volume[volumeUnit]['CAD']) : 0;
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       } else {
         const aValue = parseMetricValue(a[sortColumn as keyof typeof a]);
         const bValue = parseMetricValue(b[sortColumn as keyof typeof b]);
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
     });
-  }, [rawData, sortColumn, sortDirection, parseMetricValue]);
+  }, [rawData, sortColumn, sortDirection, parseMetricValue, volumeUnit]);
 
   // Réinitialiser les filtres quand le périmètre change (mémoïsé)
   const handlePerimetreChange = useCallback(
@@ -1756,6 +1764,32 @@ function AnalyseValeurContent() {
                 </TableHead>
                 <TableHead className="w-[180px]">
                   <div className="flex items-center gap-2">
+                    Volume
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleVolumeUnit();
+                      }}
+                      className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                    >
+                      {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
+                    </button>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-[#121212]" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Volume total en {volumeUnit === 'UVC' ? 'unités de vente consommateur' : 'tonnes'}
+                      </TooltipContent>
+                    </Tooltip>
+                    <ChevronsUpDown
+                      className="h-4 w-4 cursor-pointer text-[#121212]"
+                      onClick={() => handleSort("volume")}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead className="w-[180px]">
+                  <div className="flex items-center gap-2">
                     MP
                     <Tooltip>
                       <TooltipTrigger>
@@ -1909,7 +1943,7 @@ function AnalyseValeurContent() {
               {dataWithSubLevelCounts.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={perimetre === "Produit" ? 10 : 7}
+                    colSpan={perimetre === "Produit" ? 11 : 8}
                     className="text-center text-gray-500"
                   >
                     Aucune donnée disponible
@@ -1977,6 +2011,25 @@ function AnalyseValeurContent() {
                               })}
                             </div>
                           )}
+                        </div>
+                      </TableCell>
+
+                      {/* Volume */}
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="font-medium">
+                            {row.volume?.[volumeUnit]?.['CAD']?.valeur || 'N/A'}
+                          </div>
+                          <div
+                            className={cn(
+                              "font-medium",
+                              row.volume?.[volumeUnit]?.['CAD']?.evolution?.startsWith("+")
+                                ? "text-green-600"
+                                : "text-red-600"
+                            )}
+                          >
+                            {row.volume?.[volumeUnit]?.['CAD']?.evolution || 'N/A'}
+                          </div>
                         </div>
                       </TableCell>
 

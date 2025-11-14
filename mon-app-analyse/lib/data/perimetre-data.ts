@@ -98,6 +98,17 @@ export interface PerimetreItem {
   margeMoyenneCategorielle?: string;
   // EAN (uniquement pour les produits) - 13 chiffres
   ean?: string;
+  // Volume en UVC et Tonne avec CAD/CAM
+  volume?: {
+    UVC: {
+      CAD: MetricDisplay;
+      CAM: MetricDisplay;
+    };
+    Tonne: {
+      CAD: MetricDisplay;
+      CAM: MetricDisplay;
+    };
+  };
   // Relations hiérarchiques pour le filtrage
   marche?: string;
   marcheDetaille?: string;
@@ -244,9 +255,36 @@ const calculateMargePvc = (pv: Metric, evoPa: Metric, ca?: Metric): MetricDispla
   };
 };
 
+// Générateur de nombres pseudo-aléatoires déterministe basé sur une seed
+class SeededRandom {
+  private seed: number;
+
+  constructor(seed: string) {
+    // Créer une seed numérique à partir de la string
+    this.seed = 0;
+    for (let i = 0; i < seed.length; i++) {
+      this.seed = ((this.seed << 5) - this.seed) + seed.charCodeAt(i);
+      this.seed = this.seed & this.seed; // Convert to 32bit integer
+    }
+  }
+
+  // Génère un nombre pseudo-aléatoire entre 0 et 1
+  random(): number {
+    const x = Math.sin(this.seed++) * 10000;
+    return x - Math.floor(x);
+  }
+
+  // Génère un nombre entre min et max
+  randomRange(min: number, max: number): number {
+    return min + this.random() * (max - min);
+  }
+}
+
 // Convertir les données de content.ts vers le format de la page
 const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => {
   return items.map((item) => {
+    // Créer un générateur de nombres pseudo-aléatoires basé sur l'ID
+    const rng = new SeededRandom(item.id);
     // Variables pour les marges
     let margePvLcl: MetricDisplay | undefined = undefined;
     let margePvc: MetricDisplay | undefined = undefined;
@@ -264,7 +302,7 @@ const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => 
       const pvValue = parseFloat(item.pv.valeur.replace(/[^0-9.-]/g, ''));
       const evoPaEvolution = parseFloat(item.evoPa.evolution.replace(/[^0-9.-]/g, ''));
       const paUnitaireValue = pvValue * 0.70; // 70% du PV comme approximation
-      const paUnitaireEvolution = evoPaEvolution * (0.95 + Math.random() * 0.1); // Légère variation autour de l'évolution du PA total
+      const paUnitaireEvolution = evoPaEvolution * (0.95 + rng.random() * 0.1); // Légère variation autour de l'évolution du PA total
       paUnitaire = {
         valeur: `${paUnitaireValue.toFixed(2)}€`,
         evolution: `${paUnitaireEvolution >= 0 ? '+' : ''}${paUnitaireEvolution.toFixed(2)}%`
@@ -278,7 +316,7 @@ const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => 
       const pvValue = parseFloat(item.pv.valeur.replace(/[^0-9.-]/g, ''));
       const coutTheoriqueEvolution = parseFloat(item.coutTheorique.evolution.replace(/[^0-9.-]/g, ''));
       const coutTheoriqueUnitaireValue = pvValue * 0.60; // 60% du PV comme approximation
-      const coutTheoriqueUnitaireEvolution = coutTheoriqueEvolution * (0.95 + Math.random() * 0.1); // Légère variation
+      const coutTheoriqueUnitaireEvolution = coutTheoriqueEvolution * (0.95 + rng.random() * 0.1); // Légère variation
       coutTheoriqueUnitaire = {
         valeur: `${coutTheoriqueUnitaireValue.toFixed(2)}€`,
         evolution: `${coutTheoriqueUnitaireEvolution >= 0 ? '+' : ''}${coutTheoriqueUnitaireEvolution.toFixed(2)}%`
@@ -317,6 +355,77 @@ const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => 
       };
     }
 
+    // Générer des données de volume simulées (UVC et Tonne) avec CAD et CAM
+    const caValue = parseFloat(item.ca.valeur.replace(/[^0-9.-]/g, ''));
+    const caEvolution = parseFloat(item.ca.evolution.replace(/[^0-9.-]/g, ''));
+
+    // Déterminer le niveau hiérarchique de l'élément
+    // Plus le niveau est élevé (proche de Marché), plus les valeurs sont grandes
+    let hierarchyLevel = 1; // Par défaut : niveau le plus bas
+    if (!item.marche) {
+      // C'est un marché
+      hierarchyLevel = 7;
+    } else if (!item.marcheDetaille) {
+      // C'est un marché détaillé
+      hierarchyLevel = 6;
+    } else if (!item.categorie) {
+      // C'est une catégorie
+      hierarchyLevel = 5;
+    } else if (!item.groupeFamille) {
+      // C'est un groupe famille
+      hierarchyLevel = 4;
+    } else if (!item.famille) {
+      // C'est une famille
+      hierarchyLevel = 3;
+    } else if (!item.sousFamille) {
+      // C'est une sous famille
+      hierarchyLevel = 2;
+    } // sinon c'est un produit (niveau 1)
+
+    // Générer un volume UVC (entre 5000 et 10000)
+    // Plus le niveau est élevé, plus le volume est grand
+    const uvcMin = 5000 + (hierarchyLevel - 1) * 500; // 5000 à 8000
+    const uvcMax = 7000 + (hierarchyLevel - 1) * 500; // 7000 à 10000
+    const randomVariation = rng.random() * (uvcMax - uvcMin);
+    const volumeUVCCAD = Math.round(uvcMin + randomVariation);
+    const volumeUVCCAM = Math.round(volumeUVCCAD * 1.10); // CAM généralement 10% supérieur à CAD
+
+    const volumeUVCCADEvolution = caEvolution + (rng.random() * 2 - 1); // Variation légère autour de l'évolution du CA
+    const volumeUVCCAMEvolution = volumeUVCCADEvolution + 0.47; // CAM a généralement une meilleure évolution
+
+    // Générer un volume en Tonne (entre 2 et 200)
+    // Plus le niveau est élevé, plus le volume est grand
+    const tonneMin = 2 + (hierarchyLevel - 1) * 15; // 2 à 92
+    const tonneMax = 30 + (hierarchyLevel - 1) * 28; // 30 à 198
+    const tonneRandomVariation = rng.random() * (tonneMax - tonneMin);
+    const volumeTonneCAD = tonneMin + tonneRandomVariation;
+    const volumeTonneCAM = volumeTonneCAD * 1.10; // CAM généralement 10% supérieur à CAD
+    const volumeTonneCADEvolution = volumeUVCCADEvolution + (rng.random() * 0.5 - 0.25); // Variation légère
+    const volumeTonneCAMEvolution = volumeTonneCADEvolution + 0.55; // CAM a une meilleure évolution
+
+    const volume = {
+      UVC: {
+        CAD: {
+          valeur: Math.round(volumeUVCCAD).toString(), // Pas de décimales pour UVC
+          evolution: `${volumeUVCCADEvolution >= 0 ? '+' : ''}${volumeUVCCADEvolution.toFixed(2)}%`
+        },
+        CAM: {
+          valeur: Math.round(volumeUVCCAM).toString(), // Pas de décimales pour UVC
+          evolution: `${volumeUVCCAMEvolution >= 0 ? '+' : ''}${volumeUVCCAMEvolution.toFixed(2)}%`
+        }
+      },
+      Tonne: {
+        CAD: {
+          valeur: volumeTonneCAD.toFixed(3), // Max 3 décimales pour Tonne
+          evolution: `${volumeTonneCADEvolution >= 0 ? '+' : ''}${volumeTonneCADEvolution.toFixed(2)}%`
+        },
+        CAM: {
+          valeur: volumeTonneCAM.toFixed(3), // Max 3 décimales pour Tonne
+          evolution: `${volumeTonneCAMEvolution >= 0 ? '+' : ''}${volumeTonneCAMEvolution.toFixed(2)}%`
+        }
+      }
+    };
+
     return {
       id: item.id,
       label: item.nom,
@@ -335,6 +444,7 @@ const convertToPageFormat = (items: ContentPerimetreItem[]): PerimetreItem[] => 
       margePvc: margePvc,
       margeMoyenneCategorielle: margeMoyenneCategorielle,
       ean: item.ean,
+      volume: volume,
       marche: item.marche,
       marcheDetaille: item.marcheDetaille,
       categorie: item.categorie,
