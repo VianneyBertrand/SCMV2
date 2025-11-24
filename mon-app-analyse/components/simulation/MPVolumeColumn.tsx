@@ -35,7 +35,7 @@ export function MPVolumeColumn({ availableOptions }: MPVolumeColumnProps) {
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="bg-gray-50 px-4 py-2 border-b">
+      <div className="px-4 py-2 border-b">
         <h3 className="text-sm font-semibold text-gray-700">MP en Volume (%)</h3>
       </div>
 
@@ -57,6 +57,7 @@ export function MPVolumeColumn({ availableOptions }: MPVolumeColumnProps) {
               onIncrement={() => updateMPVolume(mp.id, mp.percentage + 0.1)}
               onDecrement={() => updateMPVolume(mp.id, Math.max(0, mp.percentage - 0.1))}
               onRemove={() => removeMPVolume(mp.id)}
+              onValueChange={(newValue) => updateMPVolume(mp.id, newValue)}
             />
           ))}
         </div>

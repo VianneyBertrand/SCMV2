@@ -78,9 +78,9 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
   return (
     <>
       <Draggable handle=".drag-handle" nodeRef={nodeRef}>
-        <div ref={nodeRef} className="fixed w-[650px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[calc(70vh-80px)]" style={windowStyle}>
+        <div ref={nodeRef} className="fixed w-[650px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[80vh]" style={windowStyle}>
           {/* Header draggable */}
-          <div className="drag-handle bg-gray-50 px-4 py-3 rounded-t-lg border-b border-gray-200 flex items-center justify-between cursor-move">
+          <div className="drag-handle px-4 py-3 rounded-t-lg border-b border-gray-200 flex items-center justify-between cursor-move">
             <div className="flex items-center gap-2">
               <GripVertical className="h-5 w-5 text-gray-400" />
               <h2 className="text-lg font-semibold text-gray-800">Simulation</h2>
@@ -88,7 +88,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 hover:bg-gray-200"
+              className="h-8 w-8 p-0 text-[#0970E6] hover:text-[#004E9B] hover:bg-gray-100 active:text-[#003161] active:bg-gray-200"
               onClick={handleClose}
             >
               <X className="h-4 w-4" />
@@ -102,7 +102,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t border-gray-200 flex justify-between items-center rounded-b-lg bg-gray-50">
+          <div className="px-4 py-3 border-t border-gray-200 flex justify-between items-center rounded-b-lg">
             <Button
               variant="outline"
               size="sm"
@@ -113,7 +113,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
 
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleQuit}
               >

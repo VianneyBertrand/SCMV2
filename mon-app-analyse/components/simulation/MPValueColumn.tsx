@@ -33,7 +33,7 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="bg-gray-50 px-4 py-2 border-b">
+      <div className="px-4 py-2 border-b">
         <h3 className="text-sm font-semibold text-gray-700">MP en Valeur (€)</h3>
       </div>
 
@@ -60,6 +60,8 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
               onSecondIncrement={() => updateMPEvolution(mp.id, mp.evolution + 0.1)}
               onSecondDecrement={() => updateMPEvolution(mp.id, mp.evolution - 0.1)}
               onRemove={() => removeMPValue(mp.id)}
+              onValueChange={(newValue) => updateMPPrice(mp.id, newValue)}
+              onSecondValueChange={(newValue) => updateMPEvolution(mp.id, newValue)}
             />
           ))}
         </div>
