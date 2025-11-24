@@ -26,6 +26,7 @@ interface SimulationState {
   // État de la simulation
   isSimulationMode: boolean
   isWindowOpen: boolean
+  buttonPosition: { top: number; left: number } | null
 
   // Données originales (copiées à l'ouverture, pour reset)
   originalData: {
@@ -40,7 +41,7 @@ interface SimulationState {
   }
 
   // Actions - Gestion de la fenêtre
-  openWindow: () => void
+  openWindow: (buttonPosition?: { top: number; left: number }) => void
   closeWindow: () => void
   startSimulation: () => void
   exitSimulation: () => void
@@ -69,6 +70,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   // État initial
   isSimulationMode: false,
   isWindowOpen: false,
+  buttonPosition: null,
 
   originalData: {
     mpValues: [],
@@ -81,8 +83,8 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   // Actions - Gestion de la fenêtre
-  openWindow: () => {
-    set({ isWindowOpen: true })
+  openWindow: (buttonPosition) => {
+    set({ isWindowOpen: true, buttonPosition: buttonPosition || null })
   },
 
   closeWindow: () => {

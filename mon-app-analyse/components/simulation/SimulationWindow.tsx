@@ -23,6 +23,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
   const nodeRef = useRef(null)
 
   const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
+  const buttonPosition = useSimulationStore((state) => state.buttonPosition)
   const closeWindow = useSimulationStore((state) => state.closeWindow)
   const startSimulation = useSimulationStore((state) => state.startSimulation)
   const resetToOriginal = useSimulationStore((state) => state.resetToOriginal)
@@ -62,10 +63,22 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
 
   if (!isWindowOpen) return null
 
+  // Calculer la position de la fenêtre
+  const windowStyle: React.CSSProperties = buttonPosition
+    ? {
+        top: `${buttonPosition.top}px`,
+        left: `${buttonPosition.left}px`,
+      }
+    : {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+      }
+
   return (
     <>
       <Draggable handle=".drag-handle" nodeRef={nodeRef}>
-        <div ref={nodeRef} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[calc(70vh-80px)]">
+        <div ref={nodeRef} className="fixed w-[650px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[calc(70vh-80px)]" style={windowStyle}>
           {/* Header draggable */}
           <div className="drag-handle bg-gray-50 px-4 py-3 rounded-t-lg border-b border-gray-200 flex items-center justify-between cursor-move">
             <div className="flex items-center gap-2">
