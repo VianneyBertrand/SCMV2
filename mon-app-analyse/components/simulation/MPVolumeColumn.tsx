@@ -14,9 +14,13 @@ interface MPVolumeColumnProps {
  */
 export function MPVolumeColumn({ availableOptions }: MPVolumeColumnProps) {
   const simulatedData = useSimulationStore((state) => state.simulatedData)
+  const originalData = useSimulationStore((state) => state.originalData)
   const updateMPVolume = useSimulationStore((state) => state.updateMPVolume)
   const addMPVolume = useSimulationStore((state) => state.addMPVolume)
   const removeMPVolume = useSimulationStore((state) => state.removeMPVolume)
+
+  // Fonction pour trouver la valeur originale d'une MP
+  const getOriginalMP = (id: string) => originalData.mpVolumes.find(mp => mp.id === id)
 
   const handleAdd = (option: { id: string; label: string }) => {
     const mpToAdd = availableOptions.find(mp => mp.id === option.id)
@@ -35,8 +39,8 @@ export function MPVolumeColumn({ availableOptions }: MPVolumeColumnProps) {
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="px-4 py-2 border-b">
-        <h3 className="text-sm font-semibold text-gray-700">MP en Volume (%)</h3>
+      <div className="px-4 py-2">
+        <h3 className="font-bold text-gray-700" style={{ fontSize: '16px' }}>MP en Volume (%)</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-2">
@@ -49,17 +53,24 @@ export function MPVolumeColumn({ availableOptions }: MPVolumeColumnProps) {
         </div>
 
         <div className="space-y-1">
-          {simulatedData.mpVolumes.map((mp) => (
-            <MPRow
-              key={mp.id}
-              label={mp.label}
-              value={`${mp.percentage.toFixed(2)}%`}
-              onIncrement={() => updateMPVolume(mp.id, mp.percentage + 0.1)}
-              onDecrement={() => updateMPVolume(mp.id, Math.max(0, mp.percentage - 0.1))}
-              onRemove={() => removeMPVolume(mp.id)}
-              onValueChange={(newValue) => updateMPVolume(mp.id, newValue)}
-            />
-          ))}
+          {simulatedData.mpVolumes.map((mp) => {
+            const originalMP = getOriginalMP(mp.id)
+            return (
+              <MPRow
+                key={mp.id}
+                label={mp.label}
+                code={mp.code}
+                value={`${mp.percentage.toFixed(2)}%`}
+                originalValue={originalMP?.percentage}
+                onIncrement01={() => updateMPVolume(mp.id, mp.percentage + 0.1)}
+                onIncrement1={() => updateMPVolume(mp.id, mp.percentage + 1)}
+                onDecrement01={() => updateMPVolume(mp.id, Math.max(0, mp.percentage - 0.1))}
+                onDecrement1={() => updateMPVolume(mp.id, Math.max(0, mp.percentage - 1))}
+                onRemove={() => removeMPVolume(mp.id)}
+                onValueChange={(newValue) => updateMPVolume(mp.id, newValue)}
+              />
+            )
+          })}
         </div>
       </div>
 

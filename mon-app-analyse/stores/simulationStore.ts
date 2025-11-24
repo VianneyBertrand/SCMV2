@@ -6,6 +6,7 @@ import { create } from 'zustand'
 export interface MPValueItem {
   id: string
   label: string
+  code: string       // Code référence (ex: HE6545)
   price: number      // Prix en €
   evolution: number  // Évolution en %
 }
@@ -16,6 +17,7 @@ export interface MPValueItem {
 export interface MPVolumeItem {
   id: string
   label: string
+  code: string       // Code référence (ex: HE6545)
   percentage: number // Pourcentage de répartition en volume
 }
 

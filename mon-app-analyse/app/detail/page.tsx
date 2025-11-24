@@ -37,7 +37,7 @@ import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download, ChevronsUpDown, Rot
 import { SwitchIcon } from "@/components/ui/switch-icon"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useMemo, useState, Suspense, useEffect } from "react"
+import { useMemo, useState, Suspense, useEffect, useRef } from "react"
 import dynamic from 'next/dynamic'
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
@@ -513,13 +513,14 @@ function DetailContent() {
     try {
       const chartData = getChartData()
       const heatmapData = getCostHeatmapData()
+      const recetteData = getRecetteData()
       if (!chartData || !heatmapData) return []
-      return extractMPValuesFromChartData(chartData, heatmapData)
+      return extractMPValuesFromChartData(chartData, heatmapData, recetteData)
     } catch (error) {
       console.error('Error extracting MP values:', error)
       return []
     }
-  }, [costSubTab, base100, currentItem])
+  }, [costSubTab, base100, currentItem, recetteSubTab])
 
   const simulationMPVolumes = useMemo(() => {
     try {
@@ -533,9 +534,16 @@ function DetailContent() {
   }, [recetteSubTab])
 
   // Initialiser les données de simulation quand la fenêtre s'ouvre
+  const hasInitializedRef = useRef(false)
   useEffect(() => {
-    if (isWindowOpen && simulationMPValues.length > 0 && simulationMPVolumes.length > 0) {
-      initializeFromExistingData(simulationMPValues, simulationMPVolumes)
+    if (isWindowOpen && !hasInitializedRef.current) {
+      if (simulationMPValues.length > 0 || simulationMPVolumes.length > 0) {
+        initializeFromExistingData(simulationMPValues, simulationMPVolumes)
+        hasInitializedRef.current = true
+      }
+    }
+    if (!isWindowOpen) {
+      hasInitializedRef.current = false
     }
   }, [isWindowOpen, simulationMPValues, simulationMPVolumes, initializeFromExistingData])
 

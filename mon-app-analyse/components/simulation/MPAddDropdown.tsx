@@ -51,8 +51,7 @@ export function MPAddDropdown({ options, onAdd, placeholder = "Rechercher une MP
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          size="sm"
-          className="w-full justify-start gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+          className="w-full h-10 justify-start gap-2 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
         >
           <Plus className="h-4 w-4" />
           Ajouter

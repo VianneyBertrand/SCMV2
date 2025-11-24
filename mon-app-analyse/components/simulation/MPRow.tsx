@@ -2,19 +2,26 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ChevronUp, ChevronDown, X } from 'lucide-react'
+import { X, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface MPRowProps {
   label: string
+  code?: string
   value: string | number
+  originalValue?: number
   valueLabel?: string
   secondValue?: string | number
+  originalSecondValue?: number
   secondValueLabel?: string
-  onIncrement: () => void
-  onDecrement: () => void
-  onSecondIncrement?: () => void
-  onSecondDecrement?: () => void
+  onIncrement01: () => void
+  onIncrement1: () => void
+  onDecrement01: () => void
+  onDecrement1: () => void
+  onSecondIncrement01?: () => void
+  onSecondIncrement1?: () => void
+  onSecondDecrement01?: () => void
+  onSecondDecrement1?: () => void
   onRemove: () => void
   onValueChange?: (newValue: number) => void
   onSecondValueChange?: (newValue: number) => void
@@ -25,14 +32,21 @@ interface MPRowProps {
  */
 export function MPRow({
   label,
+  code,
   value,
+  originalValue,
   valueLabel,
   secondValue,
+  originalSecondValue,
   secondValueLabel,
-  onIncrement,
-  onDecrement,
-  onSecondIncrement,
-  onSecondDecrement,
+  onIncrement01,
+  onIncrement1,
+  onDecrement01,
+  onDecrement1,
+  onSecondIncrement01,
+  onSecondIncrement1,
+  onSecondDecrement01,
+  onSecondDecrement1,
   onRemove,
   onValueChange,
   onSecondValueChange,
@@ -48,7 +62,7 @@ export function MPRow({
   // Extraire le nombre et l'unité de la valeur
   const parseValue = (val: string | number) => {
     const str = String(val)
-    const match = str.match(/^([\d.]+)(.*)$/)
+    const match = str.match(/^([+-]?[\d.]+)(.*)$/)
     if (match) {
       return { number: match[1], unit: match[2] }
     }
@@ -57,6 +71,22 @@ export function MPRow({
 
   const { number: valueNumber, unit: valueUnit } = parseValue(value)
   const { number: secondValueNumber, unit: secondValueUnit } = secondValue !== undefined ? parseValue(secondValue) : { number: '', unit: '' }
+
+  // Calculer le % d'évolution par rapport à la valeur originale
+  const calculateEvolution = (current: number, original: number | undefined): number | null => {
+    if (original === undefined || original === 0) return null
+    return ((current - original) / original) * 100
+  }
+
+  const valueEvolution = calculateEvolution(parseFloat(valueNumber), originalValue)
+  const secondValueEvolution = calculateEvolution(parseFloat(secondValueNumber), originalSecondValue)
+
+  // Formater l'évolution pour l'affichage
+  const formatEvolution = (evolution: number | null): string => {
+    if (evolution === null) return '+0.00%'
+    const sign = evolution >= 0 ? '+' : ''
+    return `${sign}${evolution.toFixed(2)}%`
+  }
 
   useEffect(() => {
     if (isEditingValue && inputRef.current) {
@@ -122,10 +152,13 @@ export function MPRow({
     }
   }
   return (
-    <div className="space-y-1 py-2 border-b border-gray-100 last:border-0">
-      {/* Label */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
+    <div className="space-y-1 py-2">
+      {/* Label et Code */}
+      <div className="flex items-start justify-between">
+        <div className="flex flex-col">
+          <span className="font-bold text-gray-700" style={{ fontSize: '16px' }}>{label}</span>
+          {code && <span className="text-gray-500" style={{ fontSize: '12px' }}>{code}</span>}
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -137,98 +170,160 @@ export function MPRow({
       </div>
 
       {/* Valeur principale */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-              onClick={onIncrement}
-            >
-              <ChevronUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-              onClick={onDecrement}
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
-          {valueLabel && <span className="text-xs text-gray-500">{valueLabel}</span>}
-        </div>
+      <div className="flex items-center gap-1">
+        {valueLabel && <span className="text-xs text-gray-500 w-10">{valueLabel}</span>}
 
-        <div className="flex items-center gap-1">
-          {isEditingValue && onValueChange ? (
-            <input
-              ref={inputRef}
-              type="text"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={handleValueBlur}
-              onKeyDown={handleValueKeyDown}
-              className="w-20 px-2 py-0.5 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
-            />
-          ) : (
-            <span
-              className={`text-sm font-semibold text-gray-900 ${onValueChange ? 'cursor-text hover:bg-gray-100 px-2 py-0.5 rounded border border-gray-300' : ''}`}
-              onClick={handleValueClick}
-            >
-              {valueNumber}
-            </span>
-          )}
-          {valueUnit && <span className="text-sm font-semibold text-gray-900">{valueUnit}</span>}
-        </div>
+        {/* Double chevron down (-1%) */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+          onClick={onDecrement1}
+        >
+          <ChevronsDown className="h-5 w-5" />
+        </Button>
+
+        {/* Simple chevron down (-0.1%) */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+          onClick={onDecrement01}
+        >
+          <ChevronDown className="h-5 w-5" />
+        </Button>
+
+        {/* Input avec unité */}
+        {isEditingValue && onValueChange ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleValueBlur}
+            onKeyDown={handleValueKeyDown}
+            className="h-10 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+          />
+        ) : (
+          <div
+            className={`h-10 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
+            onClick={handleValueClick}
+          >
+            {valueNumber}{valueUnit}
+          </div>
+        )}
+
+        {/* Simple chevron up (+0.1%) */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+          onClick={onIncrement01}
+        >
+          <ChevronUp className="h-5 w-5" />
+        </Button>
+
+        {/* Double chevron up (+1%) */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+          onClick={onIncrement1}
+        >
+          <ChevronsUp className="h-5 w-5" />
+        </Button>
+
+        {/* % d'évolution */}
+        <span
+          className={`ml-4 text-sm font-semibold min-w-[70px] text-right ${
+            valueEvolution === null || valueEvolution === 0
+              ? 'text-gray-500'
+              : valueEvolution > 0
+                ? 'text-green-600'
+                : 'text-red-600'
+          }`}
+        >
+          {formatEvolution(valueEvolution)}
+        </span>
       </div>
 
       {/* Valeur secondaire (optionnelle) */}
-      {secondValue !== undefined && onSecondIncrement && onSecondDecrement && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-                onClick={onSecondIncrement}
-              >
-                <ChevronUp className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-                onClick={onSecondDecrement}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </div>
-            {secondValueLabel && <span className="text-xs text-gray-500">{secondValueLabel}</span>}
-          </div>
+      {secondValue !== undefined && onSecondIncrement1 && onSecondDecrement1 && (
+        <div className="flex items-center gap-1">
+          {secondValueLabel && <span className="text-xs text-gray-500 w-10">{secondValueLabel}</span>}
 
-          <div className="flex items-center gap-1">
-            {isEditingSecondValue && onSecondValueChange ? (
-              <input
-                ref={secondInputRef}
-                type="text"
-                value={editSecondValue}
-                onChange={(e) => setEditSecondValue(e.target.value)}
-                onBlur={handleSecondValueBlur}
-                onKeyDown={handleSecondValueKeyDown}
-                className="w-20 px-2 py-0.5 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
-              />
-            ) : (
-              <span
-                className={`text-sm font-semibold text-gray-900 ${onSecondValueChange ? 'cursor-text hover:bg-gray-100 px-2 py-0.5 rounded border border-gray-300' : ''}`}
-                onClick={handleSecondValueClick}
-              >
-                {secondValueNumber}
-              </span>
-            )}
-            {secondValueUnit && <span className="text-sm font-semibold text-gray-900">{secondValueUnit}</span>}
-          </div>
+          {/* Double chevron down (-1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onSecondDecrement1}
+          >
+            <ChevronsDown className="h-5 w-5" />
+          </Button>
+
+          {/* Simple chevron down (-0.1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onSecondDecrement01}
+          >
+            <ChevronDown className="h-5 w-5" />
+          </Button>
+
+          {/* Input avec unité */}
+          {isEditingSecondValue && onSecondValueChange ? (
+            <input
+              ref={secondInputRef}
+              type="text"
+              value={editSecondValue}
+              onChange={(e) => setEditSecondValue(e.target.value)}
+              onBlur={handleSecondValueBlur}
+              onKeyDown={handleSecondValueKeyDown}
+              className="h-10 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+            />
+          ) : (
+            <div
+              className={`h-10 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onSecondValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
+              onClick={handleSecondValueClick}
+            >
+              {secondValueNumber}{secondValueUnit}
+            </div>
+          )}
+
+          {/* Simple chevron up (+0.1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onSecondIncrement01}
+          >
+            <ChevronUp className="h-5 w-5" />
+          </Button>
+
+          {/* Double chevron up (+1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onSecondIncrement1}
+          >
+            <ChevronsUp className="h-5 w-5" />
+          </Button>
+
+          {/* % d'évolution */}
+          <span
+            className={`ml-4 text-sm font-semibold min-w-[70px] text-right ${
+              secondValueEvolution === null || secondValueEvolution === 0
+                ? 'text-gray-500'
+                : secondValueEvolution > 0
+                  ? 'text-green-600'
+                  : 'text-red-600'
+            }`}
+          >
+            {formatEvolution(secondValueEvolution)}
+          </span>
         </div>
       )}
     </div>

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Draggable from 'react-draggable'
-import { X, GripVertical } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSimulationStore, MPValueItem, MPVolumeItem } from '@/stores/simulationStore'
 import { MPValueColumn } from './MPValueColumn'
@@ -78,13 +78,10 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
   return (
     <>
       <Draggable handle=".drag-handle" nodeRef={nodeRef}>
-        <div ref={nodeRef} className="fixed w-[650px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[80vh]" style={windowStyle}>
+        <div ref={nodeRef} className="fixed w-[1000px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[80vh]" style={windowStyle}>
           {/* Header draggable */}
-          <div className="drag-handle px-4 py-3 rounded-t-lg border-b border-gray-200 flex items-center justify-between cursor-move">
-            <div className="flex items-center gap-2">
-              <GripVertical className="h-5 w-5 text-gray-400" />
-              <h2 className="text-lg font-semibold text-gray-800">Simulation</h2>
-            </div>
+          <div className="drag-handle px-8 py-3 rounded-t-lg flex items-center justify-between cursor-move">
+            <h2 className="text-lg font-semibold text-gray-800">Simulation</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -105,7 +102,8 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
           <div className="px-4 py-3 border-t border-gray-200 flex justify-between items-center rounded-b-lg">
             <Button
               variant="outline"
-              size="sm"
+              className="h-11 px-4 text-sm"
+              style={{ fontSize: '14px' }}
               onClick={resetToOriginal}
             >
               Réinitialiser
@@ -114,15 +112,16 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
             <div className="flex gap-2">
               <Button
                 variant="ghost"
-                size="sm"
+                className="h-11 px-4 text-sm"
+                style={{ fontSize: '14px' }}
                 onClick={handleQuit}
               >
                 Quitter
               </Button>
               <Button
                 variant="default"
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="h-11 px-4 text-sm bg-[#0970E6] hover:bg-[#004E9B] active:bg-[#003161] text-white"
+                style={{ fontSize: '14px' }}
                 onClick={handleSimulate}
                 disabled={!hasData}
               >

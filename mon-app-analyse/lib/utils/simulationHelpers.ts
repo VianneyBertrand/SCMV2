@@ -62,7 +62,8 @@ export function createMPId(name: string): string {
  */
 export function extractMPValuesFromChartData(
   chartData: Array<Record<string, any>>,
-  heatmapData: { items?: Array<{ label: string; evolution: string }> } | null | undefined
+  heatmapData: { items?: Array<{ label: string; evolution: string }> } | null | undefined,
+  recetteData?: Array<{ name: string; code: string; percentage: number }> | null
 ): MPValueItem[] {
   if (!chartData || chartData.length === 0) {
     console.log('extractMPValuesFromChartData: no chart data')
@@ -99,7 +100,7 @@ export function extractMPValuesFromChartData(
 
     // Trouver l'évolution correspondante dans la heatmap
     let evolution = 0
-    const heatmapItem = heatmapData.items.find(item => createMPId(item.label) === key)
+    const heatmapItem = heatmapData.items?.find(item => createMPId(item.label) === key)
     if (heatmapItem) {
       const evoStr = heatmapItem.evolution.replace('%', '').replace('+', '')
       evolution = parseFloat(evoStr)
@@ -112,9 +113,19 @@ export function extractMPValuesFromChartData(
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
 
+    // Trouver le code correspondant dans les données de recette
+    let code = ''
+    if (recetteData && Array.isArray(recetteData)) {
+      const recetteItem = recetteData.find(item => createMPId(item.name) === key)
+      if (recetteItem) {
+        code = recetteItem.code
+      }
+    }
+
     mpValues.push({
       id: key,
       label,
+      code,
       price,
       evolution,
     })
@@ -140,6 +151,7 @@ export function extractMPVolumesFromRecetteData(
   const volumes = recetteData.map(item => ({
     id: createMPId(item.name),
     label: item.name,
+    code: item.code,
     percentage: item.percentage,
   }))
 
