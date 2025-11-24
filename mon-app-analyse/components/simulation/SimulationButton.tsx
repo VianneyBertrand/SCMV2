@@ -42,7 +42,7 @@ export function SimulationButton() {
         ref={buttonRef}
         variant="ghost"
         size="sm"
-        className="gap-2 hover:bg-blue-50"
+        className="gap-2 hover:bg-blue-50 text-[14px]"
         style={{ color: '#0970E6' }}
         onClick={handleClick}
       >
@@ -57,7 +57,7 @@ export function SimulationButton() {
       ref={buttonRef}
       variant="ghost"
       size="sm"
-      className="gap-2 hover:bg-blue-50"
+      className="gap-2 hover:bg-blue-50 text-[14px]"
       style={{ color: '#0970E6' }}
       onClick={handleClick}
     >

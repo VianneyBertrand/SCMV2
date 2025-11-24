@@ -51,12 +51,12 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
             <MPRow
               key={mp.id}
               label={mp.label}
-              value={`${mp.price.toFixed(2)}€`}
+              value={`${mp.price.toFixed(3)}€/kg`}
               valueLabel="Prix"
-              secondValue={`${mp.evolution >= 0 ? '+' : ''}${mp.evolution.toFixed(1)}%`}
+              secondValue={`${mp.evolution >= 0 ? '+' : ''}${mp.evolution.toFixed(2)}%`}
               secondValueLabel="Évol."
-              onIncrement={() => updateMPPrice(mp.id, mp.price + 0.01)}
-              onDecrement={() => updateMPPrice(mp.id, Math.max(0, mp.price - 0.01))}
+              onIncrement={() => updateMPPrice(mp.id, mp.price + 0.001)}
+              onDecrement={() => updateMPPrice(mp.id, Math.max(0, mp.price - 0.001))}
               onSecondIncrement={() => updateMPEvolution(mp.id, mp.evolution + 0.1)}
               onSecondDecrement={() => updateMPEvolution(mp.id, mp.evolution - 0.1)}
               onRemove={() => removeMPValue(mp.id)}

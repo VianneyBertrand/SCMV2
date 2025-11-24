@@ -401,6 +401,9 @@ function DetailContent() {
 
   // Données graphique
   const getChartData = () => {
+    // Facteur de conversion pour obtenir des €/kg (405 -> 1.12€/kg)
+    const MP_CONVERSION_FACTOR = 361.6
+
     const baseData = [
       { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'carton-ondule': 320, 'polypropylene': 290, 'polyethylene': 270, 'aluminium': 250, 'verre': 230, 'acier': 210, 'papier-kraft': 190, 'polystyrene-expanse': 170, 'pet': 150, 'etiquettes-papier': 130 },
       { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 210, 'amidon-mais': 215, 'gelatine': 208, 'presure': 212, 'ferments-lactiques': 218, 'creme-fraiche': 222, 'carton-ondule': 315, 'polypropylene': 285, 'polyethylene': 265, 'aluminium': 245, 'verre': 225, 'acier': 205, 'papier-kraft': 185, 'polystyrene-expanse': 165, 'pet': 145, 'etiquettes-papier': 125 },
@@ -413,15 +416,26 @@ function DetailContent() {
       { date: '2025-04', MPA: 430, MPI: 310, 'farine-ble': 405, 'sucre': 395, 'sel': 445, 'lait': 415, 'beurre': 325, 'huile': 335, 'oeufs': 315, 'levure': 305, 'amidon-mais': 310, 'gelatine': 303, 'presure': 307, 'ferments-lactiques': 313, 'creme-fraiche': 317, 'carton-ondule': 338, 'polypropylene': 308, 'polyethylene': 285, 'aluminium': 263, 'verre': 243, 'acier': 221, 'papier-kraft': 201, 'polystyrene-expanse': 181, 'pet': 159, 'etiquettes-papier': 139 },
     ]
 
+    // Convertir les valeurs MP en €/kg (sauf date, MPA, MPI)
+    const convertedData = baseData.map(item => {
+      const converted: any = { date: item.date, MPA: item.MPA, MPI: item.MPI }
+      Object.keys(item).forEach(key => {
+        if (key !== 'date' && key !== 'MPA' && key !== 'MPI') {
+          converted[key] = (item[key as keyof typeof item] as number) / MP_CONVERSION_FACTOR
+        }
+      })
+      return converted
+    })
+
     if (base100) {
       const firstValues: Record<string, number> = {}
-      Object.keys(baseData[0]).forEach(key => {
+      Object.keys(convertedData[0]).forEach(key => {
         if (key !== 'date') {
-          firstValues[key] = baseData[0][key as keyof typeof baseData[0]] as number
+          firstValues[key] = convertedData[0][key as keyof typeof convertedData[0]] as number
         }
       })
 
-      return baseData.map(item => {
+      return convertedData.map(item => {
         const transformed: any = { date: item.date }
         Object.keys(item).forEach(key => {
           if (key !== 'date') {
@@ -432,7 +446,7 @@ function DetailContent() {
       })
     }
 
-    return baseData
+    return convertedData
   }
 
   // Données Recette selon sous-tab
@@ -1993,7 +2007,13 @@ function DetailContent() {
                       <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} />
                       <RechartsTooltip
-                        formatter={(value: number) => value.toFixed(3)}
+                        formatter={(value: number, name: string) => {
+                          // Pour les MP individuelles (pas MPA/MPI), afficher en €/kg
+                          if (name !== 'MPA' && name !== 'MPI') {
+                            return `${value.toFixed(3)}€/kg`
+                          }
+                          return value.toFixed(3)
+                        }}
                       />
 
                       {costSubTab === 'total' && (
