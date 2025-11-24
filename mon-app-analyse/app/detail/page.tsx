@@ -454,20 +454,20 @@ function DetailContent() {
     switch (recetteSubTab) {
       case 'mpa':
         return [
-          { name: 'Eau', code: 'HE65', percentage: 25.43 },
-          { name: 'Farine de blé', code: 'FE23', percentage: 20.15 },
-          { name: 'Sucre', code: 'FE23', percentage: 17.24 },
-          { name: 'Sel', code: 'FR34', percentage: 5.46 },
-          { name: 'Lait en poudre', code: 'FR34', percentage: 5.46 },
-          { name: 'Beurre', code: 'FR34', percentage: 5.46 },
-          { name: 'Huile végétale', code: 'FR34', percentage: 5.46 },
-          { name: 'Œufs', code: 'FR34', percentage: 5.46 },
-          { name: 'Levure', code: 'FR34', percentage: 5.46 },
-          { name: 'Amidon de maïs', code: 'FR34', percentage: 5.46 },
-          { name: 'Gélatine', code: 'FR34', percentage: 5.46 },
-          { name: 'Présure', code: 'FR34', percentage: 5.46 },
-          { name: 'Ferments lactiques', code: 'FR34', percentage: 5.46 },
-          { name: 'Crème fraîche', code: 'FR34', percentage: 5.46 },
+          { name: 'Eau', code: 'HE65', percentage: 20.00 },
+          { name: 'Farine de blé', code: 'FE23', percentage: 18.00 },
+          { name: 'Sucre', code: 'FE23', percentage: 15.00 },
+          { name: 'Sel', code: 'FR34', percentage: 8.00 },
+          { name: 'Lait en poudre', code: 'FR34', percentage: 7.00 },
+          { name: 'Beurre', code: 'FR34', percentage: 6.50 },
+          { name: 'Huile végétale', code: 'FR34', percentage: 5.50 },
+          { name: 'Œufs', code: 'FR34', percentage: 5.00 },
+          { name: 'Levure', code: 'FR34', percentage: 4.00 },
+          { name: 'Amidon de maïs', code: 'FR34', percentage: 3.50 },
+          { name: 'Gélatine', code: 'FR34', percentage: 3.00 },
+          { name: 'Présure', code: 'FR34', percentage: 2.00 },
+          { name: 'Ferments lactiques', code: 'FR34', percentage: 1.50 },
+          { name: 'Crème fraîche', code: 'FR34', percentage: 1.00 },
         ].sort((a, b) => b.percentage - a.percentage)
       case 'mpi':
         return [

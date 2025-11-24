@@ -250,7 +250,7 @@ export function MPRow({
 
         {/* % d'évolution */}
         <span
-          className={`ml-4 text-sm font-semibold min-w-[70px] text-right ${
+          className={`ml-4 text-sm font-semibold min-w-[70px] text-left ${
             valueEvolution === null || valueEvolution === 0
               ? 'text-gray-500'
               : valueEvolution > 0
@@ -329,7 +329,7 @@ export function MPRow({
 
           {/* % d'évolution */}
           <span
-            className={`ml-4 text-sm font-semibold min-w-[70px] text-right ${
+            className={`ml-4 text-sm font-semibold min-w-[70px] text-left ${
               secondValueEvolution === null || secondValueEvolution === 0
                 ? 'text-gray-500'
                 : secondValueEvolution > 0
