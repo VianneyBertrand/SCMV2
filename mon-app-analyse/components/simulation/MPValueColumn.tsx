@@ -10,14 +10,13 @@ interface MPValueColumnProps {
 }
 
 /**
- * Colonne gauche: MP en Valeur (€) avec évolution (%)
+ * Colonne gauche: MP en Valeur (€) - Prix première période + Prix dernière période
  */
 export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
   const simulatedData = useSimulationStore((state) => state.simulatedData)
   const originalData = useSimulationStore((state) => state.originalData)
-  const updateMPPrice = useSimulationStore((state) => state.updateMPPrice)
-
-  console.log('MPValueColumn render - originalData.mpValues:', originalData.mpValues.length, 'simulatedData.mpValues:', simulatedData.mpValues.length)
+  const updateMPPriceFirst = useSimulationStore((state) => state.updateMPPriceFirst)
+  const updateMPPriceLast = useSimulationStore((state) => state.updateMPPriceLast)
   const updateMPEvolution = useSimulationStore((state) => state.updateMPEvolution)
   const addMPValue = useSimulationStore((state) => state.addMPValue)
   const removeMPValue = useSimulationStore((state) => state.removeMPValue)
@@ -55,31 +54,39 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
         <div className="space-y-1">
           {simulatedData.mpValues.map((mp) => {
             const originalMP = getOriginalMP(mp.id)
-            console.log('MPValueColumn - mp:', mp.id, 'price:', mp.price, 'originalMP:', originalMP, 'originalPrice:', originalMP?.price)
             return (
               <MPRow
                 key={mp.id}
                 label={mp.label}
                 code={mp.code}
-                value={`${mp.price.toFixed(3)}€/kg`}
-                numericValue={mp.price}
-                originalValue={originalMP?.price}
-                valueLabel="Prix"
-                secondValue={`${mp.evolution >= 0 ? '+' : ''}${mp.evolution.toFixed(2)}%`}
-                numericSecondValue={mp.evolution}
-                originalSecondValue={originalMP?.evolution}
-                secondValueLabel="Évol."
-                onIncrement01={() => updateMPPrice(mp.id, mp.price * 1.001)}
-                onIncrement1={() => updateMPPrice(mp.id, mp.price * 1.01)}
-                onDecrement01={() => updateMPPrice(mp.id, Math.max(0, mp.price * 0.999))}
-                onDecrement1={() => updateMPPrice(mp.id, Math.max(0, mp.price * 0.99))}
-                onSecondIncrement01={() => updateMPEvolution(mp.id, mp.evolution + 0.1)}
-                onSecondIncrement1={() => updateMPEvolution(mp.id, mp.evolution + 1)}
-                onSecondDecrement01={() => updateMPEvolution(mp.id, mp.evolution - 0.1)}
-                onSecondDecrement1={() => updateMPEvolution(mp.id, mp.evolution - 1)}
+                value={`${mp.priceFirst.toFixed(3)}€/kg`}
+                numericValue={mp.priceFirst}
+                originalValue={originalMP?.priceFirst}
+                valueLabel="P1"
+                secondValue={`${mp.priceLast.toFixed(3)}€/kg`}
+                numericSecondValue={mp.priceLast}
+                originalSecondValue={originalMP?.priceLast}
+                secondValueLabel="P2"
+                onIncrement01={() => updateMPPriceFirst(mp.id, mp.priceFirst * 1.001)}
+                onIncrement1={() => updateMPPriceFirst(mp.id, mp.priceFirst * 1.01)}
+                onDecrement01={() => updateMPPriceFirst(mp.id, Math.max(0, mp.priceFirst * 0.999))}
+                onDecrement1={() => updateMPPriceFirst(mp.id, Math.max(0, mp.priceFirst * 0.99))}
+                onSecondIncrement01={() => updateMPPriceLast(mp.id, mp.priceLast * 1.001)}
+                onSecondIncrement1={() => updateMPPriceLast(mp.id, mp.priceLast * 1.01)}
+                onSecondDecrement01={() => updateMPPriceLast(mp.id, Math.max(0, mp.priceLast * 0.999))}
+                onSecondDecrement1={() => updateMPPriceLast(mp.id, Math.max(0, mp.priceLast * 0.99))}
+                thirdValue={`${mp.evolution.toFixed(2)}%`}
+                numericThirdValue={mp.evolution}
+                originalThirdValue={originalMP?.evolution}
+                thirdValueLabel="Évol."
+                onThirdIncrement01={() => updateMPEvolution(mp.id, mp.evolution + 0.1)}
+                onThirdIncrement1={() => updateMPEvolution(mp.id, mp.evolution + 1)}
+                onThirdDecrement01={() => updateMPEvolution(mp.id, mp.evolution - 0.1)}
+                onThirdDecrement1={() => updateMPEvolution(mp.id, mp.evolution - 1)}
                 onRemove={() => removeMPValue(mp.id)}
-                onValueChange={(newValue) => updateMPPrice(mp.id, newValue)}
-                onSecondValueChange={(newValue) => updateMPEvolution(mp.id, newValue)}
+                onValueChange={(newValue) => updateMPPriceFirst(mp.id, newValue)}
+                onSecondValueChange={(newValue) => updateMPPriceLast(mp.id, newValue)}
+                onThirdValueChange={(newValue) => updateMPEvolution(mp.id, newValue)}
               />
             )
           })}

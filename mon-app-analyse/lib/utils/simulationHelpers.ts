@@ -58,7 +58,7 @@ export function createMPId(name: string): string {
 
 /**
  * Extrait les prix MP depuis les données du graphique
- * Retourne les prix du dernier mois disponible
+ * Retourne les prix de la première et dernière période
  */
 export function extractMPValuesFromChartData(
   chartData: Array<Record<string, any>>,
@@ -70,16 +70,12 @@ export function extractMPValuesFromChartData(
     return []
   }
 
-  if (!heatmapData || !heatmapData.items || !Array.isArray(heatmapData.items)) {
-    console.log('extractMPValuesFromChartData: invalid heatmap data', heatmapData)
-    return []
-  }
-
-  // Prendre les données du dernier mois
+  // Prendre les données du premier et dernier mois
+  const firstMonth = chartData[0]
   const lastMonth = chartData[chartData.length - 1]
 
-  if (!lastMonth || typeof lastMonth !== 'object') {
-    console.log('extractMPValuesFromChartData: invalid last month data')
+  if (!firstMonth || !lastMonth || typeof firstMonth !== 'object' || typeof lastMonth !== 'object') {
+    console.log('extractMPValuesFromChartData: invalid month data')
     return []
   }
 
@@ -91,20 +87,12 @@ export function extractMPValuesFromChartData(
   console.log('extractMPValuesFromChartData: found', mpKeys.length, 'MP keys')
 
   mpKeys.forEach(key => {
-    const price = lastMonth[key] as number
+    const priceFirst = firstMonth[key] as number
+    const priceLast = lastMonth[key] as number
 
-    if (typeof price !== 'number' || isNaN(price)) {
-      console.warn('Invalid price for key', key, price)
+    if (typeof priceFirst !== 'number' || isNaN(priceFirst) || typeof priceLast !== 'number' || isNaN(priceLast)) {
+      console.warn('Invalid price for key', key, priceFirst, priceLast)
       return
-    }
-
-    // Trouver l'évolution correspondante dans la heatmap
-    let evolution = 0
-    const heatmapItem = heatmapData.items?.find(item => createMPId(item.label) === key)
-    if (heatmapItem) {
-      const evoStr = heatmapItem.evolution.replace('%', '').replace('+', '')
-      evolution = parseFloat(evoStr)
-      if (isNaN(evolution)) evolution = 0
     }
 
     // Convertir la clé en label lisible
@@ -122,11 +110,18 @@ export function extractMPValuesFromChartData(
       }
     }
 
+    // Calculer l'évolution entre première et dernière période
+    let evolution = 0
+    if (priceFirst !== 0) {
+      evolution = ((priceLast - priceFirst) / priceFirst) * 100
+    }
+
     mpValues.push({
       id: key,
       label,
       code,
-      price,
+      priceFirst,
+      priceLast,
       evolution,
     })
   })

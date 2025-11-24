@@ -16,6 +16,10 @@ interface MPRowProps {
   numericSecondValue?: number  // Valeur numérique réelle pour le calcul d'évolution
   originalSecondValue?: number
   secondValueLabel?: string
+  thirdValue?: string | number
+  numericThirdValue?: number
+  originalThirdValue?: number
+  thirdValueLabel?: string
   onIncrement01: () => void
   onIncrement1: () => void
   onDecrement01: () => void
@@ -24,9 +28,14 @@ interface MPRowProps {
   onSecondIncrement1?: () => void
   onSecondDecrement01?: () => void
   onSecondDecrement1?: () => void
+  onThirdIncrement01?: () => void
+  onThirdIncrement1?: () => void
+  onThirdDecrement01?: () => void
+  onThirdDecrement1?: () => void
   onRemove: () => void
   onValueChange?: (newValue: number) => void
   onSecondValueChange?: (newValue: number) => void
+  onThirdValueChange?: (newValue: number) => void
 }
 
 /**
@@ -43,6 +52,10 @@ export function MPRow({
   numericSecondValue,
   originalSecondValue,
   secondValueLabel,
+  thirdValue,
+  numericThirdValue,
+  originalThirdValue,
+  thirdValueLabel,
   onIncrement01,
   onIncrement1,
   onDecrement01,
@@ -51,9 +64,14 @@ export function MPRow({
   onSecondIncrement1,
   onSecondDecrement01,
   onSecondDecrement1,
+  onThirdIncrement01,
+  onThirdIncrement1,
+  onThirdDecrement01,
+  onThirdDecrement1,
   onRemove,
   onValueChange,
   onSecondValueChange,
+  onThirdValueChange,
 }: MPRowProps) {
   const [isEditingValue, setIsEditingValue] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -62,6 +80,10 @@ export function MPRow({
   const [isEditingSecondValue, setIsEditingSecondValue] = useState(false)
   const [editSecondValue, setEditSecondValue] = useState('')
   const secondInputRef = useRef<HTMLInputElement>(null)
+
+  const [isEditingThirdValue, setIsEditingThirdValue] = useState(false)
+  const [editThirdValue, setEditThirdValue] = useState('')
+  const thirdInputRef = useRef<HTMLInputElement>(null)
 
   // Extraire le nombre et l'unité de la valeur
   const parseValue = (val: string | number) => {
@@ -75,6 +97,7 @@ export function MPRow({
 
   const { number: valueNumber, unit: valueUnit } = parseValue(value)
   const { number: secondValueNumber, unit: secondValueUnit } = secondValue !== undefined ? parseValue(secondValue) : { number: '', unit: '' }
+  const { number: thirdValueNumber, unit: thirdValueUnit } = thirdValue !== undefined ? parseValue(thirdValue) : { number: '', unit: '' }
 
   // Calculer le % d'évolution par rapport à la valeur originale
   const calculateEvolution = (current: number, original: number | undefined): number | null => {
@@ -89,9 +112,11 @@ export function MPRow({
   // Utiliser numericValue si fourni, sinon parser la valeur affichée
   const currentValue = numericValue !== undefined ? numericValue : parseFloat(valueNumber)
   const currentSecondValue = numericSecondValue !== undefined ? numericSecondValue : parseFloat(secondValueNumber)
+  const currentThirdValue = numericThirdValue !== undefined ? numericThirdValue : parseFloat(thirdValueNumber)
 
   const valueEvolution = calculateEvolution(currentValue, originalValue)
   const secondValueEvolution = calculateEvolution(currentSecondValue, originalSecondValue)
+  const thirdValueEvolution = calculateEvolution(currentThirdValue, originalThirdValue)
 
   // Formater l'évolution pour l'affichage
   const formatEvolution = (evolution: number | null): string => {
@@ -113,6 +138,13 @@ export function MPRow({
       secondInputRef.current.select()
     }
   }, [isEditingSecondValue])
+
+  useEffect(() => {
+    if (isEditingThirdValue && thirdInputRef.current) {
+      thirdInputRef.current.focus()
+      thirdInputRef.current.select()
+    }
+  }, [isEditingThirdValue])
 
   const handleValueClick = () => {
     if (onValueChange) {
@@ -163,6 +195,32 @@ export function MPRow({
       setIsEditingSecondValue(false)
     }
   }
+
+  const handleThirdValueClick = () => {
+    if (onThirdValueChange) {
+      setEditThirdValue(thirdValueNumber)
+      setIsEditingThirdValue(true)
+    }
+  }
+
+  const handleThirdValueBlur = () => {
+    if (onThirdValueChange) {
+      const newValue = parseFloat(editThirdValue)
+      if (!isNaN(newValue)) {
+        onThirdValueChange(newValue)
+      }
+    }
+    setIsEditingThirdValue(false)
+  }
+
+  const handleThirdValueKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleThirdValueBlur()
+    } else if (e.key === 'Escape') {
+      setIsEditingThirdValue(false)
+    }
+  }
+
   return (
     <div className="space-y-1 py-2">
       {/* Label et Code */}
@@ -338,6 +396,86 @@ export function MPRow({
             }`}
           >
             {formatEvolution(secondValueEvolution)}
+          </span>
+        </div>
+      )}
+
+      {/* Troisième valeur (optionnelle - Évolution) */}
+      {thirdValue !== undefined && onThirdIncrement1 && onThirdDecrement1 && (
+        <div className="flex items-center gap-1">
+          {thirdValueLabel && <span className="text-xs text-gray-500 w-10">{thirdValueLabel}</span>}
+
+          {/* Double chevron down (-1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onThirdDecrement1}
+          >
+            <ChevronsDown className="h-5 w-5" />
+          </Button>
+
+          {/* Simple chevron down (-0.1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onThirdDecrement01}
+          >
+            <ChevronDown className="h-5 w-5" />
+          </Button>
+
+          {/* Input avec unité */}
+          {isEditingThirdValue && onThirdValueChange ? (
+            <input
+              ref={thirdInputRef}
+              type="text"
+              value={editThirdValue}
+              onChange={(e) => setEditThirdValue(e.target.value)}
+              onBlur={handleThirdValueBlur}
+              onKeyDown={handleThirdValueKeyDown}
+              className="h-10 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+            />
+          ) : (
+            <div
+              className={`h-10 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onThirdValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
+              onClick={handleThirdValueClick}
+            >
+              {thirdValueNumber}{thirdValueUnit}
+            </div>
+          )}
+
+          {/* Simple chevron up (+0.1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onThirdIncrement01}
+          >
+            <ChevronUp className="h-5 w-5" />
+          </Button>
+
+          {/* Double chevron up (+1%) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
+            onClick={onThirdIncrement1}
+          >
+            <ChevronsUp className="h-5 w-5" />
+          </Button>
+
+          {/* % d'évolution */}
+          <span
+            className={`ml-4 text-sm font-semibold min-w-[70px] text-left ${
+              thirdValueEvolution === null || thirdValueEvolution === 0
+                ? 'text-gray-500'
+                : thirdValueEvolution > 0
+                  ? 'text-green-600'
+                  : 'text-red-600'
+            }`}
+          >
+            {formatEvolution(thirdValueEvolution)}
           </span>
         </div>
       )}

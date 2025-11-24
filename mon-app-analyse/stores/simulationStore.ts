@@ -1,14 +1,15 @@
 import { create } from 'zustand'
 
 /**
- * Interface pour une matière première en valeur (prix + évolution)
+ * Interface pour une matière première en valeur (prix première période + prix dernière période + évolution)
  */
 export interface MPValueItem {
   id: string
   label: string
-  code: string       // Code référence (ex: HE6545)
-  price: number      // Prix en €
-  evolution: number  // Évolution en %
+  code: string           // Code référence (ex: HE6545)
+  priceFirst: number     // Prix première période en €/kg
+  priceLast: number      // Prix dernière période en €/kg
+  evolution: number      // Évolution en %
 }
 
 /**
@@ -50,7 +51,8 @@ interface SimulationState {
   resetToOriginal: () => void
 
   // Actions - Modifications MP Valeur
-  updateMPPrice: (id: string, price: number) => void
+  updateMPPriceFirst: (id: string, price: number) => void
+  updateMPPriceLast: (id: string, price: number) => void
   updateMPEvolution: (id: string, evolution: number) => void
   addMPValue: (mp: MPValueItem) => void
   removeMPValue: (id: string) => void
@@ -123,13 +125,10 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   // Actions - Modifications MP Valeur
-  updateMPPrice: (id: string, price: number) => {
-    console.log('updateMPPrice called - id:', id, 'newPrice:', price)
-    const { simulatedData, originalData } = get()
-    console.log('updateMPPrice - before update, simulatedData price:', simulatedData.mpValues.find(mp => mp.id === id)?.price)
-    console.log('updateMPPrice - originalData price:', originalData.mpValues.find(mp => mp.id === id)?.price)
+  updateMPPriceFirst: (id: string, priceFirst: number) => {
+    const { simulatedData } = get()
     const updatedMPValues = simulatedData.mpValues.map(mp =>
-      mp.id === id ? { ...mp, price } : mp
+      mp.id === id ? { ...mp, priceFirst } : mp
     )
     set({
       simulatedData: {
@@ -137,7 +136,19 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
         mpValues: updatedMPValues,
       }
     })
-    console.log('updateMPPrice - after update, new price:', price)
+  },
+
+  updateMPPriceLast: (id: string, priceLast: number) => {
+    const { simulatedData } = get()
+    const updatedMPValues = simulatedData.mpValues.map(mp =>
+      mp.id === id ? { ...mp, priceLast } : mp
+    )
+    set({
+      simulatedData: {
+        ...simulatedData,
+        mpValues: updatedMPValues,
+      }
+    })
   },
 
   updateMPEvolution: (id: string, evolution: number) => {
