@@ -52,6 +52,7 @@ import {
   Check,
   ChevronDown as ChevronDownIcon,
   ChevronsUpDown,
+  Download,
   Eye,
   Info,
   Search,
@@ -925,6 +926,67 @@ function AnalyseValeurContent() {
     }));
   }, [sortedData, perimetre, filters]);
 
+  // Fonction pour télécharger le tableau en CSV
+  const downloadTableAsCSV = useCallback(() => {
+    // Définir les en-têtes selon le périmètre
+    const headers = [
+      perimetreOptions.find((p) => p.value === perimetre)?.label || '',
+      `Volume (${volumeUnit})`,
+      'MP',
+      'Emballage',
+      perimetre === "Produit" ? "PA" : "CA",
+      perimetre === "Produit" ? "PA théorique" : "CA théorique",
+    ];
+
+    if (perimetre === "Produit") {
+      headers.push("PV", "PV LCL", "Marge PV LCL");
+    }
+
+    headers.push("Opportunité");
+
+    // Créer les lignes de données
+    const rows = dataWithSubLevelCounts.map((row) => {
+      const line = [
+        row.label,
+        row.volume?.[volumeUnit]?.['CAD']?.valeur || 'N/A',
+        row.mpa.valeur,
+        row.mpi.valeur,
+        perimetre === "Produit" && row.paUnitaire ? row.paUnitaire.valeur : row.evoPa.valeur,
+        perimetre === "Produit" && row.coutTheoriqueUnitaire ? row.coutTheoriqueUnitaire.valeur : row.coutTheorique.valeur,
+      ];
+
+      if (perimetre === "Produit") {
+        line.push(
+          row.pv?.valeur || '',
+          row.pvLeclerc?.valeur || '',
+          row.margePvLcl?.valeur || ''
+        );
+      }
+
+      line.push(row.opportunites.valeur);
+
+      return line;
+    });
+
+    // Créer le contenu CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Créer le blob et télécharger
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `analyse-valeur-${perimetre}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [dataWithSubLevelCounts, perimetre, volumeUnit]);
+
   return (
     <main className="w-full px-[50px] py-4">
       {/* Bouton retour */}
@@ -1315,7 +1377,8 @@ function AnalyseValeurContent() {
       )}
 
       {/* FILTRES - Ligne 2 : Filtres disponibles selon le périmètre */}
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2 items-end justify-between">
+        <div className="flex flex-wrap gap-2">
         {/* Filtres hiérarchiques (Marché, Catégorie, etc.) */}
         {hierarchyFilters.map((filterType) => (
           <Card
@@ -1743,6 +1806,16 @@ function AnalyseValeurContent() {
             Réinitialiser
           </Button>
         )}
+        </div>
+
+        {/* Icône téléchargement */}
+        <button
+          onClick={downloadTableAsCSV}
+          className="text-[#0970E6] hover:text-[#075bb3] p-2 transition-colors"
+          title="Télécharger le tableau"
+        >
+          <Download className="w-5 h-5" />
+        </button>
       </div>
 
       {/* TABLEAU */}
