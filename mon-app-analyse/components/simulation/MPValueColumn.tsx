@@ -16,6 +16,8 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
   const simulatedData = useSimulationStore((state) => state.simulatedData)
   const originalData = useSimulationStore((state) => state.originalData)
   const updateMPPrice = useSimulationStore((state) => state.updateMPPrice)
+
+  console.log('MPValueColumn render - originalData.mpValues:', originalData.mpValues.length, 'simulatedData.mpValues:', simulatedData.mpValues.length)
   const updateMPEvolution = useSimulationStore((state) => state.updateMPEvolution)
   const addMPValue = useSimulationStore((state) => state.addMPValue)
   const removeMPValue = useSimulationStore((state) => state.removeMPValue)
@@ -53,15 +55,18 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
         <div className="space-y-1">
           {simulatedData.mpValues.map((mp) => {
             const originalMP = getOriginalMP(mp.id)
+            console.log('MPValueColumn - mp:', mp.id, 'price:', mp.price, 'originalMP:', originalMP, 'originalPrice:', originalMP?.price)
             return (
               <MPRow
                 key={mp.id}
                 label={mp.label}
                 code={mp.code}
                 value={`${mp.price.toFixed(3)}€/kg`}
+                numericValue={mp.price}
                 originalValue={originalMP?.price}
                 valueLabel="Prix"
                 secondValue={`${mp.evolution >= 0 ? '+' : ''}${mp.evolution.toFixed(2)}%`}
+                numericSecondValue={mp.evolution}
                 originalSecondValue={originalMP?.evolution}
                 secondValueLabel="Évol."
                 onIncrement01={() => updateMPPrice(mp.id, mp.price * 1.001)}

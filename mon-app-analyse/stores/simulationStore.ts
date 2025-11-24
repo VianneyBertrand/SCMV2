@@ -124,7 +124,10 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   // Actions - Modifications MP Valeur
   updateMPPrice: (id: string, price: number) => {
-    const { simulatedData } = get()
+    console.log('updateMPPrice called - id:', id, 'newPrice:', price)
+    const { simulatedData, originalData } = get()
+    console.log('updateMPPrice - before update, simulatedData price:', simulatedData.mpValues.find(mp => mp.id === id)?.price)
+    console.log('updateMPPrice - originalData price:', originalData.mpValues.find(mp => mp.id === id)?.price)
     const updatedMPValues = simulatedData.mpValues.map(mp =>
       mp.id === id ? { ...mp, price } : mp
     )
@@ -134,6 +137,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
         mpValues: updatedMPValues,
       }
     })
+    console.log('updateMPPrice - after update, new price:', price)
   },
 
   updateMPEvolution: (id: string, evolution: number) => {
@@ -210,6 +214,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   initializeFromExistingData: (mpValues: MPValueItem[], mpVolumes: MPVolumeItem[]) => {
+    console.log('Store - initializeFromExistingData called with mpValues:', mpValues.length, 'mpVolumes:', mpVolumes.length)
     const originalData = {
       mpValues: JSON.parse(JSON.stringify(mpValues)),
       mpVolumes: JSON.parse(JSON.stringify(mpVolumes)),
@@ -218,6 +223,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       mpValues: JSON.parse(JSON.stringify(mpValues)),
       mpVolumes: JSON.parse(JSON.stringify(mpVolumes)),
     }
+    console.log('Store - setting originalData.mpValues:', originalData.mpValues)
     set({
       originalData,
       simulatedData,

@@ -9,9 +9,11 @@ interface MPRowProps {
   label: string
   code?: string
   value: string | number
+  numericValue?: number  // Valeur numérique réelle pour le calcul d'évolution
   originalValue?: number
   valueLabel?: string
   secondValue?: string | number
+  numericSecondValue?: number  // Valeur numérique réelle pour le calcul d'évolution
   originalSecondValue?: number
   secondValueLabel?: string
   onIncrement01: () => void
@@ -34,9 +36,11 @@ export function MPRow({
   label,
   code,
   value,
+  numericValue,
   originalValue,
   valueLabel,
   secondValue,
+  numericSecondValue,
   originalSecondValue,
   secondValueLabel,
   onIncrement01,
@@ -74,12 +78,20 @@ export function MPRow({
 
   // Calculer le % d'évolution par rapport à la valeur originale
   const calculateEvolution = (current: number, original: number | undefined): number | null => {
-    if (original === undefined || original === 0) return null
+    if (original === undefined) return null
+    // Si l'original est 0, on affiche la différence absolue (en points de %)
+    if (original === 0) {
+      return current - original // = current
+    }
     return ((current - original) / original) * 100
   }
 
-  const valueEvolution = calculateEvolution(parseFloat(valueNumber), originalValue)
-  const secondValueEvolution = calculateEvolution(parseFloat(secondValueNumber), originalSecondValue)
+  // Utiliser numericValue si fourni, sinon parser la valeur affichée
+  const currentValue = numericValue !== undefined ? numericValue : parseFloat(valueNumber)
+  const currentSecondValue = numericSecondValue !== undefined ? numericSecondValue : parseFloat(secondValueNumber)
+
+  const valueEvolution = calculateEvolution(currentValue, originalValue)
+  const secondValueEvolution = calculateEvolution(currentSecondValue, originalSecondValue)
 
   // Formater l'évolution pour l'affichage
   const formatEvolution = (evolution: number | null): string => {
@@ -218,7 +230,10 @@ export function MPRow({
           variant="outline"
           size="sm"
           className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-          onClick={onIncrement01}
+          onClick={() => {
+            console.log('MPRow - ChevronUp clicked for', label)
+            onIncrement01()
+          }}
         >
           <ChevronUp className="h-5 w-5" />
         </Button>

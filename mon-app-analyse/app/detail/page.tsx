@@ -534,10 +534,14 @@ function DetailContent() {
   }, [recetteSubTab])
 
   // Initialiser les données de simulation quand la fenêtre s'ouvre
+  // On attend que les deux listes aient des données avant d'initialiser
   const hasInitializedRef = useRef(false)
   useEffect(() => {
+    console.log('Simulation useEffect - isWindowOpen:', isWindowOpen, 'hasInitialized:', hasInitializedRef.current, 'mpValues:', simulationMPValues.length, 'mpVolumes:', simulationMPVolumes.length)
     if (isWindowOpen && !hasInitializedRef.current) {
-      if (simulationMPValues.length > 0 || simulationMPVolumes.length > 0) {
+      // Initialiser seulement quand les deux listes sont disponibles
+      if (simulationMPValues.length > 0 && simulationMPVolumes.length > 0) {
+        console.log('Initializing simulation data with:', simulationMPValues, simulationMPVolumes)
         initializeFromExistingData(simulationMPValues, simulationMPVolumes)
         hasInitializedRef.current = true
       }

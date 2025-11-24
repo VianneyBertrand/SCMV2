@@ -61,6 +61,7 @@ export function MPVolumeColumn({ availableOptions }: MPVolumeColumnProps) {
                 label={mp.label}
                 code={mp.code}
                 value={`${mp.percentage.toFixed(2)}%`}
+                numericValue={mp.percentage}
                 originalValue={originalMP?.percentage}
                 onIncrement01={() => updateMPVolume(mp.id, mp.percentage + 0.1)}
                 onIncrement1={() => updateMPVolume(mp.id, mp.percentage + 1)}
