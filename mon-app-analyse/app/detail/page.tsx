@@ -37,10 +37,17 @@ import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download, ChevronsUpDown, Rot
 import { SwitchIcon } from "@/components/ui/switch-icon"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useMemo, useState, Suspense } from "react"
+import { useMemo, useState, Suspense, useEffect } from "react"
 import dynamic from 'next/dynamic'
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
+
+// Imports pour la simulation
+import { SimulationButton } from "@/components/simulation/SimulationButton"
+import { SimulationWindow } from "@/components/simulation/SimulationWindow"
+import { SimulationFeedbackBar } from "@/components/simulation/SimulationFeedbackBar"
+import { useSimulationStore } from "@/stores/simulationStore"
+import { extractMPValuesFromChartData, extractMPVolumesFromRecetteData } from "@/lib/utils/simulationHelpers"
 
 // Import Recharts components directly
 import {
@@ -317,6 +324,207 @@ function DetailContent() {
     return data.find(item => item.label === label) || data[0]
   }, [perimetre, label])
 
+  // ============================================
+  // FONCTIONS - Données pour simulation (doivent être avant les useMemo)
+  // ============================================
+
+  // Heatmap selon sous-tab
+  const getCostHeatmapData = () => {
+    switch (costSubTab) {
+      case 'total':
+        const mpaValue = parseFloat(currentItem.mpa.valeur)
+        const mpiValue = parseFloat(currentItem.mpi.valeur)
+        const autreValue = (100 - mpaValue - mpiValue).toFixed(2)
+
+        const getMPAColor = () => {
+          const evoValue = parseFloat(currentItem.mpa.evolution.replace('%', ''))
+          if (evoValue > 2) return 'bg-[#F25056]'
+          if (evoValue >= 1) return 'bg-[#F57A7E]'
+          if (evoValue > 0) return 'bg-[#FFEFEF]'
+          if (evoValue >= -1) return 'bg-[#F0FAF6]'
+          if (evoValue >= -2) return 'bg-[#8EE2BF]'
+          return 'bg-[#2FB67E]'
+        }
+
+        const getMPIColor = () => {
+          const evoValue = parseFloat(currentItem.mpi.evolution.replace('%', ''))
+          if (evoValue > 2) return 'bg-[#F25056]'
+          if (evoValue >= 1) return 'bg-[#F57A7E]'
+          if (evoValue > 0) return 'bg-[#FFEFEF]'
+          if (evoValue >= -1) return 'bg-[#F0FAF6]'
+          if (evoValue >= -2) return 'bg-[#8EE2BF]'
+          return 'bg-[#2FB67E]'
+        }
+
+        return {
+          layout: 'horizontal',
+          type: 'total' as const,
+          items: [
+            { label: 'MP', percentage: currentItem.mpa.valeur, evolution: currentItem.mpa.evolution, color: getMPAColor(), className: 'flex-1', href: '/detail?perimetre=MPA' },
+            { label: 'Emballage', percentage: currentItem.mpi.valeur, evolution: currentItem.mpi.evolution, color: getMPIColor(), className: 'flex-1', href: '/detail?perimetre=MPI' },
+            { label: 'Autre', percentage: `${autreValue}%`, evolution: '+0.00%', color: 'bg-gray-400', className: 'w-1/6', href: '/detail?perimetre=Autre' },
+          ]
+        }
+      case 'mpa':
+        return {
+          layout: 'complex-mpa',
+          type: 'mpa' as const,
+          items: [
+            { label: 'Farine de blé', percentage: '28.34%', categoryPercentage: '58.76%', evolution: '+0.91%', color: 'bg-[#F0FAF6]', href: '/detail?item=farine-ble' },
+            { label: 'Sucre', percentage: '17.35%', categoryPercentage: '35.97%', evolution: '-1.80%', color: 'bg-[#2FB67E]', href: '/detail?item=sucre' },
+            { label: 'Sel', percentage: '6.62%', categoryPercentage: '13.73%', evolution: '+2.10%', color: 'bg-[#F25056]', href: '/detail?item=sel' },
+            { label: 'Lait en poudre', percentage: '4.47%', categoryPercentage: '9.27%', evolution: '+1.50%', color: 'bg-[#F57A7E]', href: '/detail?item=lait' },
+            { label: 'Beurre', percentage: '2.35%', categoryPercentage: '4.87%', evolution: '-1.80%', color: 'bg-[#8EE2BF]', href: '/detail?item=beurre' },
+            { label: 'Huile végétale', percentage: '2.23%', categoryPercentage: '4.62%', evolution: '-0.80%', color: 'bg-[#8EE2BF]', href: '/detail?item=huile' },
+            { label: 'Oeufs', percentage: '1.82%', categoryPercentage: '3.77%', evolution: '-1.80%', color: 'bg-[#F57A7E]', href: '/detail?item=oeufs' },
+          ]
+        }
+      case 'mpi':
+        return {
+          layout: 'complex-mpi',
+          type: 'mpi' as const,
+          items: [
+            { label: 'Carton ondulé', percentage: '22.34%', categoryPercentage: '22.34%', evolution: '+1.20%', color: 'bg-[#F57A7E]', href: '/detail?item=carton-ondule' },
+            { label: 'Polypropylène', percentage: '16.45%', categoryPercentage: '16.45%', evolution: '-2.30%', color: 'bg-[#2FB67E]', href: '/detail?item=polypropylene' },
+            { label: 'Polyéthylène', percentage: '14.28%', categoryPercentage: '14.28%', evolution: '+0.85%', color: 'bg-[#F0FAF6]', href: '/detail?item=polyethylene' },
+            { label: 'Aluminium', percentage: '11.92%', categoryPercentage: '11.92%', evolution: '+3.15%', color: 'bg-[#F25056]', href: '/detail?item=aluminium' },
+            { label: 'Verre', percentage: '9.67%', categoryPercentage: '9.67%', evolution: '-1.45%', color: 'bg-[#8EE2BF]', href: '/detail?item=verre' },
+            { label: 'Acier', percentage: '8.53%', categoryPercentage: '8.53%', evolution: '+2.70%', color: 'bg-[#F25056]', href: '/detail?item=acier' },
+            { label: 'Papier kraft', percentage: '7.21%', categoryPercentage: '7.21%', evolution: '-0.65%', color: 'bg-[#F0FAF6]', href: '/detail?item=papier-kraft' },
+            { label: 'Polystyrène expansé', percentage: '4.89%', categoryPercentage: '4.89%', evolution: '+1.90%', color: 'bg-[#F57A7E]', href: '/detail?item=polystyrene-expanse' },
+            { label: 'PET', percentage: '2.76%', categoryPercentage: '2.76%', evolution: '-3.40%', color: 'bg-[#2FB67E]', href: '/detail?item=pet' },
+            { label: 'Étiquettes papier', percentage: '1.95%', categoryPercentage: '1.95%', evolution: '+0.55%', color: 'bg-[#F0FAF6]', href: '/detail?item=etiquettes-papier' },
+          ]
+        }
+    }
+  }
+
+  // Données graphique
+  const getChartData = () => {
+    const baseData = [
+      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'carton-ondule': 320, 'polypropylene': 290, 'polyethylene': 270, 'aluminium': 250, 'verre': 230, 'acier': 210, 'papier-kraft': 190, 'polystyrene-expanse': 170, 'pet': 150, 'etiquettes-papier': 130 },
+      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 210, 'amidon-mais': 215, 'gelatine': 208, 'presure': 212, 'ferments-lactiques': 218, 'creme-fraiche': 222, 'carton-ondule': 315, 'polypropylene': 285, 'polyethylene': 265, 'aluminium': 245, 'verre': 225, 'acier': 205, 'papier-kraft': 185, 'polystyrene-expanse': 165, 'pet': 145, 'etiquettes-papier': 125 },
+      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'levure': 205, 'amidon-mais': 210, 'gelatine': 203, 'presure': 207, 'ferments-lactiques': 213, 'creme-fraiche': 217, 'carton-ondule': 310, 'polypropylene': 280, 'polyethylene': 260, 'aluminium': 240, 'verre': 220, 'acier': 202, 'papier-kraft': 183, 'polystyrene-expanse': 163, 'pet': 142, 'etiquettes-papier': 123 },
+      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'levure': 250, 'amidon-mais': 255, 'gelatine': 248, 'presure': 252, 'ferments-lactiques': 258, 'creme-fraiche': 262, 'carton-ondule': 328, 'polypropylene': 298, 'polyethylene': 275, 'aluminium': 255, 'verre': 235, 'acier': 215, 'papier-kraft': 195, 'polystyrene-expanse': 175, 'pet': 155, 'etiquettes-papier': 135 },
+      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'levure': 280, 'amidon-mais': 285, 'gelatine': 278, 'presure': 282, 'ferments-lactiques': 288, 'creme-fraiche': 292, 'carton-ondule': 335, 'polypropylene': 305, 'polyethylene': 282, 'aluminium': 260, 'verre': 240, 'acier': 220, 'papier-kraft': 200, 'polystyrene-expanse': 180, 'pet': 160, 'etiquettes-papier': 140 },
+      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'levure': 290, 'amidon-mais': 295, 'gelatine': 288, 'presure': 292, 'ferments-lactiques': 298, 'creme-fraiche': 302, 'carton-ondule': 340, 'polypropylene': 310, 'polyethylene': 287, 'aluminium': 265, 'verre': 245, 'acier': 223, 'papier-kraft': 203, 'polystyrene-expanse': 183, 'pet': 162, 'etiquettes-papier': 142 },
+      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'carton-ondule': 333, 'polypropylene': 303, 'polyethylene': 280, 'aluminium': 258, 'verre': 238, 'acier': 218, 'papier-kraft': 198, 'polystyrene-expanse': 178, 'pet': 158, 'etiquettes-papier': 138 },
+      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'carton-ondule': 325, 'polypropylene': 295, 'polyethylene': 273, 'aluminium': 252, 'verre': 232, 'acier': 212, 'papier-kraft': 192, 'polystyrene-expanse': 172, 'pet': 152, 'etiquettes-papier': 132 },
+      { date: '2025-04', MPA: 430, MPI: 310, 'farine-ble': 405, 'sucre': 395, 'sel': 445, 'lait': 415, 'beurre': 325, 'huile': 335, 'oeufs': 315, 'levure': 305, 'amidon-mais': 310, 'gelatine': 303, 'presure': 307, 'ferments-lactiques': 313, 'creme-fraiche': 317, 'carton-ondule': 338, 'polypropylene': 308, 'polyethylene': 285, 'aluminium': 263, 'verre': 243, 'acier': 221, 'papier-kraft': 201, 'polystyrene-expanse': 181, 'pet': 159, 'etiquettes-papier': 139 },
+    ]
+
+    if (base100) {
+      const firstValues: Record<string, number> = {}
+      Object.keys(baseData[0]).forEach(key => {
+        if (key !== 'date') {
+          firstValues[key] = baseData[0][key as keyof typeof baseData[0]] as number
+        }
+      })
+
+      return baseData.map(item => {
+        const transformed: any = { date: item.date }
+        Object.keys(item).forEach(key => {
+          if (key !== 'date') {
+            transformed[key] = ((item[key as keyof typeof item] as number) / firstValues[key]) * 100
+          }
+        })
+        return transformed
+      })
+    }
+
+    return baseData
+  }
+
+  // Données Recette selon sous-tab
+  const getRecetteData = () => {
+    switch (recetteSubTab) {
+      case 'mpa':
+        return [
+          { name: 'Eau', code: 'HE65', percentage: 25.43 },
+          { name: 'Farine de blé', code: 'FE23', percentage: 20.15 },
+          { name: 'Sucre', code: 'FE23', percentage: 17.24 },
+          { name: 'Sel', code: 'FR34', percentage: 5.46 },
+          { name: 'Lait en poudre', code: 'FR34', percentage: 5.46 },
+          { name: 'Beurre', code: 'FR34', percentage: 5.46 },
+          { name: 'Huile végétale', code: 'FR34', percentage: 5.46 },
+          { name: 'Œufs', code: 'FR34', percentage: 5.46 },
+          { name: 'Levure', code: 'FR34', percentage: 5.46 },
+          { name: 'Amidon de maïs', code: 'FR34', percentage: 5.46 },
+          { name: 'Gélatine', code: 'FR34', percentage: 5.46 },
+          { name: 'Présure', code: 'FR34', percentage: 5.46 },
+          { name: 'Ferments lactiques', code: 'FR34', percentage: 5.46 },
+          { name: 'Crème fraîche', code: 'FR34', percentage: 5.46 },
+        ].sort((a, b) => b.percentage - a.percentage)
+      case 'mpi':
+        return [
+          { name: 'Carton ondulé', code: 'MP01', percentage: 18.5 },
+          { name: 'Polypropylène', code: 'MP02', percentage: 14.2 },
+          { name: 'Polyéthylène', code: 'MP03', percentage: 12.8 },
+          { name: 'Aluminium', code: 'MP04', percentage: 10.3 },
+          { name: 'Verre', code: 'MP05', percentage: 8.7 },
+          { name: 'Acier', code: 'MP06', percentage: 7.9 },
+          { name: 'Papier kraft', code: 'MP07', percentage: 6.5 },
+          { name: 'Polystyrène expansé', code: 'MP08', percentage: 5.4 },
+          { name: 'PET', code: 'MP09', percentage: 4.8 },
+          { name: 'Étiquettes papier', code: 'MP10', percentage: 3.6 },
+          { name: 'Encre d&apos;impression', code: 'MP11', percentage: 2.9 },
+          { name: 'Colle alimentaire', code: 'MP12', percentage: 2.1 },
+          { name: 'Palettes bois', code: 'MP13', percentage: 1.5 },
+          { name: 'Film étirable', code: 'MP14', percentage: 0.6 },
+          { name: 'Ruban adhésif', code: 'MP15', percentage: 0.2 },
+        ].sort((a, b) => b.percentage - a.percentage)
+      default:
+        return []
+    }
+  }
+
+  // Titre du graphique selon sous-tab
+  const getChartTitle = () => {
+    switch (costSubTab) {
+      case 'total':
+        return 'Evolution du cours des MPA et MPI'
+      case 'mpa':
+        return 'Evolution du cours des MPA'
+      case 'mpi':
+        return 'Evolution du cours des MPI'
+    }
+  }
+
+  // Store de simulation
+  const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
+  const initializeFromExistingData = useSimulationStore((state) => state.initializeFromExistingData)
+
+  // Préparer les données de simulation (mémorisées)
+  const simulationMPValues = useMemo(() => {
+    try {
+      const chartData = getChartData()
+      const heatmapData = getCostHeatmapData()
+      if (!chartData || !heatmapData) return []
+      return extractMPValuesFromChartData(chartData, heatmapData)
+    } catch (error) {
+      console.error('Error extracting MP values:', error)
+      return []
+    }
+  }, [costSubTab, base100, currentItem])
+
+  const simulationMPVolumes = useMemo(() => {
+    try {
+      const recetteData = getRecetteData()
+      if (!recetteData) return []
+      return extractMPVolumesFromRecetteData(recetteData)
+    } catch (error) {
+      console.error('Error extracting MP volumes:', error)
+      return []
+    }
+  }, [recetteSubTab])
+
+  // Initialiser les données de simulation quand la fenêtre s'ouvre
+  useEffect(() => {
+    if (isWindowOpen && simulationMPValues.length > 0 && simulationMPVolumes.length > 0) {
+      initializeFromExistingData(simulationMPValues, simulationMPVolumes)
+    }
+  }, [isWindowOpen, simulationMPValues, simulationMPVolumes, initializeFromExistingData])
+
   // Calculer les sous-niveaux pour les liens de navigation
   const navigationLinks = useMemo(() => {
     if (!currentItem) return []
@@ -544,111 +752,11 @@ function DetailContent() {
   // FONCTIONS - Structure de coût
   // ============================================
 
-  // Heatmap selon sous-tab
-  const getCostHeatmapData = () => {
-    switch (costSubTab) {
-      case 'total':
-        const mpaValue = parseFloat(currentItem.mpa.valeur)
-        const mpiValue = parseFloat(currentItem.mpi.valeur)
-        const autreValue = (100 - mpaValue - mpiValue).toFixed(2)
-
-        const getMPAColor = () => {
-          const evoValue = parseFloat(currentItem.mpa.evolution.replace('%', ''))
-          if (evoValue > 2) return 'bg-[#F25056]'
-          if (evoValue >= 1) return 'bg-[#F57A7E]'
-          if (evoValue > 0) return 'bg-[#FFEFEF]'
-          if (evoValue >= -1) return 'bg-[#F0FAF6]'
-          if (evoValue >= -2) return 'bg-[#8EE2BF]'
-          return 'bg-[#2FB67E]'
-        }
-
-        const getMPIColor = () => {
-          const evoValue = parseFloat(currentItem.mpi.evolution.replace('%', ''))
-          if (evoValue > 2) return 'bg-[#F25056]'
-          if (evoValue >= 1) return 'bg-[#F57A7E]'
-          if (evoValue > 0) return 'bg-[#FFEFEF]'
-          if (evoValue >= -1) return 'bg-[#F0FAF6]'
-          if (evoValue >= -2) return 'bg-[#8EE2BF]'
-          return 'bg-[#2FB67E]'
-        }
-
-        return {
-          layout: 'horizontal',
-          type: 'total' as const,
-          items: [
-            { label: 'MP', percentage: currentItem.mpa.valeur, evolution: currentItem.mpa.evolution, color: getMPAColor(), className: 'flex-1', href: '/detail?perimetre=MPA' },
-            { label: 'Emballage', percentage: currentItem.mpi.valeur, evolution: currentItem.mpi.evolution, color: getMPIColor(), className: 'flex-1', href: '/detail?perimetre=MPI' },
-            { label: 'Autre', percentage: `${autreValue}%`, evolution: '+0.00%', color: 'bg-gray-400', className: 'w-1/6', href: '/detail?perimetre=Autre' },
-          ]
-        }
-      case 'mpa':
-        return {
-          layout: 'complex-mpa',
-          type: 'mpa' as const,
-          items: [
-            { label: 'Farine de blé', percentage: '28.34%', categoryPercentage: '58.76%', evolution: '+0.91%', color: 'bg-[#F0FAF6]', href: '/detail?item=farine-ble' },
-            { label: 'Sucre', percentage: '17.35%', categoryPercentage: '35.97%', evolution: '-1.80%', color: 'bg-[#2FB67E]', href: '/detail?item=sucre' },
-            { label: 'Sel', percentage: '6.62%', categoryPercentage: '13.73%', evolution: '+2.10%', color: 'bg-[#F25056]', href: '/detail?item=sel' },
-            { label: 'Lait en poudre', percentage: '4.47%', categoryPercentage: '9.27%', evolution: '+1.50%', color: 'bg-[#F57A7E]', href: '/detail?item=lait' },
-            { label: 'Beurre', percentage: '2.35%', categoryPercentage: '4.87%', evolution: '-1.80%', color: 'bg-[#8EE2BF]', href: '/detail?item=beurre' },
-            { label: 'Huile végétale', percentage: '2.23%', categoryPercentage: '4.62%', evolution: '-0.80%', color: 'bg-[#8EE2BF]', href: '/detail?item=huile' },
-            { label: 'Oeufs', percentage: '1.82%', categoryPercentage: '3.77%', evolution: '-1.80%', color: 'bg-[#F57A7E]', href: '/detail?item=oeufs' },
-          ]
-        }
-      case 'mpi':
-        return {
-          layout: 'complex-mpi',
-          type: 'mpi' as const,
-          items: [
-            { label: 'Carton ondulé', percentage: '22.34%', categoryPercentage: '22.34%', evolution: '+1.20%', color: 'bg-[#F57A7E]', href: '/detail?item=carton-ondule' },
-            { label: 'Polypropylène', percentage: '16.45%', categoryPercentage: '16.45%', evolution: '-2.30%', color: 'bg-[#2FB67E]', href: '/detail?item=polypropylene' },
-            { label: 'Polyéthylène', percentage: '14.28%', categoryPercentage: '14.28%', evolution: '+0.85%', color: 'bg-[#F0FAF6]', href: '/detail?item=polyethylene' },
-            { label: 'Aluminium', percentage: '11.92%', categoryPercentage: '11.92%', evolution: '+3.15%', color: 'bg-[#F25056]', href: '/detail?item=aluminium' },
-            { label: 'Verre', percentage: '9.67%', categoryPercentage: '9.67%', evolution: '-1.45%', color: 'bg-[#8EE2BF]', href: '/detail?item=verre' },
-            { label: 'Acier', percentage: '8.53%', categoryPercentage: '8.53%', evolution: '+2.70%', color: 'bg-[#F25056]', href: '/detail?item=acier' },
-            { label: 'Papier kraft', percentage: '7.21%', categoryPercentage: '7.21%', evolution: '-0.65%', color: 'bg-[#F0FAF6]', href: '/detail?item=papier-kraft' },
-            { label: 'Polystyrène expansé', percentage: '4.89%', categoryPercentage: '4.89%', evolution: '+1.90%', color: 'bg-[#F57A7E]', href: '/detail?item=polystyrene-expanse' },
-            { label: 'PET', percentage: '2.76%', categoryPercentage: '2.76%', evolution: '-3.40%', color: 'bg-[#2FB67E]', href: '/detail?item=pet' },
-            { label: 'Étiquettes papier', percentage: '1.95%', categoryPercentage: '1.95%', evolution: '+0.55%', color: 'bg-[#F0FAF6]', href: '/detail?item=etiquettes-papier' },
-          ]
-        }
-    }
-  }
-
-  // Données graphique
-  const getChartData = () => {
-    const baseData = [
-      { date: '2024-04', MPA: 280, MPI: 250, 'farine-ble': 270, 'sucre': 270, 'sel': 380, 'lait': 350, 'beurre': 250, 'huile': 260, 'oeufs': 240, 'levure': 230, 'amidon-mais': 235, 'gelatine': 228, 'presure': 232, 'ferments-lactiques': 238, 'creme-fraiche': 242, 'carton-ondule': 320, 'polypropylene': 290, 'polyethylene': 270, 'aluminium': 250, 'verre': 230, 'acier': 210, 'papier-kraft': 190, 'polystyrene-expanse': 170, 'pet': 150, 'etiquettes-papier': 130 },
-      { date: '2024-05', MPA: 240, MPI: 230, 'farine-ble': 250, 'sucre': 240, 'sel': 360, 'lait': 330, 'beurre': 230, 'huile': 245, 'oeufs': 220, 'levure': 210, 'amidon-mais': 215, 'gelatine': 208, 'presure': 212, 'ferments-lactiques': 218, 'creme-fraiche': 222, 'carton-ondule': 315, 'polypropylene': 285, 'polyethylene': 265, 'aluminium': 245, 'verre': 225, 'acier': 205, 'papier-kraft': 185, 'polystyrene-expanse': 165, 'pet': 145, 'etiquettes-papier': 125 },
-      { date: '2024-06', MPA: 240, MPI: 210, 'farine-ble': 245, 'sucre': 235, 'sel': 355, 'lait': 325, 'beurre': 225, 'huile': 240, 'oeufs': 215, 'levure': 205, 'amidon-mais': 210, 'gelatine': 203, 'presure': 207, 'ferments-lactiques': 213, 'creme-fraiche': 217, 'carton-ondule': 310, 'polypropylene': 280, 'polyethylene': 260, 'aluminium': 240, 'verre': 220, 'acier': 202, 'papier-kraft': 183, 'polystyrene-expanse': 163, 'pet': 142, 'etiquettes-papier': 123 },
-      { date: '2024-07', MPA: 320, MPI: 290, 'farine-ble': 310, 'sucre': 305, 'sel': 390, 'lait': 360, 'beurre': 270, 'huile': 280, 'oeufs': 260, 'levure': 250, 'amidon-mais': 255, 'gelatine': 248, 'presure': 252, 'ferments-lactiques': 258, 'creme-fraiche': 262, 'carton-ondule': 328, 'polypropylene': 298, 'polyethylene': 275, 'aluminium': 255, 'verre': 235, 'acier': 215, 'papier-kraft': 195, 'polystyrene-expanse': 175, 'pet': 155, 'etiquettes-papier': 135 },
-      { date: '2024-08', MPA: 380, MPI: 340, 'farine-ble': 360, 'sucre': 350, 'sel': 420, 'lait': 390, 'beurre': 300, 'huile': 310, 'oeufs': 290, 'levure': 280, 'amidon-mais': 285, 'gelatine': 278, 'presure': 282, 'ferments-lactiques': 288, 'creme-fraiche': 292, 'carton-ondule': 335, 'polypropylene': 305, 'polyethylene': 282, 'aluminium': 260, 'verre': 240, 'acier': 220, 'papier-kraft': 200, 'polystyrene-expanse': 180, 'pet': 160, 'etiquettes-papier': 140 },
-      { date: '2025-01', MPA: 400, MPI: 320, 'farine-ble': 380, 'sucre': 370, 'sel': 430, 'lait': 400, 'beurre': 310, 'huile': 320, 'oeufs': 300, 'levure': 290, 'amidon-mais': 295, 'gelatine': 288, 'presure': 292, 'ferments-lactiques': 298, 'creme-fraiche': 302, 'carton-ondule': 340, 'polypropylene': 310, 'polyethylene': 287, 'aluminium': 265, 'verre': 245, 'acier': 223, 'papier-kraft': 203, 'polystyrene-expanse': 183, 'pet': 162, 'etiquettes-papier': 142 },
-      { date: '2025-02', MPA: 380, MPI: 290, 'farine-ble': 365, 'sucre': 360, 'sel': 415, 'lait': 385, 'beurre': 295, 'huile': 305, 'oeufs': 285, 'levure': 275, 'amidon-mais': 280, 'gelatine': 273, 'presure': 277, 'ferments-lactiques': 283, 'creme-fraiche': 287, 'carton-ondule': 333, 'polypropylene': 303, 'polyethylene': 280, 'aluminium': 258, 'verre': 238, 'acier': 218, 'papier-kraft': 198, 'polystyrene-expanse': 178, 'pet': 158, 'etiquettes-papier': 138 },
-      { date: '2025-03', MPA: 410, MPI: 280, 'farine-ble': 390, 'sucre': 380, 'sel': 435, 'lait': 405, 'beurre': 315, 'huile': 325, 'oeufs': 305, 'levure': 295, 'amidon-mais': 300, 'gelatine': 293, 'presure': 297, 'ferments-lactiques': 303, 'creme-fraiche': 307, 'carton-ondule': 325, 'polypropylene': 295, 'polyethylene': 273, 'aluminium': 252, 'verre': 232, 'acier': 212, 'papier-kraft': 192, 'polystyrene-expanse': 172, 'pet': 152, 'etiquettes-papier': 132 },
-      { date: '2025-04', MPA: 430, MPI: 310, 'farine-ble': 405, 'sucre': 395, 'sel': 445, 'lait': 415, 'beurre': 325, 'huile': 335, 'oeufs': 315, 'levure': 305, 'amidon-mais': 310, 'gelatine': 303, 'presure': 307, 'ferments-lactiques': 313, 'creme-fraiche': 317, 'carton-ondule': 338, 'polypropylene': 308, 'polyethylene': 285, 'aluminium': 263, 'verre': 243, 'acier': 221, 'papier-kraft': 201, 'polystyrene-expanse': 181, 'pet': 159, 'etiquettes-papier': 139 },
-    ]
-
-    if (base100) {
-      const firstValues: Record<string, number> = {}
-      Object.keys(baseData[0]).forEach(key => {
-        if (key !== 'date') {
-          firstValues[key] = baseData[0][key as keyof typeof baseData[0]] as number
-        }
-      })
-
-      return baseData.map(item => {
-        const transformed: any = { date: item.date }
-        Object.keys(item).forEach(key => {
-          if (key !== 'date') {
-            transformed[key] = ((item[key as keyof typeof item] as number) / firstValues[key]) * 100
-          }
-        })
-        return transformed
-      })
-    }
-
-    return baseData
+  // Fonction pour réinitialiser la sélection des séries
+  const unselectAll = () => {
+    // Cette fonction permettrait de déselectionner toutes les séries du graphique
+    // Pour l'instant, elle est vide car la gestion des séries sélectionnées
+    // n'est pas encore implémentée
   }
 
   // Données tableau selon sous-tab
@@ -657,621 +765,43 @@ function DetailContent() {
       case 'total':
         return [
           {
-            id: 'MPA',
-            name: 'MP',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '49.25%',
-            cost: '0.123M€',
-            partCost: '48.23%',
-            evolution: '+3.20%',
-            impact: '+2.20%',
-            color: '#E91E63'
+            mp: 'MP',
+            periode1: currentItem.mpa.valeur,
+            periode2: currentItem.mpa.valeur,
+            periode3: currentItem.mpa.valeur,
+            evolution: currentItem.mpa.evolution
           },
           {
-            id: 'MPI',
-            name: 'Emballage',
-            volume: '7032.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '50.75%',
-            cost: '0.083M€',
-            partCost: '27.43%',
-            evolution: '-1.80%',
-            impact: '-0.80%',
-            color: '#00BCD4'
-          },
-          {
-            id: 'Autre',
-            name: 'Autre',
-            volume: '',
-            volumeUVC: '',
-            partVolume: '',
-            cost: '0.049M€',
-            partCost: '24.34%',
-            evolution: '+0.00%',
-            impact: '',
-            color: '#4CAF50'
+            mp: 'Emballage',
+            periode1: currentItem.mpi.valeur,
+            periode2: currentItem.mpi.valeur,
+            periode3: currentItem.mpi.valeur,
+            evolution: currentItem.mpi.evolution
           },
         ]
       case 'mpa':
         return [
-          {
-            id: 'farine-ble',
-            name: 'Farine de blé',
-            subLabel: 'HRTZERF',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '20.15%',
-            cost: '0.035M€',
-            partCostTotal: '22.34%',
-            partCostMPA: '34.34%',
-            evolution: '+0.91%',
-            impactTotal: '+0.41%',
-            color: '#E91E63'
-          },
-          {
-            id: 'sucre',
-            name: 'Sucre',
-            subLabel: 'HRTZERF',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '20.15%',
-            cost: '0.035M€',
-            partCostTotal: '22.34%',
-            partCostMPA: '22.34%',
-            evolution: '+0.91%',
-            impactTotal: '+0.31%',
-            color: '#00BCD4'
-          },
-          {
-            id: 'sel',
-            name: 'Sel',
-            subLabel: 'HRTZERF',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '20.15%',
-            cost: '0.035M€',
-            partCostTotal: '22.34%',
-            partCostMPA: '22.34%',
-            evolution: '+0.91%',
-            impactTotal: '+0.23%',
-            color: '#4CAF50'
-          },
-          {
-            id: 'lait',
-            name: 'Lait en poudre',
-            subLabel: 'HRTZERF',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '20.15%',
-            cost: '0.035M€',
-            partCostTotal: '22.34%',
-            partCostMPA: '22.34%',
-            evolution: '+0.91%',
-            impactTotal: '+0.1%',
-            color: '#FF9800'
-          },
-          {
-            id: 'beurre',
-            name: 'Beurre',
-            subLabel: 'HRTZERF',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '20.15%',
-            cost: '0.035M€',
-            partCostTotal: '22.34%',
-            partCostMPA: '22.34%',
-            evolution: '+0.91%',
-            impactTotal: '+0.21%',
-            color: '#9C27B0'
-          },
-          {
-            id: 'huile',
-            name: 'Huile végétale',
-            subLabel: 'HRTZERF',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '20.15%',
-            cost: '0.035M€',
-            partCostTotal: '22.34%',
-            partCostMPA: '22.34%',
-            evolution: '+0.91%',
-            impactTotal: '+0.21%',
-            color: '#607D8B'
-          },
-          {
-            id: 'oeufs',
-            name: 'Oeufs',
-            subLabel: 'HRTZERF',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '20.15%',
-            cost: '0.035M€',
-            partCostTotal: '22.34%',
-            partCostMPA: '22.34%',
-            evolution: '+0.91%',
-            impactTotal: '+0.21%',
-            color: '#795548'
-          },
-          {
-            id: 'levure',
-            name: 'Levure',
-            subLabel: 'FR34',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '5.46%',
-            cost: '0.035M€',
-            partCostTotal: '5.46%',
-            partCostMPA: '5.46%',
-            evolution: '+0.91%',
-            impactTotal: '+0.05%',
-            color: '#FFEB3B'
-          },
-          {
-            id: 'amidon-mais',
-            name: 'Amidon de maïs',
-            subLabel: 'FR34',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '5.46%',
-            cost: '0.035M€',
-            partCostTotal: '5.46%',
-            partCostMPA: '5.46%',
-            evolution: '+0.91%',
-            impactTotal: '+0.05%',
-            color: '#FFC107'
-          },
-          {
-            id: 'gelatine',
-            name: 'Gélatine',
-            subLabel: 'FR34',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '5.46%',
-            cost: '0.035M€',
-            partCostTotal: '5.46%',
-            partCostMPA: '5.46%',
-            evolution: '+0.91%',
-            impactTotal: '+0.05%',
-            color: '#FF5722'
-          },
-          {
-            id: 'presure',
-            name: 'Présure',
-            subLabel: 'FR34',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '5.46%',
-            cost: '0.035M€',
-            partCostTotal: '5.46%',
-            partCostMPA: '5.46%',
-            evolution: '+0.91%',
-            impactTotal: '+0.05%',
-            color: '#3F51B5'
-          },
-          {
-            id: 'ferments-lactiques',
-            name: 'Ferments lactiques',
-            subLabel: 'FR34',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '5.46%',
-            cost: '0.035M€',
-            partCostTotal: '5.46%',
-            partCostMPA: '5.46%',
-            evolution: '+0.91%',
-            impactTotal: '+0.05%',
-            color: '#009688'
-          },
-          {
-            id: 'creme-fraiche',
-            name: 'Crème fraîche',
-            subLabel: 'FR34',
-            volume: '7023.42T',
-            volumeUVC: '258 UVC',
-            partVolume: '5.46%',
-            cost: '0.035M€',
-            partCostTotal: '5.46%',
-            partCostMPA: '5.46%',
-            evolution: '+0.91%',
-            impactTotal: '+0.05%',
-            color: '#8BC34A'
-          },
+          { mp: 'Farine de blé', periode1: '28.34%', periode2: '27.82%', periode3: '28.34%', evolution: '+0.91%' },
+          { mp: 'Sucre', periode1: '17.35%', periode2: '18.12%', periode3: '17.35%', evolution: '-1.80%' },
+          { mp: 'Sel', periode1: '6.62%', periode2: '6.42%', periode3: '6.62%', evolution: '+2.10%' },
+          { mp: 'Lait en poudre', periode1: '4.47%', periode2: '4.35%', periode3: '4.47%', evolution: '+1.50%' },
+          { mp: 'Beurre', periode1: '2.35%', periode2: '2.48%', periode3: '2.35%', evolution: '-1.80%' },
+          { mp: 'Huile végétale', periode1: '2.23%', periode2: '2.31%', periode3: '2.23%', evolution: '-0.80%' },
+          { mp: 'Oeufs', periode1: '1.82%', periode2: '1.94%', periode3: '1.82%', evolution: '-1.80%' },
         ]
       case 'mpi':
         return [
-          // 10 emballages cochés (affichés dans le graphique)
-          {
-            id: 'carton-ondule',
-            name: 'Carton ondulé',
-            subLabel: 'MP01',
-            volume: '1298.5T',
-            volumeUVC: '4850 UVC',
-            partVolume: '18.5%',
-            cost: '0.067M€',
-            partCostTotal: '22.34%',
-            partCostMPI: '33.5%',
-            evolution: '+1.20%',
-            impactTotal: '+0.27%',
-            color: '#FF6B6B',
-            isMain: true
-          },
-          {
-            id: 'polypropylene',
-            name: 'Polypropylène',
-            subLabel: 'MP02',
-            volume: '996.6T',
-            volumeUVC: '3720 UVC',
-            partVolume: '14.2%',
-            cost: '0.049M€',
-            partCostTotal: '16.45%',
-            partCostMPI: '24.68%',
-            evolution: '-2.30%',
-            impactTotal: '-0.38%',
-            color: '#4ECDC4',
-            isMain: true
-          },
-          {
-            id: 'polyethylene',
-            name: 'Polyéthylène',
-            subLabel: 'MP03',
-            volume: '898.2T',
-            volumeUVC: '3350 UVC',
-            partVolume: '12.8%',
-            cost: '0.043M€',
-            partCostTotal: '14.28%',
-            partCostMPI: '21.42%',
-            evolution: '+0.85%',
-            impactTotal: '+0.12%',
-            color: '#45B7D1',
-            isMain: true
-          },
-          {
-            id: 'aluminium',
-            name: 'Aluminium',
-            subLabel: 'MP04',
-            volume: '722.6T',
-            volumeUVC: '2695 UVC',
-            partVolume: '10.3%',
-            cost: '0.036M€',
-            partCostTotal: '11.92%',
-            partCostMPI: '17.88%',
-            evolution: '+3.15%',
-            impactTotal: '+0.38%',
-            color: '#F7B731',
-            isMain: true
-          },
-          {
-            id: 'verre',
-            name: 'Verre',
-            subLabel: 'MP05',
-            volume: '610.3T',
-            volumeUVC: '2275 UVC',
-            partVolume: '8.7%',
-            cost: '0.029M€',
-            partCostTotal: '9.67%',
-            partCostMPI: '14.51%',
-            evolution: '-1.45%',
-            impactTotal: '-0.14%',
-            color: '#5F27CD',
-            isMain: true
-          },
-          {
-            id: 'acier',
-            name: 'Acier',
-            subLabel: 'MP06',
-            volume: '554.5T',
-            volumeUVC: '2070 UVC',
-            partVolume: '7.9%',
-            cost: '0.026M€',
-            partCostTotal: '8.53%',
-            partCostMPI: '12.80%',
-            evolution: '+2.70%',
-            impactTotal: '+0.23%',
-            color: '#00D2D3',
-            isMain: true
-          },
-          {
-            id: 'papier-kraft',
-            name: 'Papier kraft',
-            subLabel: 'MP07',
-            volume: '456.1T',
-            volumeUVC: '1700 UVC',
-            partVolume: '6.5%',
-            cost: '0.022M€',
-            partCostTotal: '7.21%',
-            partCostMPI: '10.82%',
-            evolution: '-0.65%',
-            impactTotal: '-0.05%',
-            color: '#FD79A8',
-            isMain: true
-          },
-          {
-            id: 'polystyrene-expanse',
-            name: 'Polystyrène expansé',
-            subLabel: 'MP08',
-            volume: '379.0T',
-            volumeUVC: '1415 UVC',
-            partVolume: '5.4%',
-            cost: '0.015M€',
-            partCostTotal: '4.89%',
-            partCostMPI: '7.34%',
-            evolution: '+1.90%',
-            impactTotal: '+0.09%',
-            color: '#A29BFE',
-            isMain: true
-          },
-          {
-            id: 'pet',
-            name: 'PET',
-            subLabel: 'MP09',
-            volume: '336.8T',
-            volumeUVC: '1255 UVC',
-            partVolume: '4.8%',
-            cost: '0.008M€',
-            partCostTotal: '2.76%',
-            partCostMPI: '4.14%',
-            evolution: '-3.40%',
-            impactTotal: '-0.09%',
-            color: '#6C5CE7',
-            isMain: true
-          },
-          {
-            id: 'etiquettes-papier',
-            name: 'Étiquettes papier',
-            subLabel: 'MP10',
-            volume: '252.6T',
-            volumeUVC: '940 UVC',
-            partVolume: '3.6%',
-            cost: '0.006M€',
-            partCostTotal: '1.95%',
-            partCostMPI: '2.93%',
-            evolution: '+0.55%',
-            impactTotal: '+0.01%',
-            color: '#FD79A8',
-            isMain: true
-          },
-          // 10 emballages décochés (pas dans le graphique)
-          {
-            id: 'bouchons-plastique',
-            name: 'Bouchons plastique',
-            subLabel: 'MP11',
-            volume: '203.5T',
-            volumeUVC: '760 UVC',
-            partVolume: '2.9%',
-            cost: '0.005M€',
-            partCostTotal: '1.67%',
-            partCostMPI: '2.51%',
-            evolution: '+1.25%',
-            impactTotal: '+0.02%',
-            color: '#74B9FF',
-            isMain: true
-          },
-          {
-            id: 'film-etirable',
-            name: 'Film étirable',
-            subLabel: 'MP12',
-            volume: '161.4T',
-            volumeUVC: '602 UVC',
-            partVolume: '2.3%',
-            cost: '0.004M€',
-            partCostTotal: '1.42%',
-            partCostMPI: '2.13%',
-            evolution: '-0.95%',
-            impactTotal: '-0.01%',
-            color: '#A29BFE',
-            isMain: true
-          },
-          {
-            id: 'encres-impression',
-            name: "Encres d'impression",
-            subLabel: 'MP13',
-            volume: '126.3T',
-            volumeUVC: '470 UVC',
-            partVolume: '1.8%',
-            cost: '0.004M€',
-            partCostTotal: '1.28%',
-            partCostMPI: '1.92%',
-            evolution: '+2.10%',
-            impactTotal: '+0.03%',
-            color: '#FF7675',
-            isMain: true
-          },
-          {
-            id: 'colles-adhesifs',
-            name: 'Colles et adhésifs',
-            subLabel: 'MP14',
-            volume: '105.2T',
-            volumeUVC: '392 UVC',
-            partVolume: '1.5%',
-            cost: '0.003M€',
-            partCostTotal: '1.15%',
-            partCostMPI: '1.73%',
-            evolution: '+0.75%',
-            impactTotal: '+0.01%',
-            color: '#FDCB6E',
-            isMain: true
-          },
-          {
-            id: 'ruban-adhesif',
-            name: 'Ruban adhésif',
-            subLabel: 'MP15',
-            volume: '42.1T',
-            volumeUVC: '157 UVC',
-            partVolume: '0.6%',
-            cost: '0.003M€',
-            partCostTotal: '0.98%',
-            partCostMPI: '1.47%',
-            evolution: '-1.20%',
-            impactTotal: '-0.01%',
-            color: '#00B894',
-            isMain: true
-          },
-          {
-            id: 'palettes-bois',
-            name: 'Palettes bois',
-            subLabel: 'MP16',
-            volume: '105.2T',
-            volumeUVC: '392 UVC',
-            partVolume: '1.5%',
-            cost: '0.002M€',
-            partCostTotal: '0.85%',
-            partCostMPI: '1.28%',
-            evolution: '+1.60%',
-            impactTotal: '+0.01%',
-            color: '#E17055',
-            isMain: true
-          },
-          {
-            id: 'housses-thermoretractables',
-            name: 'Housses thermorétractables',
-            subLabel: 'MP17',
-            volume: '84.1T',
-            volumeUVC: '313 UVC',
-            partVolume: '1.2%',
-            cost: '0.002M€',
-            partCostTotal: '0.72%',
-            partCostMPI: '1.08%',
-            evolution: '-0.45%',
-            impactTotal: '-0.00%',
-            color: '#0984E3',
-            isMain: true
-          },
-          {
-            id: 'sachets-zip',
-            name: 'Sachets zip',
-            subLabel: 'MP18',
-            volume: '63.1T',
-            volumeUVC: '235 UVC',
-            partVolume: '0.9%',
-            cost: '0.002M€',
-            partCostTotal: '0.58%',
-            partCostMPI: '0.87%',
-            evolution: '+0.90%',
-            impactTotal: '+0.01%',
-            color: '#6C5CE7',
-            isMain: true
-          },
-          {
-            id: 'capsules-metal',
-            name: 'Capsules métal',
-            subLabel: 'MP19',
-            volume: '49.0T',
-            volumeUVC: '183 UVC',
-            partVolume: '0.7%',
-            cost: '0.001M€',
-            partCostTotal: '0.45%',
-            partCostMPI: '0.68%',
-            evolution: '+1.35%',
-            impactTotal: '+0.01%',
-            color: '#FD79A8',
-            isMain: true
-          },
-          {
-            id: 'opercules-aluminium',
-            name: 'Opercules aluminium',
-            subLabel: 'MP20',
-            volume: '35.0T',
-            volumeUVC: '130 UVC',
-            partVolume: '0.5%',
-            cost: '0.001M€',
-            partCostTotal: '0.32%',
-            partCostMPI: '0.48%',
-            evolution: '-0.80%',
-            impactTotal: '-0.00%',
-            color: '#FFEAA7',
-            isMain: true
-          },
+          { mp: 'Carton ondulé', periode1: '22.34%', periode2: '21.89%', periode3: '22.34%', evolution: '+1.20%' },
+          { mp: 'Polypropylène', periode1: '16.45%', periode2: '17.12%', periode3: '16.45%', evolution: '-2.30%' },
+          { mp: 'Polyéthylène', periode1: '14.28%', periode2: '14.05%', periode3: '14.28%', evolution: '+0.85%' },
+          { mp: 'Aluminium', periode1: '11.92%', periode2: '11.42%', periode3: '11.92%', evolution: '+3.15%' },
+          { mp: 'Verre', periode1: '9.67%', periode2: '9.95%', periode3: '9.67%', evolution: '-1.45%' },
+          { mp: 'Acier', periode1: '8.53%', periode2: '8.21%', periode3: '8.53%', evolution: '+2.70%' },
+          { mp: 'Papier kraft', periode1: '7.21%', periode2: '7.31%', periode3: '7.21%', evolution: '-0.65%' },
+          { mp: 'Polystyrène expansé', periode1: '4.89%', periode2: '4.72%', periode3: '4.89%', evolution: '+1.90%' },
+          { mp: 'PET', periode1: '2.76%', periode2: '2.94%', periode3: '2.76%', evolution: '-3.40%' },
+          { mp: 'Étiquettes papier', periode1: '1.95%', periode2: '1.92%', periode3: '1.95%', evolution: '+0.55%' },
         ]
-      default:
-        return []
-    }
-  }
-
-  // Fonctions d'interaction
-  const toggleItemVisibility = (itemId: string) => {
-    setVisibleItems(prev => ({ ...prev, [itemId]: !prev[itemId] }))
-    if (visibleItems[itemId]) {
-      setLegendOpacity(prev => ({ ...prev, [itemId]: false }))
-    } else {
-      setLegendOpacity(prev => ({ ...prev, [itemId]: true }))
-    }
-  }
-
-  const toggleLegendOpacity = (itemId: string) => {
-    setLegendOpacity(prev => ({ ...prev, [itemId]: !prev[itemId] }))
-  }
-
-  const toggleShowInLegend = (itemId: string) => {
-    setShowInLegend(prev => {
-      const newValue = !prev[itemId]
-      // Si on coche la checkbox, activer automatiquement la légende
-      if (newValue) {
-        setLegendOpacity(prevOpacity => ({ ...prevOpacity, [itemId]: true }))
-      }
-      return { ...prev, [itemId]: newValue }
-    })
-  }
-
-  const unselectAll = () => {
-    const allFalse = Object.keys(legendOpacity).reduce((acc, key) => {
-      acc[key] = false
-      return acc
-    }, {} as Record<string, boolean>)
-    setLegendOpacity(allFalse)
-  }
-
-  const getChartTitle = () => {
-    switch (costSubTab) {
-      case 'total':
-        return 'Evolution du cours des MPA et MPI'
-      case 'mpa':
-        return 'Evolution du cours des MPA'
-      case 'mpi':
-        return 'Evolution du cours des MPI'
-    }
-  }
-
-  // Données Recette selon sous-tab
-  const getRecetteData = () => {
-    switch (recetteSubTab) {
-      case 'mpa':
-        return [
-          { name: 'Eau', code: 'HE65', percentage: 25.43 },
-          { name: 'Farine de blé', code: 'FE23', percentage: 20.15 },
-          { name: 'Sucre', code: 'FE23', percentage: 17.24 },
-          { name: 'Sel', code: 'FR34', percentage: 5.46 },
-          { name: 'Lait en poudre', code: 'FR34', percentage: 5.46 },
-          { name: 'Beurre', code: 'FR34', percentage: 5.46 },
-          { name: 'Huile végétale', code: 'FR34', percentage: 5.46 },
-          { name: 'Œufs', code: 'FR34', percentage: 5.46 },
-          { name: 'Levure', code: 'FR34', percentage: 5.46 },
-          { name: 'Amidon de maïs', code: 'FR34', percentage: 5.46 },
-          { name: 'Gélatine', code: 'FR34', percentage: 5.46 },
-          { name: 'Présure', code: 'FR34', percentage: 5.46 },
-          { name: 'Ferments lactiques', code: 'FR34', percentage: 5.46 },
-          { name: 'Crème fraîche', code: 'FR34', percentage: 5.46 },
-        ].sort((a, b) => b.percentage - a.percentage)
-      case 'mpi':
-        return [
-          { name: 'Carton ondulé', code: 'MP01', percentage: 18.5 },
-          { name: 'Polypropylène', code: 'MP02', percentage: 14.2 },
-          { name: 'Polyéthylène', code: 'MP03', percentage: 12.8 },
-          { name: 'Aluminium', code: 'MP04', percentage: 10.3 },
-          { name: 'Verre', code: 'MP05', percentage: 8.7 },
-          { name: 'Acier', code: 'MP06', percentage: 7.9 },
-          { name: 'Papier kraft', code: 'MP07', percentage: 6.5 },
-          { name: 'Polystyrène expansé', code: 'MP08', percentage: 5.4 },
-          { name: 'PET', code: 'MP09', percentage: 4.8 },
-          { name: 'Étiquettes papier', code: 'MP10', percentage: 3.6 },
-          { name: 'Encre d&apos;impression', code: 'MP11', percentage: 2.9 },
-          { name: 'Colle alimentaire', code: 'MP12', percentage: 2.1 },
-          { name: 'Palettes bois', code: 'MP13', percentage: 1.5 },
-          { name: 'Film étirable', code: 'MP14', percentage: 0.6 },
-          { name: 'Ruban adhésif', code: 'MP15', percentage: 0.2 },
-        ].sort((a, b) => b.percentage - a.percentage)
-      default:
-        return []
     }
   }
 
@@ -1462,7 +992,10 @@ function DetailContent() {
   }
 
   return (
-    <main className="w-full px-[50px] py-4">
+    <main className="w-full px-[50px] py-4 relative">
+      {/* Barre feedback mode simulation */}
+      <SimulationFeedbackBar />
+
       {/* Bouton Retour */}
       <Button
         variant="ghost"
@@ -1483,10 +1016,7 @@ function DetailContent() {
               <div className="text-[14px]" style={{ color: '#454545' }}>{currentItem.ean}</div>
             )}
           </div>
-          <Button variant="ghost" size="sm" className="!text-[#0970E6] gap-2 hover:!text-[#075bb3] text-[16px] font-bold">
-            <Pencil className="w-5 h-5 text-[#0970E6]" />
-            Simuler
-          </Button>
+          <SimulationButton />
         </div>
 
         <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
@@ -3356,6 +2886,12 @@ function DetailContent() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Fenêtre de simulation */}
+      <SimulationWindow
+        availableMPValues={simulationMPValues}
+        availableMPVolumes={simulationMPVolumes}
+      />
 
     </main>
   )
