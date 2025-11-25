@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Draggable from 'react-draggable'
-import { X, CalendarIcon, Check } from 'lucide-react'
+import { X, CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -126,8 +126,8 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   }
 
   const handleSimulate = () => {
-    // Lancer la simulation même sans changements
-    startSimulation()
+    // Lancer la simulation avec le contexte (périmètre et label)
+    startSimulation(perimetre, label)
   }
 
   const handleQuit = () => {
@@ -139,16 +139,16 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
 
   if (!isWindowOpen) return null
 
-  // Calculer la position de la fenêtre
+  // Calculer la position de la fenêtre (à droite du bouton simulation avec 16px d'écart)
   const windowStyle: React.CSSProperties = buttonPosition
     ? {
         top: `${buttonPosition.top}px`,
         left: `${buttonPosition.left}px`,
       }
     : {
-        top: '50%',
+        top: '120px',
         left: '50%',
-        transform: 'translate(-50%, -50%)',
+        transform: 'translateX(-50%)',
       }
 
   return (
@@ -156,7 +156,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
       <Draggable handle=".drag-handle" nodeRef={nodeRef}>
         <div ref={nodeRef} className="fixed w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[80vh]" style={windowStyle}>
           {/* Header draggable */}
-          <div className="drag-handle px-8 py-3 rounded-t-lg flex items-center justify-between cursor-move">
+          <div className="drag-handle px-8 pt-8 pb-3 rounded-t-lg flex items-center justify-between cursor-move">
             <h2 className="text-lg font-semibold text-gray-800">{getSimulationTitle(perimetre, label)}</h2>
             <Button
               variant="ghost"
@@ -202,78 +202,64 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               {/* Sélecteur de période future */}
               {periodType === 'future' && (
                 <div className="ml-7 mt-3 space-y-4">
-                  {/* Étape 1 : Date de début */}
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600 w-24">Date de début</span>
-                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                      <PopoverTrigger asChild>
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0970E6] focus:border-transparent transition-colors"
+                      >
+                        <CalendarIcon className="h-4 w-4 text-gray-400" />
+                        <span className={startDate ? 'text-gray-900' : 'text-gray-500'}>
+                          {isFuturePeriodComplete ? getPeriodDisplay() : (startDate ? formatDateToFR(startDate) : 'Sélectionner')}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      {/* Raccourci Aujourd'hui */}
+                      <div className="p-3 border-b border-gray-100 bg-gray-50">
                         <button
                           type="button"
-                          className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0970E6] focus:border-transparent transition-colors"
+                          onClick={handleTodayClick}
+                          className="flex items-center gap-2 text-sm text-[#0970E6] hover:text-[#004E9B] font-medium"
                         >
-                          <CalendarIcon className="h-4 w-4 text-gray-400" />
-                          <span className={startDate ? 'text-gray-900' : 'text-gray-500'}>
-                            {startDate ? formatDateToFR(startDate) : 'Sélectionner'}
-                          </span>
+                          <CalendarIcon className="h-4 w-4" />
+                          Aujourd'hui
                         </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <div className="p-3 border-b border-gray-100 bg-gray-50">
-                          <button
-                            type="button"
-                            onClick={handleTodayClick}
-                            className="flex items-center gap-2 text-sm text-[#0970E6] hover:text-[#004E9B] font-medium"
-                          >
-                            <CalendarIcon className="h-4 w-4" />
-                            Aujourd'hui
-                          </button>
-                        </div>
-                        <Calendar
-                          mode="single"
-                          selected={startDate}
-                          onSelect={(date) => {
-                            setStartDate(date)
-                            setIsCalendarOpen(false)
-                          }}
-                          locale={fr}
-                          disabled={(date) => date < new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Étape 2 : Durée (affichée après sélection de la date) */}
-                  {startDate && (
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-600 w-24">Durée</span>
-                      <div className="flex gap-2">
-                        {DURATION_OPTIONS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => handleDurationSelect(option.value)}
-                            className={`px-4 py-2 text-sm rounded-full border transition-all ${
-                              selectedDuration === option.value
-                                ? 'bg-[#0970E6] text-white border-[#0970E6] shadow-sm'
-                                : 'bg-white text-gray-700 border-gray-300 hover:border-[#0970E6] hover:text-[#0970E6]'
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
                       </div>
-                    </div>
-                  )}
 
-                  {/* Résumé de la période sélectionnée */}
-                  {isFuturePeriodComplete && (
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <Check className="h-4 w-4 text-[#0970E6]" />
-                      <span className="text-sm text-gray-700">
-                        Période : <span className="font-medium text-gray-900">{getPeriodDisplay()}</span>
-                      </span>
-                    </div>
-                  )}
+                      {/* Calendrier */}
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={(date) => {
+                          setStartDate(date)
+                        }}
+                        locale={fr}
+                        disabled={(date) => date < new Date()}
+                      />
+
+                      {/* Chips de durée */}
+                      <div className="p-3 border-t border-gray-100">
+                        <div className="text-xs text-gray-500 mb-2">Durée</div>
+                        <div className="flex gap-2 flex-wrap">
+                          {DURATION_OPTIONS.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => handleDurationSelect(option.value)}
+                              className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
+                                selectedDuration === option.value
+                                  ? 'bg-[#0970E6] text-white border-[#0970E6] shadow-sm'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:border-[#0970E6] hover:text-[#0970E6]'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               )}
             </div>

@@ -23,7 +23,7 @@ export function SimulationButton() {
       const rect = buttonRef.current.getBoundingClientRect()
       const position = {
         top: rect.top,
-        left: rect.right + 40 // Gap de 40px à droite du bouton
+        left: rect.right + 16 // Gap de 16px à droite du bouton
       }
       console.log('Calling openWindow() with position:', position)
       openWindow(position)

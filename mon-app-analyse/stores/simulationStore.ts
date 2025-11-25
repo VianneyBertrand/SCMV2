@@ -31,6 +31,10 @@ interface SimulationState {
   isWindowOpen: boolean
   buttonPosition: { top: number; left: number } | null
 
+  // Contexte de la simulation (périmètre et label)
+  currentPerimetre: string
+  currentLabel: string
+
   // Données originales (copiées à l'ouverture, pour reset)
   originalData: {
     mpValues: MPValueItem[]
@@ -46,9 +50,10 @@ interface SimulationState {
   // Actions - Gestion de la fenêtre
   openWindow: (buttonPosition?: { top: number; left: number }) => void
   closeWindow: () => void
-  startSimulation: () => void
+  startSimulation: (perimetre?: string, label?: string) => void
   exitSimulation: () => void
   resetToOriginal: () => void
+  setSimulationContext: (perimetre: string, label: string) => void
 
   // Actions - Modifications MP Valeur
   updateMPPriceFirst: (id: string, price: number) => void
@@ -75,6 +80,8 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   isSimulationMode: false,
   isWindowOpen: false,
   buttonPosition: null,
+  currentPerimetre: '',
+  currentLabel: '',
 
   originalData: {
     mpValues: [],
@@ -95,11 +102,18 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ isWindowOpen: false })
   },
 
-  startSimulation: () => {
-    set({
+  startSimulation: (perimetre?: string, label?: string) => {
+    const updates: Partial<SimulationState> = {
       isSimulationMode: true,
       isWindowOpen: false
-    })
+    }
+    if (perimetre) updates.currentPerimetre = perimetre
+    if (label) updates.currentLabel = label
+    set(updates)
+  },
+
+  setSimulationContext: (perimetre: string, label: string) => {
+    set({ currentPerimetre: perimetre, currentLabel: label })
   },
 
   exitSimulation: () => {
