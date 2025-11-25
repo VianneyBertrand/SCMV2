@@ -3038,6 +3038,8 @@ function DetailContent() {
       <SimulationWindow
         availableMPValues={simulationMPValues}
         availableMPVolumes={simulationMPVolumes}
+        perimetre={perimetre}
+        label={label}
       />
 
     </main>
