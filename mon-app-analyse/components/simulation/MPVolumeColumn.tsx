@@ -1,57 +1,27 @@
 // @ts-nocheck
 'use client'
 
-import { useState } from 'react'
 import { useSimulationStore, MPVolumeItem } from '@/stores/simulationStore'
 import { MPRow } from './MPRow'
-import { MPFutureRow } from './MPFutureRow'
 import { MPAddDropdown } from './MPAddDropdown'
-
-type DurationOption = '3m' | '6m' | '1y' | '2y'
-type SplitOption = 'none' | 'month' | 'quarter' | 'semester' | 'year'
-
-interface FutureMPData {
-  totalEvolution: number
-  splitValues: number[]
-  selectedSplit: SplitOption
-}
 
 interface MPVolumeColumnProps {
   availableOptions: MPVolumeItem[]
-  periodType?: 'defined' | 'future'
-  selectedDuration?: DurationOption | null
 }
 
 /**
  * Colonne droite: MP en Volume (%)
- * - Mode "defined": % de répartition
- * - Mode "future": Évolution en % avec découpage possible
+ * Reste identique quel que soit le type de période (defined ou future)
  */
-export function MPVolumeColumn({ availableOptions, periodType = 'defined', selectedDuration }: MPVolumeColumnProps) {
+export function MPVolumeColumn({ availableOptions }: MPVolumeColumnProps) {
   const simulatedData = useSimulationStore((state) => state.simulatedData)
   const originalData = useSimulationStore((state) => state.originalData)
   const updateMPVolume = useSimulationStore((state) => state.updateMPVolume)
   const addMPVolume = useSimulationStore((state) => state.addMPVolume)
   const removeMPVolume = useSimulationStore((state) => state.removeMPVolume)
 
-  // État local pour les données du mode "future" (par MP)
-  const [futureMPData, setFutureMPData] = useState<Record<string, FutureMPData>>({})
-
   // Fonction pour trouver la valeur originale d'une MP
   const getOriginalMP = (id: string) => originalData.mpVolumes.find(mp => mp.id === id)
-
-  // Initialiser les données future pour une MP si nécessaire
-  const getFutureMPData = (mpId: string): FutureMPData => {
-    if (futureMPData[mpId]) return futureMPData[mpId]
-    return { totalEvolution: 0, splitValues: [], selectedSplit: 'none' }
-  }
-
-  const updateFutureMPData = (mpId: string, data: Partial<FutureMPData>) => {
-    setFutureMPData(prev => ({
-      ...prev,
-      [mpId]: { ...getFutureMPData(mpId), ...data }
-    }))
-  }
 
   const handleAdd = (option: { id: string; label: string }) => {
     const mpToAdd = availableOptions.find(mp => mp.id === option.id)
@@ -60,7 +30,7 @@ export function MPVolumeColumn({ availableOptions, periodType = 'defined', selec
     }
   }
 
-  // Calculer le total des pourcentages (mode defined seulement)
+  // Calculer le total des pourcentages
   const total = simulatedData.mpVolumes.reduce((sum, mp) => sum + mp.percentage, 0)
 
   // Filtrer les options pour ne pas afficher celles déjà ajoutées
@@ -68,13 +38,11 @@ export function MPVolumeColumn({ availableOptions, periodType = 'defined', selec
     .filter(opt => !simulatedData.mpVolumes.some(mp => mp.id === opt.id))
     .map(opt => ({ id: opt.id, label: opt.label }))
 
-  const isFutureMode = periodType === 'future' && selectedDuration
-
   return (
     <div className="flex-1 flex flex-col">
       <div className="px-4 py-2">
         <h3 className="font-bold text-gray-700" style={{ fontSize: '16px' }}>
-          {isFutureMode ? 'MP en Volume - Évolution (%)' : 'MP en Volume (%)'}
+          MP en Volume (%)
         </h3>
       </div>
 
@@ -91,28 +59,6 @@ export function MPVolumeColumn({ availableOptions, periodType = 'defined', selec
           {simulatedData.mpVolumes.map((mp) => {
             const originalMP = getOriginalMP(mp.id)
 
-            // Mode période future
-            if (isFutureMode) {
-              const mpFutureData = getFutureMPData(mp.id)
-              return (
-                <MPFutureRow
-                  key={mp.id}
-                  id={mp.id}
-                  label={mp.label}
-                  code={mp.code}
-                  duration={selectedDuration}
-                  onRemove={() => removeMPVolume(mp.id)}
-                  totalEvolution={mpFutureData.totalEvolution}
-                  splitValues={mpFutureData.splitValues}
-                  selectedSplit={mpFutureData.selectedSplit}
-                  onTotalEvolutionChange={(value) => updateFutureMPData(mp.id, { totalEvolution: value })}
-                  onSplitValuesChange={(values) => updateFutureMPData(mp.id, { splitValues: values })}
-                  onSplitChange={(split) => updateFutureMPData(mp.id, { selectedSplit: split })}
-                />
-              )
-            }
-
-            // Mode période définie (comportement existant)
             return (
               <MPRow
                 key={mp.id}
@@ -133,17 +79,15 @@ export function MPVolumeColumn({ availableOptions, periodType = 'defined', selec
         </div>
       </div>
 
-      {/* Total - seulement en mode defined */}
-      {!isFutureMode && (
-        <div className="px-4 py-3 border-t border-gray-200 bg-white">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-semibold text-gray-700">Total:</span>
-            <span className={`text-sm font-bold ${total > 100 ? 'text-red-600' : 'text-gray-900'}`}>
-              {total.toFixed(2)}%
-            </span>
-          </div>
+      {/* Total */}
+      <div className="px-4 py-3 border-t border-gray-200 bg-white">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-semibold text-gray-700">Total:</span>
+          <span className={`text-sm font-bold ${total > 100 ? 'text-red-600' : 'text-gray-900'}`}>
+            {total.toFixed(2)}%
+          </span>
         </div>
-      )}
+      </div>
     </div>
   )
 }

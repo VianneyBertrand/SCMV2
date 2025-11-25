@@ -274,8 +274,6 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
             />
             <MPVolumeColumn
               availableOptions={availableMPVolumes}
-              periodType={periodType}
-              selectedDuration={selectedDuration}
             />
           </div>
 
