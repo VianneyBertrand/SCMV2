@@ -302,7 +302,7 @@ export function MPFutureRow({
 
       {/* Lignes de découpage */}
       {isSplitActive && (
-        <div className="mt-2 pl-2 border-l-2 border-gray-200">
+        <div className="mt-2">
           {Array.from({ length: currentSplitConfig.count }).map((_, index) => (
             renderValueRow(
               `${currentSplitConfig.prefix}${index + 1}`,
