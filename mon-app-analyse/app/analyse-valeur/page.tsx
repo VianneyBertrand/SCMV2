@@ -64,6 +64,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useVolumeUnit } from "@/hooks/useVolumeUnit";
 import { SwitchIcon } from "@/components/ui/switch-icon";
 import { usePageState, useRestoredPageState } from "@/hooks/usePageState";
+import { SimulationTag } from "@/components/simulation/SimulationTag";
 
 // Lazy load heavy components - Command and Calendar
 const LazyCalendar = dynamic(
@@ -2109,7 +2110,10 @@ function AnalyseValeurContent() {
                       {/* MP */}
                       <TableCell>
                         <div className="flex flex-col">
-                          <div className="font-medium">{row.mpa.valeur}</div>
+                          <div className="font-medium flex items-center">
+                            {row.mpa.valeur}
+                            <SimulationTag seed={`av-mp-${row.id}`} />
+                          </div>
                           <div
                             className={cn(
                               "font-medium",
@@ -2126,7 +2130,10 @@ function AnalyseValeurContent() {
                       {/* Emballage */}
                       <TableCell>
                         <div className="flex flex-col">
-                          <div className="font-medium">{row.mpi.valeur}</div>
+                          <div className="font-medium flex items-center">
+                            {row.mpi.valeur}
+                            <SimulationTag seed={`av-emb-${row.id}`} />
+                          </div>
                           <div
                             className={cn(
                               "font-medium",
@@ -2143,10 +2150,11 @@ function AnalyseValeurContent() {
                       {/* CA */}
                       <TableCell>
                         <div className="flex flex-col">
-                          <div className="font-medium">
+                          <div className="font-medium flex items-center">
                             {perimetre === "Produit" && row.paUnitaire
                               ? row.paUnitaire.valeur
                               : row.evoPa.valeur}
+                            <SimulationTag seed={`av-ca-${row.id}`} />
                           </div>
                           <div
                             className={cn(
@@ -2169,11 +2177,12 @@ function AnalyseValeurContent() {
                       {/* CA théorique */}
                       <TableCell>
                         <div className="flex flex-col">
-                          <div className="font-medium">
+                          <div className="font-medium flex items-center">
                             {perimetre === "Produit" &&
                             row.coutTheoriqueUnitaire
                               ? row.coutTheoriqueUnitaire.valeur
                               : row.coutTheorique.valeur}
+                            <SimulationTag seed={`av-cathe-${row.id}`} />
                           </div>
                           <div
                             className={cn(
@@ -2199,7 +2208,10 @@ function AnalyseValeurContent() {
                       {perimetre === "Produit" && row.pv && (
                         <TableCell>
                           <div className="flex flex-col">
-                            <div className="font-medium">{row.pv.valeur}</div>
+                            <div className="font-medium flex items-center">
+                              {row.pv.valeur}
+                              <SimulationTag seed={`av-pv-${row.id}`} />
+                            </div>
                             <div
                               className={cn(
                                 "font-medium",
@@ -2218,8 +2230,9 @@ function AnalyseValeurContent() {
                       {perimetre === "Produit" && row.pvLeclerc && (
                         <TableCell>
                           <div className="flex flex-col">
-                            <div className="font-medium">
+                            <div className="font-medium flex items-center">
                               {row.pvLeclerc.valeur}
+                              <SimulationTag seed={`av-pvlcl-${row.id}`} />
                             </div>
                             <div
                               className={cn(
@@ -2239,8 +2252,9 @@ function AnalyseValeurContent() {
                       {perimetre === "Produit" && row.margePvLcl && (
                         <TableCell>
                           <div className="flex flex-col">
-                            <div className="font-medium">
+                            <div className="font-medium flex items-center">
                               {row.margePvLcl.valeur}
+                              <SimulationTag seed={`av-marge-${row.id}`} />
                             </div>
                             <div
                               className={cn(
@@ -2259,8 +2273,9 @@ function AnalyseValeurContent() {
                       {/* Opportunités */}
                       <TableCell>
                         <div className="flex flex-col">
-                          <div className="font-medium">
+                          <div className="font-medium flex items-center">
                             {row.opportunites.valeur}
+                            <SimulationTag seed={`av-opp-${row.id}`} isOpportunity />
                           </div>
                           <div
                             className={cn(

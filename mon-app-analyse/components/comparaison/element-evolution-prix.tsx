@@ -23,6 +23,7 @@ import {
 import { Download, Info, ChevronDown, ChevronUp, RefreshCw, RotateCcw } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CurveIcon } from "@/components/ui/curve-icon"
+import { SimulationTag } from "@/components/simulation/SimulationTag"
 
 // Import Recharts components directly
 import {
@@ -601,7 +602,10 @@ export function ElementEvolutionPrix({
                       </TableCell>
                       {row.values.map((value, colIdx) => (
                         <TableCell key={colIdx} className="text-center">
-                          {value}
+                          <span className="inline-flex items-center">
+                            {value}
+                            <SimulationTag seed={`evol-prix-${row.label}-${colIdx}`} />
+                          </span>
                         </TableCell>
                       ))}
                     </TableRow>

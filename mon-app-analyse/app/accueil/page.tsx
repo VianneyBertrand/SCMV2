@@ -52,6 +52,7 @@ import { useEffect, useMemo, useState } from "react"
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 import { useRestoredPageState } from "@/hooks/usePageState"
+import { SimulationTag } from "@/components/simulation/SimulationTag"
 
 // Interface pour l'état de la page à persister
 interface AccueilPageState {
@@ -87,10 +88,15 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, tot
   const content = (
     <>
       <span className="text-[14px] font-bold text-center text-black line-clamp-3 break-words w-full px-1">{label}</span>
-      <span className="text-[14px] font-medium text-black mt-1">{percentage}</span>
-      <span className="text-[14px] font-medium text-black">
-        {evolution}
-      </span>
+      <div className="flex flex-col items-start mt-1">
+        <span className="text-[14px] font-medium text-black flex items-center">
+          {percentage}
+          <SimulationTag seed={`heatmap-${label}`} />
+        </span>
+        <span className="text-[14px] font-medium text-black">
+          {evolution}
+        </span>
+      </div>
     </>
   )
 
@@ -250,7 +256,12 @@ function OpportunityTable({ title, perimetre, items, activeFilters = {} }: Oppor
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium text-right">{item.opportunites.valeur}</TableCell>
+                  <TableCell className="font-medium text-right">
+                    <span className="inline-flex items-center justify-end">
+                      {item.opportunites.valeur}
+                      <SimulationTag seed={`table-opp-${item.id}`} isOpportunity />
+                    </span>
+                  </TableCell>
                   <TableCell className="w-12">
                     <Button
                       variant="ghost"
@@ -740,7 +751,10 @@ export default function AccueilPage() {
                   </>
                 )}
               </div>
-              <div className="text-2xl font-bold mb-1">{card.value}</div>
+              <div className="text-2xl font-bold mb-1 flex items-center">
+                {card.value}
+                {card.label !== "Volume" && <SimulationTag seed={`accueil-kpi-${card.label}`} isOpportunity={card.label === "Opportunité"} />}
+              </div>
               {card.evolution && (
                 <p className={`text-[16px] ${color}`}>
                   {card.evolution}
@@ -1415,7 +1429,12 @@ export default function AccueilPage() {
                             <span className="text-xs text-muted-foreground">{item.id}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium text-right">{item.opportunites.valeur}</TableCell>
+                        <TableCell className="font-medium text-right">
+                    <span className="inline-flex items-center justify-end">
+                      {item.opportunites.valeur}
+                      <SimulationTag seed={`table-opp-${item.id}`} isOpportunity />
+                    </span>
+                  </TableCell>
                         <TableCell className="w-12">
                           <Button
                             variant="ghost"

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Download, ChevronDown, ChevronUp } from "lucide-react"
+import { SimulationTag } from "@/components/simulation/SimulationTag"
 
 // Helper pour filtrer les filtres à afficher (uniquement Pays, Fournisseur, Portefeuille)
 const filterDisplayableFilters = (filters: Record<string, string>): Record<string, string> => {
@@ -158,8 +159,9 @@ export function ElementRecette({
               </div>
 
               {/* Pourcentage à droite */}
-              <div className="w-20 text-right font-bold text-base">
-                {item.percentage}%
+              <div className="w-32 text-right font-bold text-base flex items-center justify-end">
+                {item.percentage.toFixed(2)}%
+                <SimulationTag mpLabel={item.name} mpType="volume" />
               </div>
             </div>
           ))}

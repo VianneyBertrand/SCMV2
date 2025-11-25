@@ -20,6 +20,7 @@ import {
 import { Info } from "lucide-react"
 import { SwitchIcon } from "@/components/ui/switch-icon"
 import { getPerimetreData, type PerimetreType } from "@/lib/data/perimetre-data"
+import { SimulationTag } from "@/components/simulation/SimulationTag"
 
 // Lazy load heavy comparison components with Recharts
 const ElementCostStructure = dynamic(() => import("@/components/comparaison/element-cost-structure").then(mod => ({ default: mod.ElementCostStructure })), { ssr: false })
@@ -355,7 +356,15 @@ function ComparaisonContent() {
 
                         return (
                           <TableCell key={element.id} className="text-center">
-                            <div className="font-semibold text-base">{value}</div>
+                            <div className="font-semibold text-base flex items-center justify-center">
+                              {value}
+                              {metric.key !== 'volume' && (
+                                <SimulationTag
+                                  seed={`comp-resume-${element.id}-${metric.key}`}
+                                  isOpportunity={metric.key === 'opportunite'}
+                                />
+                              )}
+                            </div>
                             {evolution && (
                               <div className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                                 {evolution}

@@ -22,6 +22,7 @@ import { CurveIcon } from "@/components/ui/curve-icon"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { SwitchIcon } from "@/components/ui/switch-icon"
+import { SimulationTag } from "@/components/simulation/SimulationTag"
 
 // Import Recharts components directly
 import {
@@ -103,10 +104,15 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
             className={`${color} ${className} p-2 flex flex-col items-center justify-center hover:opacity-90 transition-opacity cursor-pointer overflow-hidden`}
           >
             <span className="text-[14px] font-bold text-center text-black line-clamp-3 break-words w-full px-1">{label}</span>
-            <span className="text-[14px] font-medium text-black mt-1">{percentage}</span>
-            <span className="text-[14px] font-medium text-black">
-              {evolution}
-            </span>
+            <div className="flex flex-col items-start mt-1">
+              <span className="text-[14px] font-medium text-black flex items-center">
+                {percentage}
+                <SimulationTag seed={`heatmap-${label}`} />
+              </span>
+              <span className="text-[14px] font-medium text-black">
+                {evolution}
+              </span>
+            </div>
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={-50} className="max-w-xs">
@@ -1500,26 +1506,60 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
                         <TableCell>{row.partVolume}</TableCell>
                       </>
                     )}
-                    <TableCell>{row.cost}</TableCell>
-                    {costSubTab === 'total' && <TableCell>{row.partCost}</TableCell>}
+                    <TableCell>
+                      <span className="flex items-center">
+                        {row.cost}
+                        <SimulationTag seed={`comp-cost-${row.id}`} />
+                      </span>
+                    </TableCell>
+                    {costSubTab === 'total' && <TableCell>
+                      <span className="flex items-center">
+                        {row.partCost}
+                        <SimulationTag seed={`comp-partcost-${row.id}`} />
+                      </span>
+                    </TableCell>}
                     {costSubTab === 'mpa' && (
                       <>
-                        <TableCell>{row.partCostTotal}</TableCell>
-                        <TableCell>{row.partCostMPA}</TableCell>
+                        <TableCell>
+                          <span className="flex items-center">
+                            {row.partCostTotal}
+                            <SimulationTag seed={`comp-partcosttotal-${row.id}`} />
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center">
+                            {row.partCostMPA}
+                            <SimulationTag seed={`comp-partcostmpa-${row.id}`} />
+                          </span>
+                        </TableCell>
                       </>
                     )}
-                    {costSubTab === 'mpi' && <TableCell>{row.partCost}</TableCell>}
+                    {costSubTab === 'mpi' && <TableCell>
+                      <span className="flex items-center">
+                        {row.partCost}
+                        <SimulationTag seed={`comp-partcost-${row.id}`} />
+                      </span>
+                    </TableCell>}
                     <TableCell className={row.evolution?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                      {row.evolution}
+                      <span className="flex items-center">
+                        {row.evolution}
+                        <SimulationTag seed={`comp-evol-${row.id}`} />
+                      </span>
                     </TableCell>
                     {costSubTab === 'total' && (
                       <TableCell className={row.impact?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                        {row.impact}
+                        <span className="flex items-center">
+                          {row.impact}
+                          <SimulationTag seed={`comp-impact-${row.id}`} />
+                        </span>
                       </TableCell>
                     )}
                     {costSubTab === 'mpa' && (
                       <TableCell className={row.impactTotal?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                        {row.impactTotal}
+                        <span className="flex items-center">
+                          {row.impactTotal}
+                          <SimulationTag seed={`comp-impacttotal-${row.id}`} />
+                        </span>
                       </TableCell>
                     )}
                   </TableRow>

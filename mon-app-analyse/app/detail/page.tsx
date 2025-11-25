@@ -45,6 +45,7 @@ import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 // Imports pour la simulation
 import { SimulationButton } from "@/components/simulation/SimulationButton"
 import { SimulationWindow } from "@/components/simulation/SimulationWindow"
+import { SimulationTag } from "@/components/simulation/SimulationTag"
 import { useSimulationStore } from "@/stores/simulationStore"
 import { extractMPValuesFromChartData, extractMPVolumesFromRecetteData } from "@/lib/utils/simulationHelpers"
 
@@ -91,10 +92,15 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
   const content = (
     <>
       <span className="text-[14px] font-bold text-center text-black line-clamp-3 break-words w-full px-1">{label}</span>
-      <span className="text-[14px] font-medium text-black mt-1">{percentage}</span>
-      <span className="text-[14px] font-medium text-black">
-        {evolution}
-      </span>
+      <div className="flex flex-col items-start mt-1">
+        <span className="text-[14px] font-medium text-black flex items-center">
+          {percentage}
+          <SimulationTag seed={`heatmap-${label}`} />
+        </span>
+        <span className="text-[14px] font-medium text-black">
+          {evolution}
+        </span>
+      </div>
     </>
   )
 
@@ -1208,7 +1214,10 @@ function DetailContent() {
                       </>
                     )}
                   </div>
-                  <div className="text-2xl font-bold mb-1">{card.value}</div>
+                  <div className="text-2xl font-bold mb-1 flex items-center">
+                    {card.value}
+                    {card.label !== "Volume" && <SimulationTag seed={`kpi-${card.label}`} isOpportunity={card.label === "Opportunité"} />}
+                  </div>
                   {card.evolution && (
                     <p className={`text-[16px] ${color}`}>
                       {card.evolution}
@@ -1254,7 +1263,10 @@ function DetailContent() {
                       </TooltipProvider>
                     </div>
                     <div className="flex items-center gap-2 mb-1">
-                      <div className="text-2xl font-bold">{card.value}</div>
+                      <div className="text-2xl font-bold flex items-center">
+                        {card.value}
+                        <SimulationTag seed={`product-${card.label}`} isOpportunity={card.label === "Opportunité"} />
+                      </div>
                       {card.label === "Marge moyenne catégorielle" && (
                         <Pencil className="w-4 h-4 text-[#0970E6]" />
                       )}
@@ -2569,36 +2581,78 @@ function DetailContent() {
                               <TableCell>{row.partVolume}</TableCell>
                             </>
                           )}
-                          <TableCell>{row.cost}</TableCell>
-                          {costSubTab === 'total' && <TableCell>{row.partCost}</TableCell>}
+                          <TableCell>
+                            <span className="flex items-center">
+                              {row.cost}
+                              <SimulationTag seed={`table-cost-${row.id}`} />
+                            </span>
+                          </TableCell>
+                          {costSubTab === 'total' && <TableCell>
+                            <span className="flex items-center">
+                              {row.partCost}
+                              <SimulationTag seed={`table-partcost-${row.id}`} />
+                            </span>
+                          </TableCell>}
                           {costSubTab === 'mpa' && (
                             <>
-                              <TableCell>{row.partCostTotal}</TableCell>
-                              <TableCell>{row.partCostMPA}</TableCell>
+                              <TableCell>
+                                <span className="flex items-center">
+                                  {row.partCostTotal}
+                                  <SimulationTag seed={`table-partcosttotal-${row.id}`} />
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="flex items-center">
+                                  {row.partCostMPA}
+                                  <SimulationTag seed={`table-partcostmpa-${row.id}`} />
+                                </span>
+                              </TableCell>
                             </>
                           )}
                           {costSubTab === 'mpi' && (
                             <>
-                              <TableCell>{row.partCostTotal}</TableCell>
-                              <TableCell>{row.partCostMPI}</TableCell>
+                              <TableCell>
+                                <span className="flex items-center">
+                                  {row.partCostTotal}
+                                  <SimulationTag seed={`table-partcosttotal-${row.id}`} />
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="flex items-center">
+                                  {row.partCostMPI}
+                                  <SimulationTag seed={`table-partcostmpi-${row.id}`} />
+                                </span>
+                              </TableCell>
                             </>
                           )}
                           <TableCell className={row.evolution?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                            {row.evolution}
+                            <span className="flex items-center">
+                              {row.evolution}
+                              <SimulationTag seed={`table-evol-${row.id}`} />
+                            </span>
                           </TableCell>
                           {costSubTab === 'total' && (
                             <TableCell className={row.impact?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                              {row.impact}
+                              <span className="flex items-center">
+                                {row.impact}
+                                <SimulationTag seed={`table-impact-${row.id}`} />
+                              </span>
                             </TableCell>
                           )}
                           {costSubTab === 'mpa' && (
                             <TableCell className={row.impactTotal?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                              {row.impactTotal}
+                              <span className="flex items-center">
+                                {row.impactTotal}
+                                <SimulationTag seed={`table-impacttotal-${row.id}`} />
+                              </span>
                             </TableCell>
                           )}
                           {costSubTab === 'mpi' && (
                             <TableCell className={row.impactTotal?.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                              {row.impactTotal}
+                              <span className="flex items-center">
+                                {row.impactTotal}
+                                <SimulationTag seed={`table-impacttotal-${row.id}`} />
+                              </span>
                             </TableCell>
                           )}
                         </TableRow>
@@ -2651,8 +2705,9 @@ function DetailContent() {
                   <div className="flex-1 bg-gray-100 rounded-md h-8 relative overflow-hidden">
                     <div className="h-full rounded-md transition-all duration-300" style={{ width: `${item.percentage}%`, backgroundColor: '#0970E6' }} />
                   </div>
-                  <div className="w-20 text-right font-bold text-base">
-                    {item.percentage}%
+                  <div className="w-32 text-right font-bold text-base flex items-center justify-end">
+                    {item.percentage.toFixed(2)}%
+                    <SimulationTag mpLabel={item.name} mpType="volume" />
                   </div>
                 </div>
               ))}
@@ -2901,8 +2956,9 @@ function DetailContent() {
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                      <div className={`text-2xl font-bold ${color}`}>
+                      <div className={`text-2xl font-bold ${color} flex items-center`}>
                         {card.evolution}
+                        <SimulationTag seed={`evol-${card.label}`} />
                       </div>
                     </Card>
                   )
@@ -2912,7 +2968,32 @@ function DetailContent() {
 
             {/* Tableau Détail */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Détail</h3>
+              <div className="flex items-start justify-between">
+                <h3 className="text-lg font-medium">Détail</h3>
+                <div className="flex items-center gap-4">
+                  <Select value={evolutionPeriod} onValueChange={(v: 'mois' | 'semaine' | 'jour') => setEvolutionPeriod(v)}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mois">Mois</SelectItem>
+                      <SelectItem value="semaine">Semaine</SelectItem>
+                      <SelectItem value="jour">Jour</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="evolution-table-base100">Base 100</Label>
+                    <Switch
+                      id="evolution-table-base100"
+                      checked={evolutionBase100}
+                      onCheckedChange={setEvolutionBase100}
+                    />
+                  </div>
+                  <Button variant="ghost" size="icon" className="p-0">
+                    <Download className="text-[#0970E6]" width={24} height={24} />
+                  </Button>
+                </div>
+              </div>
               <Card className="border rounded-lg shadow-none">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -2935,7 +3016,10 @@ function DetailContent() {
                             </TableCell>
                             {row.values.map((value, colIdx) => (
                               <TableCell key={colIdx} className="text-center">
-                                {value}
+                                <span className="inline-flex items-center">
+                                  {value}
+                                  <SimulationTag seed={`detail-${row.label}-${colIdx}`} />
+                                </span>
                               </TableCell>
                             ))}
                           </TableRow>
