@@ -127,9 +127,14 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   // Actions - Modifications MP Valeur
   updateMPPriceFirst: (id: string, priceFirst: number) => {
     const { simulatedData } = get()
-    const updatedMPValues = simulatedData.mpValues.map(mp =>
-      mp.id === id ? { ...mp, priceFirst } : mp
-    )
+    const updatedMPValues = simulatedData.mpValues.map(mp => {
+      if (mp.id === id) {
+        // Recalculer l'évolution quand priceFirst change
+        const evolution = priceFirst !== 0 ? ((mp.priceLast - priceFirst) / priceFirst) * 100 : 0
+        return { ...mp, priceFirst, evolution }
+      }
+      return mp
+    })
     set({
       simulatedData: {
         ...simulatedData,
@@ -140,9 +145,14 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   updateMPPriceLast: (id: string, priceLast: number) => {
     const { simulatedData } = get()
-    const updatedMPValues = simulatedData.mpValues.map(mp =>
-      mp.id === id ? { ...mp, priceLast } : mp
-    )
+    const updatedMPValues = simulatedData.mpValues.map(mp => {
+      if (mp.id === id) {
+        // Recalculer l'évolution quand priceLast change
+        const evolution = mp.priceFirst !== 0 ? ((priceLast - mp.priceFirst) / mp.priceFirst) * 100 : 0
+        return { ...mp, priceLast, evolution }
+      }
+      return mp
+    })
     set({
       simulatedData: {
         ...simulatedData,
@@ -226,12 +236,23 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   initializeFromExistingData: (mpValues: MPValueItem[], mpVolumes: MPVolumeItem[]) => {
     console.log('Store - initializeFromExistingData called with mpValues:', mpValues.length, 'mpVolumes:', mpVolumes.length)
+
+    // Arrondir les prix à 3 décimales et recalculer l'évolution
+    const recalculatedMPValues = mpValues.map(mp => {
+      // Arrondir à 3 décimales pour cohérence avec l'affichage
+      const priceFirst = Math.round(mp.priceFirst * 1000) / 1000
+      const priceLast = Math.round(mp.priceLast * 1000) / 1000
+      const evolution = priceFirst !== 0 ? ((priceLast - priceFirst) / priceFirst) * 100 : 0
+      console.log(`Store - ${mp.label}: priceFirst=${priceFirst}, priceLast=${priceLast}, evolution=${evolution.toFixed(2)}%`)
+      return { ...mp, priceFirst, priceLast, evolution }
+    })
+
     const originalData = {
-      mpValues: JSON.parse(JSON.stringify(mpValues)),
+      mpValues: JSON.parse(JSON.stringify(recalculatedMPValues)),
       mpVolumes: JSON.parse(JSON.stringify(mpVolumes)),
     }
     const simulatedData = {
-      mpValues: JSON.parse(JSON.stringify(mpValues)),
+      mpValues: JSON.parse(JSON.stringify(recalculatedMPValues)),
       mpVolumes: JSON.parse(JSON.stringify(mpVolumes)),
     }
     console.log('Store - setting originalData.mpValues:', originalData.mpValues)

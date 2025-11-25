@@ -78,7 +78,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes }: Simu
   return (
     <>
       <Draggable handle=".drag-handle" nodeRef={nodeRef}>
-        <div ref={nodeRef} className="fixed w-[1000px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[80vh]" style={windowStyle}>
+        <div ref={nodeRef} className="fixed w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[80vh]" style={windowStyle}>
           {/* Header draggable */}
           <div className="drag-handle px-8 py-3 rounded-t-lg flex items-center justify-between cursor-move">
             <h2 className="text-lg font-semibold text-gray-800">Simulation</h2>

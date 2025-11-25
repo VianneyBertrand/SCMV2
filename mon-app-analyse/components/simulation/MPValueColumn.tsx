@@ -62,11 +62,11 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
                 value={`${mp.priceFirst.toFixed(3)}€/kg`}
                 numericValue={mp.priceFirst}
                 originalValue={originalMP?.priceFirst}
-                valueLabel="P1"
+                valueLabel="Prix 01/04/2024"
                 secondValue={`${mp.priceLast.toFixed(3)}€/kg`}
                 numericSecondValue={mp.priceLast}
                 originalSecondValue={originalMP?.priceLast}
-                secondValueLabel="P2"
+                secondValueLabel="Prix 01/04/2025"
                 onIncrement01={() => updateMPPriceFirst(mp.id, mp.priceFirst * 1.001)}
                 onIncrement1={() => updateMPPriceFirst(mp.id, mp.priceFirst * 1.01)}
                 onDecrement01={() => updateMPPriceFirst(mp.id, Math.max(0, mp.priceFirst * 0.999))}
@@ -78,7 +78,7 @@ export function MPValueColumn({ availableOptions }: MPValueColumnProps) {
                 thirdValue={`${mp.evolution.toFixed(2)}%`}
                 numericThirdValue={mp.evolution}
                 originalThirdValue={originalMP?.evolution}
-                thirdValueLabel="Évol."
+                thirdValueLabel="Évolution"
                 onThirdIncrement01={() => updateMPEvolution(mp.id, mp.evolution + 0.1)}
                 onThirdIncrement1={() => updateMPEvolution(mp.id, mp.evolution + 1)}
                 onThirdDecrement01={() => updateMPEvolution(mp.id, mp.evolution - 0.1)}

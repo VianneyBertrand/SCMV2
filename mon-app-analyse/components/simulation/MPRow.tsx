@@ -222,9 +222,9 @@ export function MPRow({
   }
 
   return (
-    <div className="space-y-1 py-2">
+    <div className="py-2">
       {/* Label et Code */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between mb-1">
         <div className="flex flex-col">
           <span className="font-bold text-gray-700" style={{ fontSize: '16px' }}>{label}</span>
           {code && <span className="text-gray-500" style={{ fontSize: '12px' }}>{code}</span>}
@@ -241,7 +241,7 @@ export function MPRow({
 
       {/* Valeur principale */}
       <div className="flex items-center gap-1">
-        {valueLabel && <span className="text-xs text-gray-500 w-10">{valueLabel}</span>}
+        {valueLabel && <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>{valueLabel}</span>}
 
         {/* Double chevron down (-1%) */}
         <Button
@@ -322,8 +322,8 @@ export function MPRow({
 
       {/* Valeur secondaire (optionnelle) */}
       {secondValue !== undefined && onSecondIncrement1 && onSecondDecrement1 && (
-        <div className="flex items-center gap-1">
-          {secondValueLabel && <span className="text-xs text-gray-500 w-10">{secondValueLabel}</span>}
+        <div className="flex items-center gap-1 mt-1">
+          {secondValueLabel && <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>{secondValueLabel}</span>}
 
           {/* Double chevron down (-1%) */}
           <Button
@@ -402,8 +402,8 @@ export function MPRow({
 
       {/* Troisième valeur (optionnelle - Évolution) */}
       {thirdValue !== undefined && onThirdIncrement1 && onThirdDecrement1 && (
-        <div className="flex items-center gap-1">
-          {thirdValueLabel && <span className="text-xs text-gray-500 w-10">{thirdValueLabel}</span>}
+        <div className="flex items-center gap-1 mt-4">
+          {thirdValueLabel && <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>{thirdValueLabel}</span>}
 
           {/* Double chevron down (-1%) */}
           <Button

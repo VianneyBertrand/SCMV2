@@ -45,7 +45,6 @@ import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 // Imports pour la simulation
 import { SimulationButton } from "@/components/simulation/SimulationButton"
 import { SimulationWindow } from "@/components/simulation/SimulationWindow"
-import { SimulationFeedbackBar } from "@/components/simulation/SimulationFeedbackBar"
 import { useSimulationStore } from "@/stores/simulationStore"
 import { extractMPValuesFromChartData, extractMPVolumesFromRecetteData } from "@/lib/utils/simulationHelpers"
 
@@ -1054,9 +1053,6 @@ function DetailContent() {
 
   return (
     <main className="w-full px-[50px] py-4 relative">
-      {/* Barre feedback mode simulation */}
-      <SimulationFeedbackBar />
-
       {/* Bouton Retour */}
       <Button
         variant="ghost"
