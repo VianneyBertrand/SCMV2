@@ -43,6 +43,7 @@ interface MPFutureRowProps {
   label: string
   code?: string
   duration: DurationOption
+  initialPrice: number
   onRemove: () => void
   // Pour stocker/récupérer les valeurs
   totalEvolution: number
@@ -61,6 +62,7 @@ export function MPFutureRow({
   label,
   code,
   duration,
+  initialPrice,
   onRemove,
   totalEvolution,
   splitValues,
@@ -169,6 +171,7 @@ export function MPFutureRow({
     isDisabled: boolean = false
   ) => {
     const isEditing = editingIndex === index
+    const calculatedPrice = initialPrice * (1 + value / 100)
 
     return (
       <div className={`flex items-center gap-1 ${index > 0 ? 'mt-1' : ''}`}>
@@ -241,6 +244,11 @@ export function MPFutureRow({
         >
           <ChevronsUp className="h-4 w-4" />
         </Button>
+
+        {/* Prix calculé */}
+        <span className="ml-2 text-sm text-gray-600 w-[85px] text-right">
+          {calculatedPrice.toFixed(3)}€/kg
+        </span>
       </div>
     )
   }

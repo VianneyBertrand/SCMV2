@@ -100,6 +100,7 @@ export function MPValueColumn({ availableOptions, periodType = 'defined', select
                   label={mp.label}
                   code={mp.code}
                   duration={selectedDuration}
+                  initialPrice={mp.priceFirst}
                   onRemove={() => removeMPValue(mp.id)}
                   totalEvolution={mpFutureData.totalEvolution}
                   splitValues={mpFutureData.splitValues}
