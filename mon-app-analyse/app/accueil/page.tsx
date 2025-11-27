@@ -44,7 +44,7 @@ import {
 } from "@/lib/data/perimetre-data"
 import { cn, calculateValorisation } from "@/lib/utils"
 import { PORTEFEUILLE_CATEGORIE_MAP, PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles"
-import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Eye, Info, X } from "lucide-react"
+import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Download, Eye, Info, X } from "lucide-react"
 import { SwitchIcon } from "@/components/ui/switch-icon"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -770,18 +770,23 @@ export default function AccueilPage() {
 
         {/* Bloc A - Répartition CA par pays */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">Répartition CA par pays</h2>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-4 h-4 text-[#121212]" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Répartition du chiffre d&apos;affaires par pays</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[16px] font-medium">Répartition CA par pays</h2>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-[#121212]" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Répartition du chiffre d&apos;affaires par pays</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+              <Download className="w-4 h-4 text-gray-600" />
+            </button>
           </div>
           <div className="rounded overflow-hidden">
             <div className="flex gap-1 h-[300px]">
@@ -854,18 +859,23 @@ export default function AccueilPage() {
 
         {/* Bloc B - Structure de coût */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">Structure de coût</h2>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-4 h-4 text-[#121212]" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Répartition des coûts</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[16px] font-medium">Structure de coût</h2>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-[#121212]" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Répartition des coûts</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+              <Download className="w-4 h-4 text-gray-600" />
+            </button>
           </div>
           <div className="rounded overflow-hidden">
             <div className="flex gap-1 h-[300px]">
@@ -924,20 +934,25 @@ export default function AccueilPage() {
 
         {/* Bloc C - Répartition CA par catégorie/famille */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">
-              {selectedPortefeuille === "tous" ? "Répartition CA par catégorie" : "Répartition CA par famille"}
-            </h2>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-4 h-4 text-[#121212]" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{selectedPortefeuille === "tous" ? "Répartition du CA par catégorie de produits" : "Répartition du CA par famille de produits"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[16px] font-medium">
+                {selectedPortefeuille === "tous" ? "Répartition CA par catégorie" : "Répartition CA par famille"}
+              </h2>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-[#121212]" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{selectedPortefeuille === "tous" ? "Répartition du CA par catégorie de produits" : "Répartition du CA par famille de produits"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+              <Download className="w-4 h-4 text-gray-600" />
+            </button>
           </div>
           <div className="rounded overflow-hidden">
             <div className="flex gap-1 h-[300px]">
@@ -1075,18 +1090,23 @@ export default function AccueilPage() {
 
         {/* Bloc D - Répartition CA par fournisseur */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[16px] font-medium">Répartition CA par fournisseur</h2>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-4 h-4 text-[#121212]" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Répartition du CA par fournisseur</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[16px] font-medium">Répartition CA par fournisseur</h2>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-[#121212]" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Répartition du CA par fournisseur</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+              <Download className="w-4 h-4 text-gray-600" />
+            </button>
           </div>
           <div className="rounded overflow-hidden">
             <div className="flex gap-1 h-[300px]">

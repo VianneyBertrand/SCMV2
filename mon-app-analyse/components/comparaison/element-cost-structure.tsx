@@ -698,6 +698,26 @@ export function ElementCostStructure({ element, data, costSubTab: costSubTabProp
         )}
       </div>
 
+      {/* Titre et bouton télécharger */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h4 className="text-[16px] font-medium">Structure de coût</h4>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="w-4 h-4 text-[#121212]" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Répartition des coûts en valeur</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+          <Download className="w-4 h-4 text-gray-600" />
+        </button>
+      </div>
+
       {/* Sous-tabs */}
       <div className="flex gap-0 w-fit">
         <button

@@ -323,6 +323,11 @@ function DetailContent() {
     'Marge-PV-LCL': false,
   })
 
+  // Toggle pour la visibilité des courbes dans le graphique structure de coût
+  const toggleLegendOpacity = (key: string) => {
+    setLegendOpacity(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
   // Récupérer l'item spécifique
   const currentItem = useMemo(() => {
     const data = getPerimetreData(perimetre)
@@ -1288,18 +1293,23 @@ function DetailContent() {
             {/* Bloc Gauche - Répartition PA par pays (conditionnel) */}
             {shouldShowPaysHeatmap && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[16px] font-medium">Répartition PA par pays</h2>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-[#121212]" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Répartition du chiffre d&apos;affaires par pays</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-[16px] font-medium">Répartition PA par pays</h2>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-4 h-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Répartition du chiffre d&apos;affaires par pays</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+                    <Download className="w-4 h-4 text-gray-600" />
+                  </button>
                 </div>
                 <div className="rounded overflow-hidden">
                   <div className="flex gap-1 h-[300px]">
@@ -1375,18 +1385,23 @@ function DetailContent() {
             {/* Bloc Droite - Répartition PA par fournisseur (conditionnel) */}
             {shouldShowFournisseurHeatmap && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[16px] font-medium">Répartition PA par fournisseur</h2>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-[#121212]" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Répartition du CA par fournisseur</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-[16px] font-medium">Répartition PA par fournisseur</h2>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-4 h-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Répartition du CA par fournisseur</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+                    <Download className="w-4 h-4 text-gray-600" />
+                  </button>
                 </div>
                 <div className="rounded overflow-hidden">
                   <div className="flex gap-1 h-[300px]">
@@ -1430,22 +1445,27 @@ function DetailContent() {
 
         {/* Tab Structure de coût */}
         <TabsContent value="structure-cout" className="space-y-6 mt-10">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-[20px] font-medium">
-              {costSubTab === 'total' && 'Répartition en valeur des MP et Emballage'}
-              {costSubTab === 'mpa' && 'Répartition en valeur des MP'}
-              {costSubTab === 'mpi' && 'Répartition en valeur des emballages'}
-            </h2>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-4 h-4 text-[#121212]" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Visualisation de la répartition des coûts en valeur</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[20px] font-medium">
+                {costSubTab === 'total' && 'Répartition en valeur des MP et Emballage'}
+                {costSubTab === 'mpa' && 'Répartition en valeur des MP'}
+                {costSubTab === 'mpi' && 'Répartition en valeur des emballages'}
+              </h2>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-[#121212]" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Visualisation de la répartition des coûts en valeur</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+              <Download className="w-4 h-4 text-gray-600" />
+            </button>
           </div>
 
           <div className="flex gap-0 w-fit">
@@ -2182,15 +2202,6 @@ function DetailContent() {
                               >
                                 {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
                               </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleVolumeTableMode()
-                                }}
-                                className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
-                              >
-                                {volumeTableMode} <SwitchIcon className="w-4 h-3.5" />
-                              </button>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
@@ -2242,15 +2253,6 @@ function DetailContent() {
                                   className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
                                 >
                                   {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    toggleVolumeTableMode()
-                                  }}
-                                  className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
-                                >
-                                  {volumeTableMode} <SwitchIcon className="w-4 h-3.5" />
                                 </button>
                                 <TooltipProvider>
                                   <Tooltip>

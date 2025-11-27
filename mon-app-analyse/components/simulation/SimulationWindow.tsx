@@ -1,8 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
-import Draggable from 'react-draggable'
+import { useState, useMemo } from 'react'
 import { X, CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -57,11 +56,10 @@ interface SimulationWindowProps {
 }
 
 /**
- * Fenêtre de simulation draggable
+ * Dialog modale de simulation
  */
 export function SimulationWindow({ availableMPValues, availableMPVolumes, perimetre, label }: SimulationWindowProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const nodeRef = useRef(null)
 
   // États pour la sélection de période
   const [periodType, setPeriodType] = useState<PeriodType>('defined')
@@ -99,7 +97,6 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   const isFuturePeriodComplete = startDate && selectedDuration
 
   const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
-  const buttonPosition = useSimulationStore((state) => state.buttonPosition)
   const closeWindow = useSimulationStore((state) => state.closeWindow)
   const startSimulation = useSimulationStore((state) => state.startSimulation)
   const resetToOriginal = useSimulationStore((state) => state.resetToOriginal)
@@ -139,24 +136,16 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
 
   if (!isWindowOpen) return null
 
-  // Calculer la position de la fenêtre (à droite du bouton simulation avec 16px d'écart)
-  const windowStyle: React.CSSProperties = buttonPosition
-    ? {
-        top: `${buttonPosition.top}px`,
-        left: `${buttonPosition.left}px`,
-      }
-    : {
-        top: '120px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-      }
-
   return (
     <>
-      <Draggable handle=".drag-handle" nodeRef={nodeRef}>
-        <div ref={nodeRef} className="fixed w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 z-40 flex flex-col max-h-[80vh]" style={windowStyle}>
-          {/* Header draggable */}
-          <div className="drag-handle px-8 pt-8 pb-3 rounded-t-lg flex items-center justify-between cursor-move">
+      {/* Overlay grisé - z-index supérieur au header (z-50) */}
+      <div className="fixed inset-0 bg-black/50 z-[60]" onClick={handleClose} />
+
+      {/* Dialog centrée */}
+      <div className="fixed inset-0 z-[65] flex items-center justify-center pointer-events-none">
+        <div className="w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[85vh] pointer-events-auto">
+          {/* Header */}
+          <div className="px-8 pt-8 pb-3 rounded-t-lg flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">{getSimulationTitle(perimetre, label)}</h2>
             <Button
               variant="ghost"
@@ -223,7 +212,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
                           className="flex items-center gap-2 text-sm text-[#0970E6] hover:text-[#004E9B] font-medium"
                         >
                           <CalendarIcon className="h-4 w-4" />
-                          Aujourd'hui
+                          Aujourd&apos;hui
                         </button>
                       </div>
 
@@ -288,28 +277,18 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               Réinitialiser
             </Button>
 
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                className="h-11 px-4 text-sm"
-                style={{ fontSize: '14px' }}
-                onClick={handleQuit}
-              >
-                Quitter
-              </Button>
-              <Button
-                variant="default"
-                className="h-11 px-4 text-sm bg-[#0970E6] hover:bg-[#004E9B] active:bg-[#003161] text-white"
-                style={{ fontSize: '14px' }}
-                onClick={handleSimulate}
-                disabled={!hasData}
-              >
-                Simuler ✓
-              </Button>
-            </div>
+            <Button
+              variant="default"
+              className="h-11 px-4 text-sm bg-[#0970E6] hover:bg-[#004E9B] active:bg-[#003161] text-white"
+              style={{ fontSize: '14px' }}
+              onClick={handleSimulate}
+              disabled={!hasData}
+            >
+              Simuler ✓
+            </Button>
           </div>
         </div>
-      </Draggable>
+      </div>
 
       <ConfirmCloseDialog
         open={showConfirmDialog}
