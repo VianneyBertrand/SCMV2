@@ -263,6 +263,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
             />
             <MPVolumeColumn
               availableOptions={availableMPVolumes}
+              availableMPValues={availableMPValues}
             />
           </div>
 

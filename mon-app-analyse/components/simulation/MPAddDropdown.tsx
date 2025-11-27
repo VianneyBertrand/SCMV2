@@ -28,12 +28,13 @@ interface MPAddDropdownProps {
   options: MPOption[]
   onAdd: (option: MPOption) => void
   placeholder?: string
+  buttonLabel?: string
 }
 
 /**
  * Dropdown pour ajouter une matière première
  */
-export function MPAddDropdown({ options, onAdd, placeholder = "Rechercher une MP..." }: MPAddDropdownProps) {
+export function MPAddDropdown({ options, onAdd, placeholder = "Rechercher une MP...", buttonLabel = "Ajouter" }: MPAddDropdownProps) {
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState("")
 
@@ -54,10 +55,10 @@ export function MPAddDropdown({ options, onAdd, placeholder = "Rechercher une MP
           className="w-full h-10 justify-start gap-2 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
         >
           <Plus className="h-4 w-4" />
-          Ajouter
+          {buttonLabel}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
+      <PopoverContent className="w-[300px] p-0 z-[70]" align="start" side="top">
         <Command>
           <CommandInput placeholder={placeholder} />
           <CommandList>

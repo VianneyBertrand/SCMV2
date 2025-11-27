@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { X, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ChevronDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { MPRefSelector } from './MPRefSelector'
 
 type DurationOption = '3m' | '6m' | '1y' | '2y'
 type SplitOption = 'none' | 'month' | 'quarter' | 'semester' | 'year'
@@ -42,6 +43,7 @@ interface MPFutureRowProps {
   id: string
   label: string
   code?: string
+  onReferenceChange?: (newCode: string, newLabel: string) => void
   duration: DurationOption
   initialPrice: number
   onRemove: () => void
@@ -61,6 +63,7 @@ export function MPFutureRow({
   id,
   label,
   code,
+  onReferenceChange,
   duration,
   initialPrice,
   onRemove,
@@ -257,9 +260,17 @@ export function MPFutureRow({
     <div className="py-3 border-b border-gray-100">
       {/* Header: Label, Code et Bouton supprimer */}
       <div className="flex items-start justify-between mb-2">
-        <div className="flex flex-col">
+        <div className="flex flex-col items-start">
           <span className="font-bold text-gray-700" style={{ fontSize: '15px' }}>{label}</span>
-          {code && <span className="text-gray-500" style={{ fontSize: '11px' }}>{code}</span>}
+          {onReferenceChange ? (
+            <MPRefSelector
+              mpId={id}
+              currentCode={code || ''}
+              onReferenceChange={onReferenceChange}
+            />
+          ) : (
+            code && <span className="text-gray-500" style={{ fontSize: '11px' }}>{code}</span>
+          )}
         </div>
         <Button
           variant="ghost"

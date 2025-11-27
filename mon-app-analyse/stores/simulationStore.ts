@@ -67,6 +67,9 @@ interface SimulationState {
   addMPVolume: (mp: MPVolumeItem) => void
   removeMPVolume: (id: string) => void
 
+  // Actions - Modification code et label référence (synchronisé entre les deux colonnes)
+  updateMPReference: (id: string, newCode: string, newLabel: string) => void
+
   // Helpers
   hasChanges: () => boolean
   initializeFromExistingData: (mpValues: MPValueItem[], mpVolumes: MPVolumeItem[]) => void
@@ -238,6 +241,22 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       simulatedData: {
         ...simulatedData,
         mpVolumes: simulatedData.mpVolumes.filter(mp => mp.id !== id),
+      }
+    })
+  },
+
+  // Mise à jour du code et label référence dans les deux colonnes
+  updateMPReference: (id: string, newCode: string, newLabel: string) => {
+    const { simulatedData } = get()
+    set({
+      simulatedData: {
+        ...simulatedData,
+        mpValues: simulatedData.mpValues.map(mp =>
+          mp.id === id ? { ...mp, code: newCode, label: newLabel } : mp
+        ),
+        mpVolumes: simulatedData.mpVolumes.map(mp =>
+          mp.id === id ? { ...mp, code: newCode, label: newLabel } : mp
+        ),
       }
     })
   },

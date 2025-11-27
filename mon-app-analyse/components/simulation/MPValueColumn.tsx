@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { useSimulationStore, MPValueItem } from '@/stores/simulationStore'
 import { MPRow } from './MPRow'
 import { MPFutureRow } from './MPFutureRow'
-import { MPAddDropdown } from './MPAddDropdown'
 
 type DurationOption = '3m' | '6m' | '1y' | '2y'
 type SplitOption = 'none' | 'month' | 'quarter' | 'semester' | 'year'
@@ -33,8 +32,8 @@ export function MPValueColumn({ availableOptions, periodType = 'defined', select
   const updateMPPriceFirst = useSimulationStore((state) => state.updateMPPriceFirst)
   const updateMPPriceLast = useSimulationStore((state) => state.updateMPPriceLast)
   const updateMPEvolution = useSimulationStore((state) => state.updateMPEvolution)
-  const addMPValue = useSimulationStore((state) => state.addMPValue)
   const removeMPValue = useSimulationStore((state) => state.removeMPValue)
+  const updateMPReference = useSimulationStore((state) => state.updateMPReference)
 
   // État local pour les données du mode "future" (par MP)
   const [futureMPData, setFutureMPData] = useState<Record<string, FutureMPData>>({})
@@ -55,18 +54,6 @@ export function MPValueColumn({ availableOptions, periodType = 'defined', select
     }))
   }
 
-  const handleAdd = (option: { id: string; label: string }) => {
-    const mpToAdd = availableOptions.find(mp => mp.id === option.id)
-    if (mpToAdd) {
-      addMPValue(mpToAdd)
-    }
-  }
-
-  // Filtrer les options pour ne pas afficher celles déjà ajoutées
-  const filteredOptions = availableOptions
-    .filter(opt => !simulatedData.mpValues.some(mp => mp.id === opt.id))
-    .map(opt => ({ id: opt.id, label: opt.label }))
-
   const isFutureMode = periodType === 'future' && selectedDuration
 
   return (
@@ -78,14 +65,6 @@ export function MPValueColumn({ availableOptions, periodType = 'defined', select
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-2">
-        <div className="mb-3">
-          <MPAddDropdown
-            options={filteredOptions}
-            onAdd={handleAdd}
-            placeholder="Rechercher une MP..."
-          />
-        </div>
-
         <div className="space-y-1">
           {simulatedData.mpValues.map((mp) => {
             const originalMP = getOriginalMP(mp.id)
@@ -99,6 +78,7 @@ export function MPValueColumn({ availableOptions, periodType = 'defined', select
                   id={mp.id}
                   label={mp.label}
                   code={mp.code}
+                  onReferenceChange={(newCode, newLabel) => updateMPReference(mp.id, newCode, newLabel)}
                   duration={selectedDuration}
                   initialPrice={mp.priceFirst}
                   onRemove={() => removeMPValue(mp.id)}
@@ -118,6 +98,8 @@ export function MPValueColumn({ availableOptions, periodType = 'defined', select
                 key={mp.id}
                 label={mp.label}
                 code={mp.code}
+                mpId={mp.id}
+                onReferenceChange={(newCode, newLabel) => updateMPReference(mp.id, newCode, newLabel)}
                 value={`${mp.priceFirst.toFixed(3)}€/kg`}
                 numericValue={mp.priceFirst}
                 originalValue={originalMP?.priceFirst}

@@ -4,10 +4,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { MPRefSelector } from './MPRefSelector'
 
 interface MPRowProps {
   label: string
   code?: string
+  mpId?: string
+  onReferenceChange?: (newCode: string, newLabel: string) => void
   value: string | number
   numericValue?: number  // Valeur numérique réelle pour le calcul d'évolution
   originalValue?: number
@@ -44,6 +47,8 @@ interface MPRowProps {
 export function MPRow({
   label,
   code,
+  mpId,
+  onReferenceChange,
   value,
   numericValue,
   originalValue,
@@ -225,9 +230,17 @@ export function MPRow({
     <div className="py-2">
       {/* Label et Code */}
       <div className="flex items-start justify-between mb-1">
-        <div className="flex flex-col">
+        <div className="flex flex-col items-start">
           <span className="font-bold text-gray-700" style={{ fontSize: '16px' }}>{label}</span>
-          {code && <span className="text-gray-500" style={{ fontSize: '12px' }}>{code}</span>}
+          {mpId && onReferenceChange ? (
+            <MPRefSelector
+              mpId={mpId}
+              currentCode={code || ''}
+              onReferenceChange={onReferenceChange}
+            />
+          ) : (
+            code && <span className="text-gray-500" style={{ fontSize: '12px' }}>{code}</span>
+          )}
         </div>
         <Button
           variant="ghost"

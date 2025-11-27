@@ -5,22 +5,10 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSimulationStore } from '@/stores/simulationStore'
 import { Button } from '@/components/ui/button'
-import { X, Eye } from 'lucide-react'
-
-// Générer le titre dynamique
-function getSimulationTitle(perimetre: string, label: string): string {
-  const perimetreMap: Record<string, string> = {
-    'Catégorie': 'de la catégorie',
-    'Marché': 'du marché',
-    'Fournisseur': 'du fournisseur',
-    'Produit': 'du produit',
-  }
-  const preposition = perimetreMap[perimetre] || `de ${perimetre.toLowerCase()}`
-  return `Simulation en cours ${preposition} ${label}`
-}
+import { X, Eye, FlaskConical } from 'lucide-react'
 
 /**
- * Overlay de simulation avec contour rouge fixe et barre de contrôle
+ * Banner de simulation avec barre de contrôle
  * Visible sur toutes les pages sauf /cours-matieres-premieres
  */
 export function SimulationOverlay() {
@@ -60,45 +48,35 @@ export function SimulationOverlay() {
 
   return (
     <>
-      {/* Contour fixe rouge avec bordure blanche (4px blanc + 2px rouge) */}
-      <div
-        className="fixed pointer-events-none z-[55]"
-        style={{
-          top: '64px',
-          left: '0',
-          right: '0',
-          bottom: '0',
-          border: '4px solid white',
-          boxShadow: 'inset 0 0 0 2px red',
-        }}
-      />
-
-      {/* Barre de contrôle de simulation */}
-      <div className="w-full px-[50px] py-3 bg-white border-b border-gray-200">
+      {/* Banner de simulation */}
+      <div className="w-full px-[50px] py-3 bg-[#0970E6] text-white">
         <div className="flex items-center justify-between">
-          {/* Titre */}
-          <h2 className="text-gray-800 font-semibold" style={{ fontSize: '20px' }}>
-            {getSimulationTitle(currentPerimetre, currentLabel)}
-          </h2>
+          {/* Gauche - Titre */}
+          <div className="flex items-center gap-3">
+            <FlaskConical className="h-5 w-5" />
+            <span className="font-semibold tracking-wide">SIMULATION EN COURS</span>
+            <span className="text-white/60">•</span>
+            <span className="text-white/80">{currentLabel}</span>
+          </div>
 
-          {/* Boutons */}
+          {/* Droite - Boutons */}
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="px-4 py-2 text-sm border-[#0970E6] text-[#0970E6] hover:bg-blue-50"
+              className="px-4 py-2 text-sm border-white text-white bg-transparent hover:bg-white/10"
               onClick={handleViewModify}
             >
               <Eye className="h-4 w-4 mr-2" />
-              Voir/modifier la simulation
+              Modifier
             </Button>
 
             <Button
-              variant="destructive"
-              className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white"
+              variant="ghost"
+              className="px-4 py-2 text-sm text-white hover:bg-white/10"
               onClick={handleQuit}
             >
               <X className="h-4 w-4 mr-2" />
-              Quitter la simulation
+              Quitter
             </Button>
           </div>
         </div>
