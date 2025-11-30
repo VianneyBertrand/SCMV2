@@ -48,10 +48,20 @@ import { CalendarIcon, Check, ChevronDown as ChevronDownIcon, ChevronsUpDown, Do
 import { SwitchIcon } from "@/components/ui/switch-icon"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { InlineField } from "@/componentsv2/ui/inline-field"
+import { DatePicker as DatePickerV2, type MonthYear } from "@/componentsv2/ui/date-picker"
+import {
+  Select as SelectV2,
+  SelectContent as SelectContentV2,
+  SelectItem as SelectItemV2,
+  SelectTrigger as SelectTriggerV2,
+  SelectValue as SelectValueV2,
+} from "@/componentsv2/ui/select"
 import { useEffect, useMemo, useState } from "react"
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 import { useRestoredPageState } from "@/hooks/usePageState"
+import { usePeriodStore } from "@/stores/periodStore"
 import { SimulationTag } from "@/components/simulation/SimulationTag"
 
 // Interface pour l'état de la page à persister
@@ -303,6 +313,9 @@ export default function AccueilPage() {
 
   // State pour le combobox
   const [openCombobox, setOpenCombobox] = useState(false)
+
+  // State pour la période (synchronisé via store)
+  const { period, setPeriod } = usePeriodStore()
 
   // State pour les fournisseurs sélectionnés (multiselection)
   const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>(restoredState?.selectedFournisseurs ?? [])
@@ -605,52 +618,45 @@ export default function AccueilPage() {
         <h1 className="text-[40px] font-bold">Accueil</h1>
 
         <div className="flex items-center gap-2">
-          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700">Périmètre</Label>
-              <Select value={selectedPortefeuille} onValueChange={setSelectedPortefeuille}>
-                <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                  <SelectValue placeholder="Périmètre" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tous">Tous</SelectItem>
-                  {portefeuilleOptions.map(portef => (
-                    <SelectItem key={portef} value={portef}>{portef}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </Card>
+          <InlineField label="Périmètre">
+            <SelectV2 value={selectedPortefeuille} onValueChange={setSelectedPortefeuille}>
+              <SelectTriggerV2 size="sm" width="auto">
+                <SelectValueV2 />
+              </SelectTriggerV2>
+              <SelectContentV2>
+                <SelectItemV2 value="tous">Tous</SelectItemV2>
+                {portefeuilleOptions.map(portef => (
+                  <SelectItemV2 key={portef} value={portef}>{portef}</SelectItemV2>
+                ))}
+              </SelectContentV2>
+            </SelectV2>
+          </InlineField>
 
-          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700">Pays</Label>
-              <Select defaultValue="tous">
-                <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                  <SelectValue placeholder="Pays" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tous">Tous</SelectItem>
-                  <SelectItem value="france">France</SelectItem>
-                  <SelectItem value="belgique">Belgique</SelectItem>
-                  <SelectItem value="espagne">Espagne</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </Card>
+          <InlineField label="Pays">
+            <SelectV2 defaultValue="tous">
+              <SelectTriggerV2 size="sm" width="auto">
+                <SelectValueV2 />
+              </SelectTriggerV2>
+              <SelectContentV2>
+                <SelectItemV2 value="tous">Tous</SelectItemV2>
+                <SelectItemV2 value="france">France</SelectItemV2>
+                <SelectItemV2 value="belgique">Belgique</SelectItemV2>
+                <SelectItemV2 value="espagne">Espagne</SelectItemV2>
+              </SelectContentV2>
+            </SelectV2>
+          </InlineField>
 
-          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700">Période</Label>
-              <Button
-                variant="outline"
-                className="w-auto justify-between border-gray-200 bg-white font-normal shadow-none gap-2"
-              >
-                01/01/2025 - 13/11/2025
-                <CalendarIcon className="h-4 w-4 text-blue-500" />
-              </Button>
-            </div>
-          </Card>
+          <InlineField label="Période">
+            <DatePickerV2
+              mode="period"
+              size="sm"
+              value={period}
+              onValueChange={setPeriod}
+              minDate={{ month: 0, year: 2018 }}
+              maxDate={{ month: 11, year: 2025 }}
+              showValidateButton
+            />
+          </InlineField>
         </div>
       </div>
 

@@ -1,136 +1,79 @@
 // @ts-nocheck
 'use client'
 
-import { useState } from 'react'
-import { useSimulationStore, MPValueItem } from '@/stores/simulationStore'
-import { MPRow } from './MPRow'
-import { MPFutureRow } from './MPFutureRow'
-
-type DurationOption = '3m' | '6m' | '1y' | '2y'
-type SplitOption = 'none' | 'month' | 'quarter' | 'semester' | 'year'
-
-interface FutureMPData {
-  totalEvolution: number
-  splitValues: number[]
-  selectedSplit: SplitOption
-}
+import { useSimulationStore, MPValueItem, DecoupageType } from '@/stores/simulationStore'
+import { MPValueItemCard } from './MPValueItemCard'
 
 interface MPValueColumnProps {
   availableOptions: MPValueItem[]
-  periodType?: 'defined' | 'future'
-  selectedDuration?: DurationOption | null
+  period?: { from?: { month: number; year: number }; to?: { month: number; year: number } }
+  resetKey?: number
+  columnType?: 'mp' | 'emballage'
 }
 
 /**
- * Colonne gauche: MP en Valeur (€)
- * - Mode "defined": Prix première période + Prix dernière période
- * - Mode "future": Évolution en % avec découpage possible
+ * Colonne gauche: MP/Emballage en Valeur (€)
+ * Mode période définie: Prix première période + Prix dernière période
+ * Avec support du découpage temporel
  */
-export function MPValueColumn({ availableOptions, periodType = 'defined', selectedDuration }: MPValueColumnProps) {
+export function MPValueColumn({ availableOptions, period, resetKey, columnType = 'mp' }: MPValueColumnProps) {
   const simulatedData = useSimulationStore((state) => state.simulatedData)
-  const originalData = useSimulationStore((state) => state.originalData)
+
+  // Actions MP
   const updateMPPriceFirst = useSimulationStore((state) => state.updateMPPriceFirst)
   const updateMPPriceLast = useSimulationStore((state) => state.updateMPPriceLast)
-  const updateMPEvolution = useSimulationStore((state) => state.updateMPEvolution)
   const removeMPValue = useSimulationStore((state) => state.removeMPValue)
   const updateMPReference = useSimulationStore((state) => state.updateMPReference)
+  const updateMPDecoupage = useSimulationStore((state) => state.updateMPDecoupage)
+  const updateMPIntermediatePrice = useSimulationStore((state) => state.updateMPIntermediatePrice)
 
-  // État local pour les données du mode "future" (par MP)
-  const [futureMPData, setFutureMPData] = useState<Record<string, FutureMPData>>({})
+  // Actions Emballage
+  const updateEmballagePriceFirst = useSimulationStore((state) => state.updateEmballagePriceFirst)
+  const updateEmballagePriceLast = useSimulationStore((state) => state.updateEmballagePriceLast)
+  const removeEmballageValue = useSimulationStore((state) => state.removeEmballageValue)
+  const updateEmballageReference = useSimulationStore((state) => state.updateEmballageReference)
+  const updateEmballageDecoupage = useSimulationStore((state) => state.updateEmballageDecoupage)
+  const updateEmballageIntermediatePrice = useSimulationStore((state) => state.updateEmballageIntermediatePrice)
 
-  // Fonction pour trouver la valeur originale d'une MP
-  const getOriginalMP = (id: string) => originalData.mpValues.find(mp => mp.id === id)
+  // Sélectionner les données en fonction du type de colonne
+  const isEmballage = columnType === 'emballage'
+  const items = isEmballage ? simulatedData.emballageValues : simulatedData.mpValues
 
-  // Initialiser les données future pour une MP si nécessaire
-  const getFutureMPData = (mpId: string): FutureMPData => {
-    if (futureMPData[mpId]) return futureMPData[mpId]
-    return { totalEvolution: 0, splitValues: [], selectedSplit: 'none' }
-  }
-
-  const updateFutureMPData = (mpId: string, data: Partial<FutureMPData>) => {
-    setFutureMPData(prev => ({
-      ...prev,
-      [mpId]: { ...getFutureMPData(mpId), ...data }
-    }))
-  }
-
-  const isFutureMode = periodType === 'future' && selectedDuration
+  // Sélectionner les actions en fonction du type
+  const updatePriceFirst = isEmballage ? updateEmballagePriceFirst : updateMPPriceFirst
+  const updatePriceLast = isEmballage ? updateEmballagePriceLast : updateMPPriceLast
+  const removeItem = isEmballage ? removeEmballageValue : removeMPValue
+  const updateReference = isEmballage ? updateEmballageReference : updateMPReference
+  const updateDecoupage = isEmballage ? updateEmballageDecoupage : updateMPDecoupage
+  const updateIntermediatePrice = isEmballage ? updateEmballageIntermediatePrice : updateMPIntermediatePrice
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="px-4 py-2">
-        <h3 className="font-bold text-gray-700" style={{ fontSize: '16px' }}>
-          {isFutureMode ? 'MP en Valeur - Évolution (%)' : 'MP en Valeur (€)'}
-        </h3>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-2">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
         <div className="space-y-1">
-          {simulatedData.mpValues.map((mp) => {
-            const originalMP = getOriginalMP(mp.id)
-
-            // Mode période future
-            if (isFutureMode) {
-              const mpFutureData = getFutureMPData(mp.id)
-              return (
-                <MPFutureRow
-                  key={mp.id}
-                  id={mp.id}
-                  label={mp.label}
-                  code={mp.code}
-                  onReferenceChange={(newCode, newLabel) => updateMPReference(mp.id, newCode, newLabel)}
-                  duration={selectedDuration}
-                  initialPrice={mp.priceFirst}
-                  onRemove={() => removeMPValue(mp.id)}
-                  totalEvolution={mpFutureData.totalEvolution}
-                  splitValues={mpFutureData.splitValues}
-                  selectedSplit={mpFutureData.selectedSplit}
-                  onTotalEvolutionChange={(value) => updateFutureMPData(mp.id, { totalEvolution: value })}
-                  onSplitValuesChange={(values) => updateFutureMPData(mp.id, { splitValues: values })}
-                  onSplitChange={(split) => updateFutureMPData(mp.id, { selectedSplit: split })}
-                />
-              )
-            }
-
-            // Mode période définie (comportement existant)
-            return (
-              <MPRow
-                key={mp.id}
-                label={mp.label}
-                code={mp.code}
-                mpId={mp.id}
-                onReferenceChange={(newCode, newLabel) => updateMPReference(mp.id, newCode, newLabel)}
-                value={`${mp.priceFirst.toFixed(3)}€/kg`}
-                numericValue={mp.priceFirst}
-                originalValue={originalMP?.priceFirst}
-                valueLabel="Prix 01/04/2024"
-                secondValue={`${mp.priceLast.toFixed(3)}€/kg`}
-                numericSecondValue={mp.priceLast}
-                originalSecondValue={originalMP?.priceLast}
-                secondValueLabel="Prix 01/04/2025"
-                onIncrement01={() => updateMPPriceFirst(mp.id, mp.priceFirst * 1.001)}
-                onIncrement1={() => updateMPPriceFirst(mp.id, mp.priceFirst * 1.01)}
-                onDecrement01={() => updateMPPriceFirst(mp.id, Math.max(0, mp.priceFirst * 0.999))}
-                onDecrement1={() => updateMPPriceFirst(mp.id, Math.max(0, mp.priceFirst * 0.99))}
-                onSecondIncrement01={() => updateMPPriceLast(mp.id, mp.priceLast * 1.001)}
-                onSecondIncrement1={() => updateMPPriceLast(mp.id, mp.priceLast * 1.01)}
-                onSecondDecrement01={() => updateMPPriceLast(mp.id, Math.max(0, mp.priceLast * 0.999))}
-                onSecondDecrement1={() => updateMPPriceLast(mp.id, Math.max(0, mp.priceLast * 0.99))}
-                thirdValue={`${mp.evolution.toFixed(2)}%`}
-                numericThirdValue={mp.evolution}
-                originalThirdValue={originalMP?.evolution}
-                thirdValueLabel="Évolution"
-                onThirdIncrement01={() => updateMPEvolution(mp.id, mp.evolution + 0.1)}
-                onThirdIncrement1={() => updateMPEvolution(mp.id, mp.evolution + 1)}
-                onThirdDecrement01={() => updateMPEvolution(mp.id, mp.evolution - 0.1)}
-                onThirdDecrement1={() => updateMPEvolution(mp.id, mp.evolution - 1)}
-                onRemove={() => removeMPValue(mp.id)}
-                onValueChange={(newValue) => updateMPPriceFirst(mp.id, newValue)}
-                onSecondValueChange={(newValue) => updateMPPriceLast(mp.id, newValue)}
-                onThirdValueChange={(newValue) => updateMPEvolution(mp.id, newValue)}
-              />
-            )
-          })}
+          {items.map((item) => (
+            <MPValueItemCard
+              key={item.id}
+              id={item.id}
+              label={item.label}
+              code={item.code}
+              priceFirst={item.priceFirst}
+              priceLast={item.priceLast}
+              decoupage={item.decoupage}
+              intermediatePrices={item.intermediatePrices}
+              period={period}
+              onReferenceChange={(newCode, newLabel, priceFirst, priceLast) =>
+                updateReference(item.id, newCode, newLabel, priceFirst, priceLast)
+              }
+              onPriceFirstChange={(price) => updatePriceFirst(item.id, price)}
+              onPriceLastChange={(price) => updatePriceLast(item.id, price)}
+              onDecoupageChange={(decoupage) => updateDecoupage(item.id, decoupage, period)}
+              onIntermediatePriceChange={(periodIndex, price) =>
+                updateIntermediatePrice(item.id, periodIndex, price)
+              }
+              onRemove={() => removeItem(item.id)}
+            />
+          ))}
         </div>
       </div>
     </div>

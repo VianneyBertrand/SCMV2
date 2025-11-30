@@ -2,15 +2,16 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown } from 'lucide-react'
+import { X, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { IconButton } from '@/componentsv2/ui/icon-button'
 import { MPRefSelector } from './MPRefSelector'
 
 interface MPRowProps {
   label: string
   code?: string
   mpId?: string
-  onReferenceChange?: (newCode: string, newLabel: string) => void
+  onReferenceChange?: (newCode: string, newLabel: string, priceFirst?: number, priceLast?: number) => void
   value: string | number
   numericValue?: number  // Valeur numérique réelle pour le calcul d'évolution
   originalValue?: number
@@ -90,6 +91,11 @@ export function MPRow({
   const [editThirdValue, setEditThirdValue] = useState('')
   const thirdInputRef = useRef<HTMLInputElement>(null)
 
+  // État pour l'édition de l'évolution totale (ligne 2 uniquement)
+  const [isEditingTotalEvolution, setIsEditingTotalEvolution] = useState(false)
+  const [editTotalEvolution, setEditTotalEvolution] = useState('')
+  const totalEvolutionInputRef = useRef<HTMLInputElement>(null)
+
   // Extraire le nombre et l'unité de la valeur
   const parseValue = (val: string | number) => {
     const str = String(val)
@@ -119,9 +125,8 @@ export function MPRow({
   const currentSecondValue = numericSecondValue !== undefined ? numericSecondValue : parseFloat(secondValueNumber)
   const currentThirdValue = numericThirdValue !== undefined ? numericThirdValue : parseFloat(thirdValueNumber)
 
-  const valueEvolution = calculateEvolution(currentValue, originalValue)
-  const secondValueEvolution = calculateEvolution(currentSecondValue, originalSecondValue)
-  const thirdValueEvolution = calculateEvolution(currentThirdValue, originalThirdValue)
+  // Évolution totale : de priceFirst (ligne 1) à priceLast (ligne 2)
+  const totalEvolution = currentValue > 0 ? ((currentSecondValue - currentValue) / currentValue) * 100 : 0
 
   // Formater l'évolution pour l'affichage
   const formatEvolution = (evolution: number | null): string => {
@@ -226,12 +231,57 @@ export function MPRow({
     }
   }
 
+  // Handlers pour l'édition de l'évolution totale (ligne 2)
+  const handleTotalEvolutionClick = () => {
+    if (onSecondValueChange && currentValue > 0) {
+      setEditTotalEvolution(totalEvolution.toFixed(2))
+      setIsEditingTotalEvolution(true)
+    }
+  }
+
+  const handleTotalEvolutionBlur = () => {
+    if (onSecondValueChange && currentValue > 0) {
+      const newEvolution = parseFloat(editTotalEvolution)
+      if (!isNaN(newEvolution)) {
+        // Calculer priceLast basé sur priceFirst et l'évolution totale
+        const newPriceLast = currentValue * (1 + newEvolution / 100)
+        onSecondValueChange(Math.max(0, newPriceLast))
+      }
+    }
+    setIsEditingTotalEvolution(false)
+  }
+
+  const handleTotalEvolutionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTotalEvolutionBlur()
+    } else if (e.key === 'Escape') {
+      setIsEditingTotalEvolution(false)
+    }
+  }
+
+  // Incrémenter/décrémenter l'évolution totale
+  const handleTotalEvolutionChange = (delta: number) => {
+    if (onSecondValueChange && currentValue > 0) {
+      const newEvolution = totalEvolution + delta
+      const newPriceLast = currentValue * (1 + newEvolution / 100)
+      onSecondValueChange(Math.max(0, newPriceLast))
+    }
+  }
+
+  // useEffect pour focus sur l'input d'évolution totale
+  useEffect(() => {
+    if (isEditingTotalEvolution && totalEvolutionInputRef.current) {
+      totalEvolutionInputRef.current.focus()
+      totalEvolutionInputRef.current.select()
+    }
+  }, [isEditingTotalEvolution])
+
   return (
-    <div className="py-2">
+    <div className="pt-6 pb-6 border-b border-gray-200 last:border-b-0 first:pt-0">
       {/* Label et Code */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex flex-col items-start">
-          <span className="font-bold text-gray-700" style={{ fontSize: '16px' }}>{label}</span>
+          <span className="body-m-bold text-foreground">{label}</span>
           {mpId && onReferenceChange ? (
             <MPRefSelector
               mpId={mpId}
@@ -256,25 +306,21 @@ export function MPRow({
       <div className="flex items-center gap-1">
         {valueLabel && <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>{valueLabel}</span>}
 
-        {/* Double chevron down (-1%) */}
-        <Button
+        {/* Bouton - (Shift = -1, sinon -0.1) */}
+        <IconButton
           variant="outline"
-          size="sm"
-          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-          onClick={onDecrement1}
+          size="xs"
+          aria-label="Diminuer (Shift pour -1)"
+          onClick={(e: React.MouseEvent) => {
+            if (e.shiftKey) {
+              onDecrement1()
+            } else {
+              onDecrement01()
+            }
+          }}
         >
-          <ChevronsDown className="h-5 w-5" />
-        </Button>
-
-        {/* Simple chevron down (-0.1%) */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-          onClick={onDecrement01}
-        >
-          <ChevronDown className="h-5 w-5" />
-        </Button>
+          <Minus />
+        </IconButton>
 
         {/* Input avec unité */}
         {isEditingValue && onValueChange ? (
@@ -285,52 +331,32 @@ export function MPRow({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleValueBlur}
             onKeyDown={handleValueKeyDown}
-            className="h-10 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+            className="h-8 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
           />
         ) : (
           <div
-            className={`h-10 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
+            className={`h-8 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
             onClick={handleValueClick}
           >
             {valueNumber}{valueUnit}
           </div>
         )}
 
-        {/* Simple chevron up (+0.1%) */}
-        <Button
+        {/* Bouton + (Shift = +1, sinon +0.1) */}
+        <IconButton
           variant="outline"
-          size="sm"
-          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-          onClick={() => {
-            console.log('MPRow - ChevronUp clicked for', label)
-            onIncrement01()
+          size="xs"
+          aria-label="Augmenter (Shift pour +1)"
+          onClick={(e: React.MouseEvent) => {
+            if (e.shiftKey) {
+              onIncrement1()
+            } else {
+              onIncrement01()
+            }
           }}
         >
-          <ChevronUp className="h-5 w-5" />
-        </Button>
-
-        {/* Double chevron up (+1%) */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-          onClick={onIncrement1}
-        >
-          <ChevronsUp className="h-5 w-5" />
-        </Button>
-
-        {/* % d'évolution */}
-        <span
-          className={`ml-4 text-sm font-semibold min-w-[70px] text-left ${
-            valueEvolution === null || valueEvolution === 0
-              ? 'text-gray-500'
-              : valueEvolution > 0
-                ? 'text-green-600'
-                : 'text-red-600'
-          }`}
-        >
-          {formatEvolution(valueEvolution)}
-        </span>
+          <Plus />
+        </IconButton>
       </div>
 
       {/* Valeur secondaire (optionnelle) */}
@@ -338,25 +364,21 @@ export function MPRow({
         <div className="flex items-center gap-1 mt-1">
           {secondValueLabel && <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>{secondValueLabel}</span>}
 
-          {/* Double chevron down (-1%) */}
-          <Button
+          {/* Bouton - (Shift = -1, sinon -0.1) */}
+          <IconButton
             variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onSecondDecrement1}
+            size="xs"
+            aria-label="Diminuer (Shift pour -1)"
+            onClick={(e: React.MouseEvent) => {
+              if (e.shiftKey) {
+                onSecondDecrement1()
+              } else {
+                onSecondDecrement01?.()
+              }
+            }}
           >
-            <ChevronsDown className="h-5 w-5" />
-          </Button>
-
-          {/* Simple chevron down (-0.1%) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onSecondDecrement01}
-          >
-            <ChevronDown className="h-5 w-5" />
-          </Button>
+            <Minus />
+          </IconButton>
 
           {/* Input avec unité */}
           {isEditingSecondValue && onSecondValueChange ? (
@@ -367,131 +389,85 @@ export function MPRow({
               onChange={(e) => setEditSecondValue(e.target.value)}
               onBlur={handleSecondValueBlur}
               onKeyDown={handleSecondValueKeyDown}
-              className="h-10 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+              className="h-8 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
             />
           ) : (
             <div
-              className={`h-10 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onSecondValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
+              className={`h-8 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onSecondValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
               onClick={handleSecondValueClick}
             >
               {secondValueNumber}{secondValueUnit}
             </div>
           )}
 
-          {/* Simple chevron up (+0.1%) */}
-          <Button
+          {/* Bouton + (Shift = +1, sinon +0.1) */}
+          <IconButton
             variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onSecondIncrement01}
+            size="xs"
+            aria-label="Augmenter (Shift pour +1)"
+            onClick={(e: React.MouseEvent) => {
+              if (e.shiftKey) {
+                onSecondIncrement1()
+              } else {
+                onSecondIncrement01?.()
+              }
+            }}
           >
-            <ChevronUp className="h-5 w-5" />
-          </Button>
+            <Plus />
+          </IconButton>
 
-          {/* Double chevron up (+1%) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onSecondIncrement1}
-          >
-            <ChevronsUp className="h-5 w-5" />
-          </Button>
-
-          {/* % d'évolution */}
-          <span
-            className={`ml-4 text-sm font-semibold min-w-[70px] text-left ${
-              secondValueEvolution === null || secondValueEvolution === 0
-                ? 'text-gray-500'
-                : secondValueEvolution > 0
-                  ? 'text-green-600'
-                  : 'text-red-600'
-            }`}
-          >
-            {formatEvolution(secondValueEvolution)}
-          </span>
-        </div>
-      )}
-
-      {/* Troisième valeur (optionnelle - Évolution) */}
-      {thirdValue !== undefined && onThirdIncrement1 && onThirdDecrement1 && (
-        <div className="flex items-center gap-1 mt-4">
-          {thirdValueLabel && <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>{thirdValueLabel}</span>}
-
-          {/* Double chevron down (-1%) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onThirdDecrement1}
-          >
-            <ChevronsDown className="h-5 w-5" />
-          </Button>
-
-          {/* Simple chevron down (-0.1%) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onThirdDecrement01}
-          >
-            <ChevronDown className="h-5 w-5" />
-          </Button>
-
-          {/* Input avec unité */}
-          {isEditingThirdValue && onThirdValueChange ? (
-            <input
-              ref={thirdInputRef}
-              type="text"
-              value={editThirdValue}
-              onChange={(e) => setEditThirdValue(e.target.value)}
-              onBlur={handleThirdValueBlur}
-              onKeyDown={handleThirdValueKeyDown}
-              className="h-10 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
-            />
-          ) : (
-            <div
-              className={`h-10 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center ${onThirdValueChange ? 'cursor-text hover:bg-gray-100' : ''}`}
-              onClick={handleThirdValueClick}
+          {/* % d'évolution totale (de priceFirst à priceLast) */}
+          <div className="flex items-center gap-1 ml-4">
+            <IconButton
+              variant="outline"
+              size="xs"
+              aria-label="Diminuer évolution (Shift pour -1%)"
+              onClick={(e: React.MouseEvent) => {
+                handleTotalEvolutionChange(e.shiftKey ? -1 : -0.1)
+              }}
             >
-              {thirdValueNumber}{thirdValueUnit}
-            </div>
-          )}
+              <Minus />
+            </IconButton>
 
-          {/* Simple chevron up (+0.1%) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onThirdIncrement01}
-          >
-            <ChevronUp className="h-5 w-5" />
-          </Button>
+            {isEditingTotalEvolution ? (
+              <input
+                ref={totalEvolutionInputRef}
+                type="text"
+                value={editTotalEvolution}
+                onChange={(e) => setEditTotalEvolution(e.target.value)}
+                onBlur={handleTotalEvolutionBlur}
+                onKeyDown={handleTotalEvolutionKeyDown}
+                className="h-8 w-20 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+              />
+            ) : (
+              <div
+                className={`h-8 w-20 px-2 text-sm font-semibold text-center rounded border border-gray-300 flex items-center justify-center cursor-text hover:bg-gray-100 ${
+                  totalEvolution === 0
+                    ? 'text-gray-500'
+                    : totalEvolution > 0
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                }`}
+                onClick={handleTotalEvolutionClick}
+              >
+                {formatEvolution(totalEvolution)}
+              </div>
+            )}
 
-          {/* Double chevron up (+1%) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0 border-[#0970E6] text-[#0970E6] hover:border-[#004E9B] hover:text-[#004E9B] hover:bg-white active:border-[#003161] active:text-[#003161] active:bg-white"
-            onClick={onThirdIncrement1}
-          >
-            <ChevronsUp className="h-5 w-5" />
-          </Button>
-
-          {/* % d'évolution */}
-          <span
-            className={`ml-4 text-sm font-semibold min-w-[70px] text-left ${
-              thirdValueEvolution === null || thirdValueEvolution === 0
-                ? 'text-gray-500'
-                : thirdValueEvolution > 0
-                  ? 'text-green-600'
-                  : 'text-red-600'
-            }`}
-          >
-            {formatEvolution(thirdValueEvolution)}
-          </span>
+            <IconButton
+              variant="outline"
+              size="xs"
+              aria-label="Augmenter évolution (Shift pour +1%)"
+              onClick={(e: React.MouseEvent) => {
+                handleTotalEvolutionChange(e.shiftKey ? 1 : 0.1)
+              }}
+            >
+              <Plus />
+            </IconButton>
+          </div>
         </div>
       )}
+
     </div>
   )
 }

@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client";
 
+import React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
@@ -33,7 +34,7 @@ import {
   type PerimetreType
 } from "@/lib/data/perimetre-data"
 import { calculateValorisation } from "@/lib/utils"
-import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download, ChevronsUpDown, RotateCcw } from "lucide-react"
+import { ArrowLeft, CalendarIcon, Info, Pencil, X, Download, ChevronsUpDown, RotateCcw, Search } from "lucide-react"
 import { SwitchIcon } from "@/components/ui/switch-icon"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -41,13 +42,16 @@ import { useMemo, useState, Suspense, useEffect, useRef } from "react"
 import dynamic from 'next/dynamic'
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
+import { InlineField } from "@/componentsv2/ui/inline-field"
+import { DatePicker as DatePickerV2 } from "@/componentsv2/ui/date-picker"
+import { usePeriodStore } from "@/stores/periodStore"
 
 // Imports pour la simulation
 import { SimulationButton } from "@/components/simulation/SimulationButton"
 import { SimulationWindow } from "@/components/simulation/SimulationWindow"
 import { SimulationTag } from "@/components/simulation/SimulationTag"
 import { useSimulationStore } from "@/stores/simulationStore"
-import { extractMPValuesFromChartData, extractMPVolumesFromRecetteData } from "@/lib/utils/simulationHelpers"
+import { extractMPValuesFromChartData, extractMPVolumesFromRecetteData, getEmballageValues, getEmballageVolumes } from "@/lib/utils/simulationHelpers"
 
 // Import Recharts components directly
 import {
@@ -310,6 +314,48 @@ function DetailContent() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
   const [recetteSubTab, setRecetteSubTab] = useState<'mpa' | 'mpi'>('mpa')
 
+  // État pour le tableau Details d'emballage
+  const [emballageSearchKeyword, setEmballageSearchKeyword] = useState('')
+  const [emballageSortConfig, setEmballageSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
+
+  // Données mockées pour le tableau Details d'emballage
+  const emballageDetailsData = [
+    {
+      id: '1',
+      emballage: 'CARREFOUR POWDER BOX C7,1',
+      section: 'CARTON BOX',
+      poidsSection: 175.5,
+      nombreSections: 1,
+      materiaux: [
+        { partMateriau: '96.18%', poidsMateriau: '168.80g', materiau: 'Cellulosique / Carton plat', poidsRecycle: '0g', partRecyclee: '0%', origineMateriau: 'Europe', codeMintec: 'SV85', coefficientCout: 1.5 },
+        { partMateriau: '1.26%', poidsMateriau: '2.21g', materiau: 'Métaux / Acier et fer (magnétiques)', poidsRecycle: '0g', partRecyclee: '0%', origineMateriau: 'Europe', codeMintec: '1K01', coefficientCout: 1.5 },
+        { partMateriau: '2.56%', poidsMateriau: '4.49g', materiau: 'Plastiques / PEHD - Polyéthylène haute densité', poidsRecycle: '0g', partRecyclee: '0%', origineMateriau: 'Europe', codeMintec: 'PI40', coefficientCout: 2 },
+      ]
+    },
+  ]
+
+  // Fonction pour calculer le total d'un emballage
+  const getEmballageTotals = (emballage: typeof emballageDetailsData[0]) => {
+    const totalPoids = emballage.materiaux.reduce((sum, m) => sum + parseFloat(m.poidsMateriau), 0)
+    const totalPoidsRecycle = emballage.materiaux.reduce((sum, m) => sum + parseFloat(m.poidsRecycle), 0)
+    const partRecyclee = totalPoids > 0 ? ((totalPoidsRecycle / totalPoids) * 100).toFixed(0) + '%' : '0%'
+    return { totalPoids: totalPoids.toFixed(2) + 'g', totalPoidsRecycle: totalPoidsRecycle.toFixed(0) + 'g', partRecyclee }
+  }
+
+  // Filtre et tri des données d'emballage
+  const getFilteredEmballageData = () => {
+    let data = emballageDetailsData
+    if (emballageSearchKeyword) {
+      const keyword = emballageSearchKeyword.toLowerCase()
+      data = data.filter(item =>
+        item.emballage.toLowerCase().includes(keyword) ||
+        item.section.toLowerCase().includes(keyword) ||
+        item.materiaux.some(m => m.materiau.toLowerCase().includes(keyword) || m.codeMintec.toLowerCase().includes(keyword))
+      )
+    }
+    return data
+  }
+
   // États pour Evolution Prix
   const [evolutionPeriod, setEvolutionPeriod] = useState<'mois' | 'semaine' | 'jour'>('mois')
   const [evolutionBase100, setEvolutionBase100] = useState(false)
@@ -322,6 +368,9 @@ function DetailContent() {
     'Marge-PV': false,
     'Marge-PV-LCL': false,
   })
+
+  // State pour la période (synchronisé via store)
+  const { period, setPeriod } = usePeriodStore()
 
   // Toggle pour la visibilité des courbes dans le graphique structure de coût
   const toggleLegendOpacity = (key: string) => {
@@ -543,6 +592,10 @@ function DetailContent() {
     }
   }, [recetteSubTab])
 
+  // Fake data pour les emballages
+  const simulationEmballageValues = useMemo(() => getEmballageValues(), [])
+  const simulationEmballageVolumes = useMemo(() => getEmballageVolumes(), [])
+
   // Initialiser les données de simulation quand la fenêtre s'ouvre
   // On attend que les deux listes aient des données avant d'initialiser
   const hasInitializedRef = useRef(false)
@@ -552,14 +605,14 @@ function DetailContent() {
       // Initialiser seulement quand les deux listes sont disponibles
       if (simulationMPValues.length > 0 && simulationMPVolumes.length > 0) {
         console.log('Initializing simulation data with:', simulationMPValues, simulationMPVolumes)
-        initializeFromExistingData(simulationMPValues, simulationMPVolumes)
+        initializeFromExistingData(simulationMPValues, simulationMPVolumes, simulationEmballageValues, simulationEmballageVolumes)
         hasInitializedRef.current = true
       }
     }
     if (!isWindowOpen) {
       hasInitializedRef.current = false
     }
-  }, [isWindowOpen, simulationMPValues, simulationMPVolumes, initializeFromExistingData])
+  }, [isWindowOpen, simulationMPValues, simulationMPVolumes, simulationEmballageValues, simulationEmballageVolumes, initializeFromExistingData])
 
   // Calculer les sous-niveaux pour les liens de navigation
   const navigationLinks = useMemo(() => {
@@ -1076,29 +1129,28 @@ function DetailContent() {
 
       {/* Titre + Simuler + Date */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div>
+        <div>
+          <div className="flex items-center gap-4">
             <h1 className="text-[40px] font-bold">{label}</h1>
-            {/* EAN (uniquement pour les produits) */}
-            {perimetre === "Produit" && currentItem?.ean && (
-              <div className="text-[14px]" style={{ color: '#454545' }}>{currentItem.ean}</div>
-            )}
+            <SimulationButton />
           </div>
-          <SimulationButton />
+          {/* EAN (uniquement pour les produits) */}
+          {perimetre === "Produit" && currentItem?.ean && (
+            <div className="text-[14px]" style={{ color: '#454545' }}>{currentItem.ean}</div>
+          )}
         </div>
 
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700">Période</Label>
-            <Button
-              variant="outline"
-              className="w-auto justify-between border-gray-200 bg-white font-normal shadow-none gap-2"
-            >
-              01/01/2025 - 13/11/2025
-              <CalendarIcon className="h-4 w-4 text-blue" />
-            </Button>
-          </div>
-        </Card>
+        <InlineField label="Période">
+          <DatePickerV2
+            mode="period"
+            size="sm"
+            value={period}
+            onValueChange={setPeriod}
+            minDate={{ month: 0, year: 2018 }}
+            maxDate={{ month: 11, year: 2025 }}
+            showValidateButton
+          />
+        </InlineField>
       </div>
 
       {/* Tabs */}
@@ -2173,12 +2225,12 @@ function DetailContent() {
                   </TooltipProvider>
                 </div>
 
-                <div className="overflow-hidden rounded-lg border">
-                  <Table className="table-fixed">
+                <div className="rounded-lg border overflow-hidden">
+                  <Table className="table-fixed [&_thead]:block [&_tbody]:block [&_tbody]:max-h-[480px] [&_tbody]:overflow-y-auto [&_tr]:table [&_tr]:w-full [&_tr]:table-fixed">
                     <TableHeader>
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
                         <TableHead
-                          className="font-semibold cursor-pointer hover:bg-gray-100 w-[300px] pl-4"
+                          className="font-semibold cursor-pointer hover:bg-gray-100 w-[300px] pl-4 bg-gray-50"
                           onClick={() => handleSort('name')}
                         >
                           <div className="flex items-center gap-2">
@@ -2663,6 +2715,173 @@ function DetailContent() {
                   </Table>
                 </div>
               </div>
+
+              {/* Tableau Details d'emballage - uniquement pour MPI et périmètre Produit */}
+              {costSubTab === 'mpi' && perimetre === "Produit" && (
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-[20px] font-medium">Details d&apos;emballage</h2>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-4 h-4 text-[#121212]" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Détail des matériaux composant l&apos;emballage</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Mot-clé"
+                          value={emballageSearchKeyword}
+                          onChange={(e) => setEmballageSearchKeyword(e.target.value)}
+                          className="pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      </div>
+                      <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+                        <Download className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-lg border">
+                    <Table className="table-fixed w-full">
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 hover:bg-gray-50">
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[180px]">
+                            <div className="flex items-center gap-1">
+                              Emballage
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[100px]">
+                            <div className="flex items-center gap-1">
+                              Section
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
+                            <div className="flex items-center gap-1">
+                              Poids section
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
+                            <div className="flex items-center gap-1">
+                              Nombre de sections
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
+                            <div className="flex items-center gap-1">
+                              Part du matériau
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
+                            <div className="flex items-center gap-1">
+                              Poids matériau
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[200px]">
+                            <div className="flex items-center gap-1">
+                              Matériau
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold w-[70px]">Poids recyclé</TableHead>
+                          <TableHead className="font-semibold w-[70px]">Part recyclée</TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[100px]">
+                            <div className="flex items-center gap-1">
+                              Origine matériau
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
+                            <div className="flex items-center gap-1">
+                              Code mintec
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
+                            <div className="flex items-center gap-1">
+                              Coefficient coût
+                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                            </div>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {getFilteredEmballageData().map((emballage) => {
+                          const totals = getEmballageTotals(emballage)
+                          return (
+                            <React.Fragment key={emballage.id}>
+                              {/* Ligne Total */}
+                              <TableRow className="bg-white hover:bg-gray-50 font-semibold">
+                                <TableCell className="font-bold">Total</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>{totals.totalPoids}</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>{totals.totalPoidsRecycle}</TableCell>
+                                <TableCell>{totals.partRecyclee}</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                              </TableRow>
+                              {/* Ligne Emballage */}
+                              <TableRow className="bg-white hover:bg-gray-50">
+                                <TableCell className="font-medium">{emballage.emballage}</TableCell>
+                                <TableCell>{emballage.section}</TableCell>
+                                <TableCell>{emballage.poidsSection}</TableCell>
+                                <TableCell className="text-center">{emballage.nombreSections}</TableCell>
+                                <TableCell>{emballage.materiaux[0].partMateriau}</TableCell>
+                                <TableCell>{emballage.materiaux[0].poidsMateriau}</TableCell>
+                                <TableCell>
+                                  <a href="#" className="text-[#D32F2F] hover:underline">{emballage.materiaux[0].materiau}</a>
+                                </TableCell>
+                                <TableCell>{emballage.materiaux[0].poidsRecycle}</TableCell>
+                                <TableCell>{emballage.materiaux[0].partRecyclee}</TableCell>
+                                <TableCell>{emballage.materiaux[0].origineMateriau}</TableCell>
+                                <TableCell>{emballage.materiaux[0].codeMintec}</TableCell>
+                                <TableCell>{emballage.materiaux[0].coefficientCout}</TableCell>
+                              </TableRow>
+                              {/* Lignes Matériaux supplémentaires */}
+                              {emballage.materiaux.slice(1).map((materiau, idx) => (
+                                <TableRow key={idx} className="bg-white hover:bg-gray-50">
+                                  <TableCell></TableCell>
+                                  <TableCell></TableCell>
+                                  <TableCell></TableCell>
+                                  <TableCell></TableCell>
+                                  <TableCell>{materiau.partMateriau}</TableCell>
+                                  <TableCell>{materiau.poidsMateriau}</TableCell>
+                                  <TableCell>
+                                    <a href="#" className="text-[#D32F2F] hover:underline">{materiau.materiau}</a>
+                                  </TableCell>
+                                  <TableCell>{materiau.poidsRecycle}</TableCell>
+                                  <TableCell>{materiau.partRecyclee}</TableCell>
+                                  <TableCell>{materiau.origineMateriau}</TableCell>
+                                  <TableCell>{materiau.codeMintec}</TableCell>
+                                  <TableCell>{materiau.coefficientCout}</TableCell>
+                                </TableRow>
+                              ))}
+                            </React.Fragment>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
           </div>
         </TabsContent>
 

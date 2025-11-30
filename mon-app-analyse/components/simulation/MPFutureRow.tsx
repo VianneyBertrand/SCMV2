@@ -5,46 +5,61 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { X, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ChevronDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MPRefSelector } from './MPRefSelector'
+import { addMonths } from 'date-fns'
 
-type DurationOption = '3m' | '6m' | '1y' | '2y'
+type DurationOption = '3m' | '6m' | '1y' | '18m' | '2y'
 type SplitOption = 'none' | 'month' | 'quarter' | 'semester' | 'year'
 
 interface SplitConfig {
   value: SplitOption
   label: string
   count: number
-  prefix: string
+  monthsPerPeriod: number // Nombre de mois par période
 }
 
 // Configuration des découpages selon la durée
 const SPLIT_OPTIONS: Record<DurationOption, SplitConfig[]> = {
   '3m': [
-    { value: 'none', label: '3 mois', count: 0, prefix: '' },
-    { value: 'month', label: 'Découpage par mois', count: 3, prefix: 'M' },
+    { value: 'none', label: '3 mois', count: 0, monthsPerPeriod: 3 },
+    { value: 'month', label: 'Découpage par mois', count: 3, monthsPerPeriod: 1 },
   ],
   '6m': [
-    { value: 'none', label: '6 mois', count: 0, prefix: '' },
-    { value: 'month', label: 'Découpage par mois', count: 6, prefix: 'M' },
-    { value: 'quarter', label: 'Découpage par trimestre', count: 2, prefix: 'T' },
+    { value: 'none', label: '6 mois', count: 0, monthsPerPeriod: 6 },
+    { value: 'month', label: 'Découpage par mois', count: 6, monthsPerPeriod: 1 },
+    { value: 'quarter', label: 'Découpage par trimestre', count: 2, monthsPerPeriod: 3 },
   ],
   '1y': [
-    { value: 'none', label: '1 an', count: 0, prefix: '' },
-    { value: 'quarter', label: 'Découpage par trimestre', count: 4, prefix: 'T' },
-    { value: 'semester', label: 'Découpage par semestre', count: 2, prefix: 'S' },
+    { value: 'none', label: '12 mois', count: 0, monthsPerPeriod: 12 },
+    { value: 'quarter', label: 'Découpage par trimestre', count: 4, monthsPerPeriod: 3 },
+    { value: 'semester', label: 'Découpage par semestre', count: 2, monthsPerPeriod: 6 },
+  ],
+  '18m': [
+    { value: 'none', label: '18 mois', count: 0, monthsPerPeriod: 18 },
+    { value: 'quarter', label: 'Découpage par trimestre', count: 6, monthsPerPeriod: 3 },
+    { value: 'semester', label: 'Découpage par semestre', count: 3, monthsPerPeriod: 6 },
   ],
   '2y': [
-    { value: 'none', label: '2 ans', count: 0, prefix: '' },
-    { value: 'semester', label: 'Découpage par semestre', count: 4, prefix: 'S' },
-    { value: 'year', label: 'Découpage par année', count: 2, prefix: 'A' },
+    { value: 'none', label: '24 mois', count: 0, monthsPerPeriod: 24 },
+    { value: 'semester', label: 'Découpage par semestre', count: 4, monthsPerPeriod: 6 },
+    { value: 'year', label: 'Découpage par année', count: 2, monthsPerPeriod: 12 },
   ],
+}
+
+// Formater une date en format court (JJ/MM/YY)
+function formatDateShort(date: Date): string {
+  const day = date.getDate().toString().padStart(2, '0')
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const year = date.getFullYear().toString().slice(-2)
+  return `${day}/${month}/${year}`
 }
 
 interface MPFutureRowProps {
   id: string
   label: string
   code?: string
-  onReferenceChange?: (newCode: string, newLabel: string) => void
+  onReferenceChange?: (newCode: string, newLabel: string, priceFirst?: number, priceLast?: number) => void
   duration: DurationOption
+  startDate?: Date
   initialPrice: number
   onRemove: () => void
   // Pour stocker/récupérer les valeurs
@@ -65,6 +80,7 @@ export function MPFutureRow({
   code,
   onReferenceChange,
   duration,
+  startDate,
   initialPrice,
   onRemove,
   totalEvolution,
@@ -83,6 +99,22 @@ export function MPFutureRow({
   const splitOptions = SPLIT_OPTIONS[duration] || SPLIT_OPTIONS['1y']
   const currentSplitConfig = splitOptions.find(s => s.value === selectedSplit) || splitOptions[0]
   const isSplitActive = selectedSplit !== 'none'
+
+  // Calculer les périodes avec leurs dates
+  const periodDates = useMemo(() => {
+    if (!startDate || !isSplitActive) return []
+    const periods: { start: Date; end: Date; label: string }[] = []
+    for (let i = 0; i < currentSplitConfig.count; i++) {
+      const periodStart = addMonths(startDate, i * currentSplitConfig.monthsPerPeriod)
+      const periodEnd = addMonths(startDate, (i + 1) * currentSplitConfig.monthsPerPeriod)
+      periods.push({
+        start: periodStart,
+        end: periodEnd,
+        label: `${formatDateShort(periodStart)} → ${formatDateShort(periodEnd)}`
+      })
+    }
+    return periods
+  }, [startDate, isSplitActive, currentSplitConfig])
 
   // Calculer le total à partir des valeurs de découpage
   const calculatedTotal = useMemo(() => {
@@ -178,7 +210,7 @@ export function MPFutureRow({
 
     return (
       <div className={`flex items-center gap-1 ${index > 0 ? 'mt-1' : ''}`}>
-        <span className="text-gray-500 w-[80px] mr-2" style={{ fontSize: '14px' }}>{labelText}</span>
+        <span className="text-gray-500 w-[160px] mr-2 whitespace-nowrap" style={{ fontSize: '14px' }}>{labelText}</span>
 
         {/* Double chevron down (-1%) */}
         <Button
@@ -311,12 +343,12 @@ export function MPFutureRow({
         )}
       </div>
 
-      {/* Ligne d'évolution totale */}
-      {renderValueRow(
-        isSplitActive ? 'Total' : 'Évolution',
-        isSplitActive ? calculatedTotal : totalEvolution,
+      {/* Ligne d'évolution (sans découpage) */}
+      {!isSplitActive && renderValueRow(
+        'Évolution',
+        totalEvolution,
         -1,
-        isSplitActive // Grisé si découpage actif
+        false
       )}
 
       {/* Lignes de découpage */}
@@ -324,12 +356,26 @@ export function MPFutureRow({
         <div className="mt-2">
           {Array.from({ length: currentSplitConfig.count }).map((_, index) => (
             renderValueRow(
-              `${currentSplitConfig.prefix}${index + 1}`,
+              periodDates[index]?.label || `P${index + 1}`,
               splitValues[index] || 0,
               index,
               false
             )
           ))}
+          {/* Ligne évolution totale (après les périodes) */}
+          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-200">
+            <span className="text-gray-500 w-[160px] mr-2 whitespace-nowrap" style={{ fontSize: '14px' }}>Évolution totale</span>
+            <div className="h-9 w-9" /> {/* Spacer */}
+            <div className="h-9 w-9" /> {/* Spacer */}
+            <div className="h-9 w-20 px-2 text-center rounded flex items-center justify-center">
+              <span className="font-bold text-gray-900">{calculatedTotal.toFixed(1)}%</span>
+            </div>
+            <div className="h-9 w-9" /> {/* Spacer */}
+            <div className="h-9 w-9" /> {/* Spacer */}
+            <span className="ml-2 text-sm text-gray-600 w-[85px] text-right">
+              {(initialPrice * (1 + calculatedTotal / 100)).toFixed(3)}€/kg
+            </span>
+          </div>
         </div>
       )}
     </div>

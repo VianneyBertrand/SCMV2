@@ -173,3 +173,41 @@ export function mergeMPData(
     mpVolumes,
   }
 }
+
+/**
+ * Fake data pour les emballages en valeur (prix)
+ * Structure identique à MPValueItem
+ */
+export function getEmballageValues(): MPValueItem[] {
+  return [
+    { id: 'carton-ondule', label: 'Carton ondulé', code: 'EMB001', priceFirst: 0.892, priceLast: 0.903, evolution: 1.23 },
+    { id: 'polypropylene', label: 'Polypropylène', code: 'EMB002', priceFirst: 1.245, priceLast: 1.216, evolution: -2.33 },
+    { id: 'polyethylene', label: 'Polyéthylène', code: 'EMB003', priceFirst: 1.087, priceLast: 1.096, evolution: 0.83 },
+    { id: 'aluminium', label: 'Aluminium', code: 'EMB004', priceFirst: 2.456, priceLast: 2.533, evolution: 3.14 },
+    { id: 'verre', label: 'Verre', code: 'EMB005', priceFirst: 0.654, priceLast: 0.645, evolution: -1.38 },
+    { id: 'acier', label: 'Acier', code: 'EMB006', priceFirst: 1.823, priceLast: 1.872, evolution: 2.69 },
+    { id: 'papier-kraft', label: 'Papier kraft', code: 'EMB007', priceFirst: 0.567, priceLast: 0.563, evolution: -0.71 },
+    { id: 'polystyrene-expanse', label: 'Polystyrène expansé', code: 'EMB008', priceFirst: 0.934, priceLast: 0.952, evolution: 1.93 },
+    { id: 'pet', label: 'PET', code: 'EMB009', priceFirst: 1.156, priceLast: 1.178, evolution: 1.90 },
+    { id: 'etiquettes-papier', label: 'Étiquettes papier', code: 'EMB010', priceFirst: 0.234, priceLast: 0.241, evolution: 2.99 },
+  ]
+}
+
+/**
+ * Fake data pour les emballages en volume (pourcentage)
+ * Structure identique à MPVolumeItem
+ */
+export function getEmballageVolumes(): MPVolumeItem[] {
+  return [
+    { id: 'carton-ondule', label: 'Carton ondulé', code: 'EMB001', percentage: 22.34 },
+    { id: 'polypropylene', label: 'Polypropylène', code: 'EMB002', percentage: 16.45 },
+    { id: 'polyethylene', label: 'Polyéthylène', code: 'EMB003', percentage: 14.28 },
+    { id: 'aluminium', label: 'Aluminium', code: 'EMB004', percentage: 11.92 },
+    { id: 'verre', label: 'Verre', code: 'EMB005', percentage: 9.67 },
+    { id: 'acier', label: 'Acier', code: 'EMB006', percentage: 8.53 },
+    { id: 'papier-kraft', label: 'Papier kraft', code: 'EMB007', percentage: 7.21 },
+    { id: 'polystyrene-expanse', label: 'Polystyrène expansé', code: 'EMB008', percentage: 4.89 },
+    { id: 'pet', label: 'PET', code: 'EMB009', percentage: 3.21 },
+    { id: 'etiquettes-papier', label: 'Étiquettes papier', code: 'EMB010', percentage: 1.50 },
+  ]
+}

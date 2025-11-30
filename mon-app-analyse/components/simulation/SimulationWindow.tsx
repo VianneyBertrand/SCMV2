@@ -1,40 +1,18 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useMemo } from 'react'
-import { X, CalendarIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useState, useEffect } from 'react'
+import { X, Info } from 'lucide-react'
+import { Button } from '@/componentsv2/ui/button'
+import { Field, FieldLabel } from '@/componentsv2/ui/field'
+import { DatePicker, type MonthYear } from '@/componentsv2/ui/date-picker'
+import { SegmentedControl, SegmentedControlItem } from '@/componentsv2/ui/segmented-control'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/componentsv2/ui/tooltip'
 import { useSimulationStore, MPValueItem, MPVolumeItem } from '@/stores/simulationStore'
+import { usePeriodStore } from '@/stores/periodStore'
 import { MPValueColumn } from './MPValueColumn'
 import { MPVolumeColumn } from './MPVolumeColumn'
 import { ConfirmCloseDialog } from './ConfirmCloseDialog'
-import { fr } from 'date-fns/locale'
-import { addMonths, addYears } from 'date-fns'
-
-type PeriodType = 'defined' | 'future'
-type DurationOption = '3m' | '6m' | '1y' | '2y'
-
-const DURATION_OPTIONS: { value: DurationOption; label: string; months: number }[] = [
-  { value: '3m', label: '3 mois', months: 3 },
-  { value: '6m', label: '6 mois', months: 6 },
-  { value: '1y', label: '1 an', months: 12 },
-  { value: '2y', label: '2 ans', months: 24 },
-]
-
-// Formater une date en jj/mm/aaaa
-function formatDateToFR(date: Date): string {
-  const day = date.getDate().toString().padStart(2, '0')
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const year = date.getFullYear()
-  return `${day}/${month}/${year}`
-}
-
-// Calculer la date de fin en fonction de la durée
-function calculateEndDate(startDate: Date, months: number): Date {
-  return addMonths(startDate, months)
-}
 
 // Générer le titre dynamique
 function getSimulationTitle(perimetre: string, label: string): string {
@@ -60,41 +38,50 @@ interface SimulationWindowProps {
  */
 export function SimulationWindow({ availableMPValues, availableMPVolumes, perimetre, label }: SimulationWindowProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [resetKey, setResetKey] = useState(0)
 
-  // États pour la sélection de période
-  const [periodType, setPeriodType] = useState<PeriodType>('defined')
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
-  const [selectedDuration, setSelectedDuration] = useState<DurationOption | null>(null)
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  // Récupérer la période globale du store (pour initialiser)
+  const globalPeriod = usePeriodStore((state) => state.period)
 
-  // Calculer la date de fin automatiquement
-  const endDate = useMemo(() => {
-    if (!startDate || !selectedDuration) return undefined
-    const durationOption = DURATION_OPTIONS.find(d => d.value === selectedDuration)
-    if (!durationOption) return undefined
-    return calculateEndDate(startDate, durationOption.months)
-  }, [startDate, selectedDuration])
+  // État local pour la période (initialisé avec la période globale, mais indépendant)
+  const [period, setPeriod] = useState<{ from?: MonthYear; to?: MonthYear } | undefined>(undefined)
 
-  // Appliquer "Aujourd'hui" comme date de départ
-  const handleTodayClick = () => {
-    setStartDate(new Date())
-    setIsCalendarOpen(false)
+  // Initialiser la période locale avec la période globale au premier rendu
+  useEffect(() => {
+    if (period === undefined) {
+      setPeriod({
+        from: globalPeriod.from,
+        to: globalPeriod.to
+      })
+    }
+  }, [globalPeriod, period])
+
+  // Limite pour la période 1 (from) : pas après novembre 2025
+  const maxFromDate: MonthYear = { month: 10, year: 2025 } // November 2025 (month is 0-indexed)
+
+  // Handler pour valider la période avec contrainte sur "from"
+  const handlePeriodChange = (newPeriod: { from?: MonthYear; to?: MonthYear } | undefined) => {
+    if (!newPeriod) {
+      setPeriod(newPeriod)
+      return
+    }
+
+    // Vérifier si "from" dépasse la limite
+    if (newPeriod.from) {
+      const fromValue = newPeriod.from.year * 12 + newPeriod.from.month
+      const maxFromValue = maxFromDate.year * 12 + maxFromDate.month
+      if (fromValue > maxFromValue) {
+        // Plafonner "from" à novembre 2025
+        newPeriod = { ...newPeriod, from: maxFromDate }
+      }
+    }
+
+    setPeriod(newPeriod)
   }
 
-  // Sélectionner une durée
-  const handleDurationSelect = (duration: DurationOption) => {
-    setSelectedDuration(duration)
-  }
-
-  // Formater l'affichage de la période
-  const getPeriodDisplay = () => {
-    if (!startDate) return 'Choisir une date de début'
-    if (!endDate) return `À partir du ${formatDateToFR(startDate)}`
-    return `${formatDateToFR(startDate)} → ${formatDateToFR(endDate)}`
-  }
-
-  // Vérifier si la période future est complète
-  const isFuturePeriodComplete = startDate && selectedDuration
+  // États pour les SegmentedControls (MP ou Emballage) - un pour chaque colonne
+  const [leftColumnType, setLeftColumnType] = useState<'mp' | 'emballage'>('mp')
+  const [rightColumnType, setRightColumnType] = useState<'mp' | 'emballage'>('mp')
 
   const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
   const closeWindow = useSimulationStore((state) => state.closeWindow)
@@ -146,125 +133,103 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
         <div className="w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[85vh] pointer-events-auto">
           {/* Header */}
           <div className="px-8 pt-8 pb-3 rounded-t-lg flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">{getSimulationTitle(perimetre, label)}</h2>
+            <div className="flex flex-col gap-8">
+              <h2 className="title-xs text-foreground">{getSimulationTitle(perimetre, label)}</h2>
+              <Field className="w-fit flex items-center gap-2">
+                <FieldLabel htmlFor="simulation-period" className="mb-0">Période</FieldLabel>
+                <DatePicker
+                  id="simulation-period"
+                  mode="period"
+                  value={period}
+                  onValueChange={handlePeriodChange}
+                  minDate={{ month: 0, year: 2020 }}
+                  maxDate={{ month: 0, year: 2028 }}
+                  className="w-[320px]"
+                />
+              </Field>
+            </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-[#0970E6] hover:text-[#004E9B] hover:bg-gray-100 active:text-[#003161] active:bg-gray-200"
+              className="h-8 w-8 p-0 text-[#0970E6] hover:text-[#004E9B] hover:bg-gray-100 active:text-[#003161] active:bg-gray-200 self-start"
               onClick={handleClose}
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Sélection de la période */}
-          <div className="px-8 py-4 border-b border-gray-200">
-            <div className="flex flex-col gap-3">
-              {/* Radio: Période définie */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="periodType"
-                  value="defined"
-                  checked={periodType === 'defined'}
-                  onChange={() => setPeriodType('defined')}
-                  className="w-4 h-4 text-[#0970E6] border-gray-300 focus:ring-[#0970E6]"
-                />
-                <span className="text-sm text-gray-700">
-                  Période définie <span className="text-gray-500">(01/04/2024 - 01/04/2025)</span>
-                </span>
-              </label>
-
-              {/* Radio: Période future */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="periodType"
-                  value="future"
-                  checked={periodType === 'future'}
-                  onChange={() => setPeriodType('future')}
-                  className="w-4 h-4 text-[#0970E6] border-gray-300 focus:ring-[#0970E6]"
-                />
-                <span className="text-sm text-gray-700">Période future</span>
-              </label>
-
-              {/* Sélecteur de période future */}
-              {periodType === 'future' && (
-                <div className="ml-7 mt-3 space-y-4">
-                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0970E6] focus:border-transparent transition-colors"
-                      >
-                        <CalendarIcon className="h-4 w-4 text-gray-400" />
-                        <span className={startDate ? 'text-gray-900' : 'text-gray-500'}>
-                          {isFuturePeriodComplete ? getPeriodDisplay() : (startDate ? formatDateToFR(startDate) : 'Sélectionner')}
-                        </span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      {/* Raccourci Aujourd'hui */}
-                      <div className="p-3 border-b border-gray-100 bg-gray-50">
-                        <button
-                          type="button"
-                          onClick={handleTodayClick}
-                          className="flex items-center gap-2 text-sm text-[#0970E6] hover:text-[#004E9B] font-medium"
-                        >
-                          <CalendarIcon className="h-4 w-4" />
-                          Aujourd&apos;hui
-                        </button>
-                      </div>
-
-                      {/* Calendrier */}
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={(date) => {
-                          setStartDate(date)
-                        }}
-                        locale={fr}
-                        disabled={(date) => date < new Date()}
-                      />
-
-                      {/* Chips de durée */}
-                      <div className="p-3 border-t border-gray-100">
-                        <div className="text-xs text-gray-500 mb-2">Durée</div>
-                        <div className="flex gap-2 flex-wrap">
-                          {DURATION_OPTIONS.map((option) => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => handleDurationSelect(option.value)}
-                              className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
-                                selectedDuration === option.value
-                                  ? 'bg-[#0970E6] text-white border-[#0970E6] shadow-sm'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:border-[#0970E6] hover:text-[#0970E6]'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Colonnes */}
-          <div className="flex gap-4 p-4 flex-1 overflow-hidden">
-            <MPValueColumn
-              availableOptions={availableMPValues}
-              periodType={periodType}
-              selectedDuration={selectedDuration}
-            />
-            <MPVolumeColumn
-              availableOptions={availableMPVolumes}
-              availableMPValues={availableMPValues}
-            />
+          <div className="flex gap-4 p-4 flex-1 overflow-hidden min-h-0">
+            {/* Colonne gauche */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <h4 className="title-xs-regular text-foreground">
+                    {leftColumnType === 'emballage' ? 'Emballage en Valeur (€)' : 'MP en Valeur (€)'}
+                  </h4>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-4 h-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{leftColumnType === 'emballage' ? 'Prix des emballages par période' : 'Prix des matières premières par période'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <div className="px-4 mb-4">
+                <SegmentedControl
+                  value={leftColumnType}
+                  onValueChange={(v) => setLeftColumnType(v as 'mp' | 'emballage')}
+                >
+                  <SegmentedControlItem value="mp">MP</SegmentedControlItem>
+                  <SegmentedControlItem value="emballage">Emballage</SegmentedControlItem>
+                </SegmentedControl>
+              </div>
+              <MPValueColumn
+                availableOptions={availableMPValues}
+                period={period}
+                resetKey={resetKey}
+                columnType={leftColumnType}
+              />
+            </div>
+
+            {/* Colonne droite */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <h4 className="title-xs-regular text-foreground">
+                    {rightColumnType === 'emballage' ? 'Emballage en Volume (%)' : 'MP en Volume (%)'}
+                  </h4>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-4 h-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{rightColumnType === 'emballage' ? 'Répartition des emballages en volume' : 'Répartition des matières premières en volume'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <div className="px-4 mb-4">
+                <SegmentedControl
+                  value={rightColumnType}
+                  onValueChange={(v) => setRightColumnType(v as 'mp' | 'emballage')}
+                >
+                  <SegmentedControlItem value="mp">MP</SegmentedControlItem>
+                  <SegmentedControlItem value="emballage">Emballage</SegmentedControlItem>
+                </SegmentedControl>
+              </div>
+              <MPVolumeColumn
+                availableOptions={availableMPVolumes}
+                availableMPValues={availableMPValues}
+                columnType={rightColumnType}
+              />
+            </div>
           </div>
 
           {/* Footer */}
@@ -273,7 +238,10 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               variant="outline"
               className="h-11 px-4 text-sm"
               style={{ fontSize: '14px' }}
-              onClick={resetToOriginal}
+              onClick={() => {
+                resetToOriginal()
+                setResetKey(k => k + 1)
+              }}
             >
               Réinitialiser
             </Button>

@@ -1,65 +1,345 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.25rem;
+/* =============================================================================
+   TYPOGRAPHY UTILITIES
+   Combined tokens: font-size + line-height + font-weight
+   Usage: <h1 className="display-m">Hero</h1>
+   ============================================================================= */
+
+@layer utilities {
+  .display-m {
+    font-size: 56px;
+    line-height: 64px;
+    font-weight: 700;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  .display-s {
+    font-size: 48px;
+    line-height: 52px;
+    font-weight: 700;
   }
+
+  .title-lg {
+    font-size: 40px;
+    line-height: 48px;
+    font-weight: 700;
+  }
+
+  .title-md {
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 700;
+  }
+
+  .title-sm {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 700;
+  }
+
+  .title-sm-regular {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 400;
+  }
+
+  .title-xs {
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 700;
+  }
+
+  .title-xs-regular {
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 400;
+  }
+
+  .body-lg {
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 400;
+  }
+
+  .body-lg-bold {
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 700;
+  }
+
+  .body-m {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 400;
+  }
+
+  .body-m-bold {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 700;
+  }
+
+  .body-s {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+  }
+
+  .body-s-bold {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+  }
+
+  .caption {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+  }
+
+  .caption-bold {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+  }
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* =============================================================================
+   TAILWIND THEME EXPOSURE
+   Exposes CSS variables to Tailwind utilities (bg-primary, text-accent, etc.)
+   ============================================================================= */
+
+@theme inline {
+  /* Primary (blue) */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-pressed: var(--primary-pressed);
+  --color-primary-foreground: var(--primary-foreground);
+
+  /* Accent (black) */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-pressed: var(--accent-pressed);
+  --color-accent-foreground: var(--accent-foreground);
+
+  /* Neutral (gray) */
+  --color-neutral: var(--neutral);
+  --color-neutral-hover: var(--neutral-hover);
+  --color-neutral-pressed: var(--neutral-pressed);
+  --color-neutral-foreground: var(--neutral-foreground);
+
+  /* Destructive (red) */
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-pressed: var(--destructive-pressed);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Background & Foreground */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  /* Surface */
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+
+  /* Shadcn component tokens */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Fonts */
+  --font-sans: var(--font-ubuntu);
+  --font-mono: var(--font-ubuntu-mono);
+}
+
+/* =============================================================================
+   COLOR TOKENS
+   ============================================================================= */
+
+:root {
+  --radius: 0.375rem;
+
+  /* -------------------------------------------------------------------------
+     Primary (blue) - Main actions, links, focus states
+     ------------------------------------------------------------------------- */
+  --primary: #0970e6;
+  --primary-hover: #004e9b;
+  --primary-pressed: #003161;
+  --primary-foreground: #ffffff;
+
+  /* -------------------------------------------------------------------------
+     Accent (black) - Secondary actions, dark elements
+     ------------------------------------------------------------------------- */
+  --accent: #121212;
+  --accent-hover: #454545;
+  --accent-pressed: #696969;
+  --accent-foreground: #ffffff;
+
+  /* -------------------------------------------------------------------------
+     Neutral (gray) - Borders, muted backgrounds, disabled states
+     ------------------------------------------------------------------------- */
+  --neutral: #d9d9d9;
+  --neutral-hover: #b8b8b8;
+  --neutral-pressed: #878787;
+  --neutral-foreground: #121212;
+
+  /* -------------------------------------------------------------------------
+     Destructive (red) - Errors, delete actions, warnings
+     ------------------------------------------------------------------------- */
+  --destructive: #dc2626;
+  --destructive-hover: #b91c1c;
+  --destructive-pressed: #991b1b;
+  --destructive-foreground: #ffffff;
+
+  /* -------------------------------------------------------------------------
+     Background & Foreground - Page backgrounds, text
+     ------------------------------------------------------------------------- */
+  --background: #ffffff;
+  --foreground: #121212;
+  --muted: #f5f5f5;
+  --muted-foreground: #696969;
+
+  /* -------------------------------------------------------------------------
+     Surface - Component/container backgrounds
+     ------------------------------------------------------------------------- */
+  --surface: #ffffff;
+  --surface-secondary: #f7f7f7;
+  --surface-tertiary: #f5faff;
+
+  /* -------------------------------------------------------------------------
+     Shadcn component tokens
+     ------------------------------------------------------------------------- */
+  --card: #ffffff;
+  --card-foreground: #121212;
+  --popover: #ffffff;
+  --popover-foreground: #121212;
+  --border: #d9d9d9;
+  --input: #d9d9d9;
+  --ring: #0970e6;
+
+  /* -------------------------------------------------------------------------
+     Sidebar
+     ------------------------------------------------------------------------- */
+  --sidebar: #fafafa;
+  --sidebar-foreground: #121212;
+  --sidebar-primary: #0970e6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #121212;
+  --sidebar-border: #d9d9d9;
+  --sidebar-ring: #0970e6;
+
+  /* -------------------------------------------------------------------------
+     Charts
+     ------------------------------------------------------------------------- */
+  --chart-1: #e36322;
+  --chart-2: #2a9d90;
+  --chart-3: #1f4e5f;
+  --chart-4: #f0c130;
+  --chart-5: #f59e0b;
+}
+
+.dark {
+  /* Primary */
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-pressed: #93c5fd;
+  --primary-foreground: #121212;
+
+  /* Accent */
+  --accent: #e5e5e5;
+  --accent-hover: #d4d4d4;
+  --accent-pressed: #a3a3a3;
+  --accent-foreground: #121212;
+
+  /* Neutral */
+  --neutral: #404040;
+  --neutral-hover: #525252;
+  --neutral-pressed: #737373;
+  --neutral-foreground: #fafafa;
+
+  /* Destructive */
+  --destructive: #f87171;
+  --destructive-hover: #fca5a5;
+  --destructive-pressed: #fecaca;
+  --destructive-foreground: #121212;
+
+  /* Background & Foreground */
+  --background: #121212;
+  --foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+
+  /* Surface */
+  --surface: #1e1e1e;
+  --surface-secondary: #262626;
+  --surface-tertiary: #1a2a3a;
+
+  /* Shadcn component tokens */
+  --card: #1e1e1e;
+  --card-foreground: #fafafa;
+  --popover: #1e1e1e;
+  --popover-foreground: #fafafa;
+  --border: #404040;
+  --input: #404040;
+  --ring: #3b82f6;
+
+  /* Sidebar */
+  --sidebar: #1e1e1e;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #404040;
+  --sidebar-ring: #3b82f6;
+
+  /* Charts */
+  --chart-1: #6366f1;
+  --chart-2: #34d399;
+  --chart-3: #f59e0b;
+  --chart-4: #a855f7;
+  --chart-5: #f43f5e;
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
-  }
-  a:not(.app-header *) {
-    color: #0970E6 !important;
-  }
-  a:not(.app-header *):hover {
-    color: #075bb3 !important;
   }
 }

@@ -22,7 +22,7 @@ import { getMPReferences, MPReference } from '@/lib/data/mpReferences'
 interface MPRefSelectorProps {
   mpId: string
   currentCode: string
-  onReferenceChange: (newCode: string, newLabel: string) => void
+  onReferenceChange: (newCode: string, newLabel: string, priceFirst?: number, priceLast?: number) => void
 }
 
 /**
@@ -51,7 +51,8 @@ export function MPRefSelector({ mpId, currentCode, onReferenceChange }: MPRefSel
   }
 
   const handleSelect = (ref: MPReference) => {
-    onReferenceChange(ref.code, ref.label)
+    // Passer les prix pour mise à jour automatique
+    onReferenceChange(ref.code, ref.label, ref.priceFirst, ref.priceLast)
     setOpen(false)
   }
 

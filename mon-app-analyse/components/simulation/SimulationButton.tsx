@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import { Pencil } from 'lucide-react'
+import { FlaskConical } from 'lucide-react'
 import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { useSimulationStore } from '@/stores/simulationStore'
@@ -36,15 +36,14 @@ export function SimulationButton() {
   return (
     <Button
       ref={buttonRef}
-      variant="ghost"
+      variant="outline"
       size="sm"
-      className="gap-2 hover:bg-blue-50 text-[14px]"
-      style={{ color: '#0970E6' }}
+      className="gap-2 text-[16px] border-[#0970E6] text-[#0970E6] hover:bg-blue-50 hover:text-[#004E9B] hover:border-[#004E9B] mt-1"
       onClick={handleClick}
       disabled={isSimulationMode}
     >
-      <Pencil className="w-5 h-5" style={{ color: '#0970E6' }} />
-      Simulation
+      <FlaskConical className="w-7 h-7" />
+      Simuler
     </Button>
   )
 }

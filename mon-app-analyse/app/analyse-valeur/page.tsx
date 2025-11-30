@@ -65,6 +65,26 @@ import { useVolumeUnit } from "@/hooks/useVolumeUnit";
 import { SwitchIcon } from "@/components/ui/switch-icon";
 import { usePageState, useRestoredPageState } from "@/hooks/usePageState";
 import { SimulationTag } from "@/components/simulation/SimulationTag";
+import { InlineField } from "@/componentsv2/ui/inline-field";
+import {
+  Select as SelectV2,
+  SelectContent as SelectContentV2,
+  SelectItem as SelectItemV2,
+  SelectTrigger as SelectTriggerV2,
+  SelectValue as SelectValueV2,
+} from "@/componentsv2/ui/select";
+import { Autocomplete } from "@/componentsv2/ui/autocomplete";
+import { DatePicker as DatePickerV2 } from "@/componentsv2/ui/date-picker";
+import { usePeriodStore } from "@/stores/periodStore";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/componentsv2/ui/pagination";
 
 // Lazy load heavy components - Command and Calendar
 const LazyCalendar = dynamic(
@@ -169,16 +189,17 @@ function AnalyseValeurContent() {
   // Initialiser avec des valeurs par défaut (pas de sessionStorage)
   const [comparisonMode, setComparisonMode] = useState(false);
   const [perimetre, setPerimetre] = useState<PerimetreType>("Marché");
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: new Date(2024, 10, 11),
-    to: new Date(2024, 10, 14),
-  });
+  const { period, setPeriod } = usePeriodStore();
   const [typePrix, setTypePrix] = useState<"Prix départ" | "Prix franco">("Prix départ");
 
   // States pour le combobox
   const [openRecherche, setOpenRecherche] = useState(false);
   const [rechercheValue, setRechercheValue] = useState("");
   const [searchInputValue, setSearchInputValue] = useState("");
+
+  // States pour la pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
 
   // States pour la multi-sélection des fournisseurs
   const [fournisseurSelections, setFournisseurSelections] = useState<string[]>([]);
@@ -508,17 +529,18 @@ function AnalyseValeurContent() {
     const filterKey = perimetreToFilterKey[perimetre];
 
     if (filterKey) {
-      setFilters((prev) => {
-        const newFilters = { ...prev, [filterKey]: "tous" };
+      const newFilters = { ...filters, [filterKey]: "tous" };
+      setFilters(newFilters);
+      // Utiliser setTimeout pour éviter l'erreur de setState pendant le rendu
+      setTimeout(() => {
         updateURL(perimetre, newFilters);
-        return newFilters;
-      });
+      }, 0);
     }
 
     setRechercheValue("");
     setSearchInputValue("");
     setOpenRecherche(false);
-  }, [perimetre, updateURL]);
+  }, [perimetre, filters, updateURL]);
 
   // Réinitialiser la recherche quand on change de périmètre
   useEffect(() => {
@@ -927,6 +949,21 @@ function AnalyseValeurContent() {
     }));
   }, [sortedData, perimetre, filters]);
 
+  // Pagination
+  const totalItems = dataWithSubLevelCounts.length;
+  const totalPages = Math.ceil(totalItems / rowsPerPage);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return dataWithSubLevelCounts.slice(startIndex, endIndex);
+  }, [dataWithSubLevelCounts, currentPage, rowsPerPage]);
+
+  // Reset page when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortedData, rowsPerPage]);
+
   // Fonction pour télécharger le tableau en CSV
   const downloadTableAsCSV = useCallback(() => {
     // Définir les en-têtes selon le périmètre
@@ -1031,174 +1068,101 @@ function AnalyseValeurContent() {
       {/* FILTRES - Ligne 1 : 3 cards */}
       <div className="mb-6 flex flex-wrap gap-x-2 gap-y-4">
         {/* Périmètre d'analyse */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">
-              Périmètre d&apos;analyse
-            </Label>
-            <Select
-              value={perimetre}
-              onValueChange={(value) =>
-                handlePerimetreChange(value as PerimetreType)
-              }
-            >
-              <SelectTrigger className="w-auto border-gray-200 bg-white  shadow-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {perimetreOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Périmètre d'analyse">
+          <SelectV2
+            value={perimetre}
+            onValueChange={(value) =>
+              handlePerimetreChange(value as PerimetreType)
+            }
+          >
+            <SelectTriggerV2 size="sm" width="auto">
+              <SelectValueV2 />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              {perimetreOptions.map((option) => (
+                <SelectItemV2 key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItemV2>
+              ))}
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
-        {/* Recherche dynamique (Combobox) - masqué pour le périmètre Marché - affiché ici uniquement si mode comparaison OFF */}
+        {/* Recherche dynamique (Autocomplete) - masqué pour le périmètre Marché - affiché ici uniquement si mode comparaison OFF */}
         {perimetre !== "Marché" && !comparisonMode && (
-          <Popover open={openRecherche} onOpenChange={setOpenRecherche}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={openRecherche}
-                className="h-[52px] justify-between border-[#EBEBEB] bg-[#ffffff] hover:bg-white rounded font-normal shadow-none"
-              >
-                {rechercheValue || getSearchPlaceholder}
-                {rechercheValue ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    className="ml-2 cursor-pointer inline-flex"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      resetRecherche();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        resetRecherche();
-                      }
-                    }}
-                  >
-                    <X className="h-4 w-4 shrink-0 hover:opacity-70" />
-                  </span>
-                ) : (
-                  <Search className="ml-2 h-4 w-4 shrink-0 text-blue" />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0">
-              <LazyCommand shouldFilter={false}>
-                <LazyCommandInput
-                  value={searchInputValue}
-                  onValueChange={setSearchInputValue}
-                  placeholder={getSearchPlaceholder}
+          <Autocomplete
+            options={sortedData.map((item) => ({ value: item.label, label: item.label }))}
+            value={rechercheValue}
+            onValueChange={(value) => {
+              setRechercheValue(value);
+
+              // Vérifier si c'est une option valide (sélection)
+              const isValidOption = sortedData.some((item) => item.label === value);
+              if (isValidOption) {
+                const filterKey = perimetreToFilterKey[perimetre];
+                if (filterKey) {
+                  const newFilters = {
+                    ...filters,
+                    [filterKey]: value,
+                  };
+                  setFilters(newFilters);
+                  // Utiliser setTimeout pour éviter l'erreur de setState pendant le rendu
+                  setTimeout(() => {
+                    updateURL(perimetre, newFilters);
+                  }, 0);
+                }
+              }
+            }}
+            placeholder={getSearchPlaceholder}
+            emptyMessage="Aucun résultat trouvé."
+            minChars={3}
+            size="md"
+            className="w-[280px]"
+            hideSearchIcon
+            endAddon={
+              rechercheValue ? (
+                <X
+                  className="h-5 w-5 cursor-pointer text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetRecherche();
+                  }}
                 />
-                <LazyCommandList>
-                  <LazyCommandEmpty>Aucun résultat trouvé.</LazyCommandEmpty>
-                  <LazyCommandGroup>
-                    {sortedData.map((item, index) => (
-                      <LazyCommandItem
-                        key={`${item.label}-${index}`}
-                        value={item.label}
-                        onSelect={(currentValue) => {
-                          // Trouver l'item correspondant pour obtenir le label exact
-                          const selectedItem = sortedData.find(
-                            (dataItem) =>
-                              dataItem.label.toLowerCase() ===
-                              currentValue.toLowerCase()
-                          );
-                          const exactLabel =
-                            selectedItem?.label || currentValue;
-
-                          setRechercheValue(exactLabel);
-                          setSearchInputValue(currentValue);
-                          setOpenRecherche(false);
-
-                          // Mettre à jour le filtre correspondant au périmètre actuel
-                          const filterKey = perimetreToFilterKey[perimetre];
-                          if (filterKey) {
-                            setFilters((prev) => {
-                              const newFilters = {
-                                ...prev,
-                                [filterKey]: exactLabel,
-                              };
-                              updateURL(perimetre, newFilters);
-                              return newFilters;
-                            });
-                          }
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            rechercheValue === item.label
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                        />
-                        {item.label}
-                      </LazyCommandItem>
-                    ))}
-                  </LazyCommandGroup>
-                </LazyCommandList>
-              </LazyCommand>
-            </PopoverContent>
-          </Popover>
+              ) : (
+                <Search className="h-5 w-5 text-primary" />
+              )
+            }
+          />
         )}
 
         {/* Période */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">
-              Période
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-auto justify-between border-gray-200 bg-white hover:bg-white font-normal shadow-none"
-                >
-                  01/01/2025 - 13/11/2025
-                  <CalendarIcon className="h-4 w-4 text-blue" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <LazyCalendar
-                  mode="range"
-                  selected={{ from: dateRange.from, to: dateRange.to }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </Card>
+        <InlineField label="Période">
+          <DatePickerV2
+            mode="period"
+            size="sm"
+            value={period}
+            onValueChange={setPeriod}
+            minDate={{ month: 0, year: 2018 }}
+            maxDate={{ month: 11, year: 2025 }}
+            showValidateButton
+          />
+        </InlineField>
 
         {/* Prix */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">
-              Prix
-            </Label>
-            <Select
-              value={typePrix}
-              onValueChange={(value) => setTypePrix(value as "Prix départ" | "Prix franco")}
-            >
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Prix départ">Prix départ</SelectItem>
-                <SelectItem value="Prix franco">Prix franco</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Prix">
+          <SelectV2
+            value={typePrix}
+            onValueChange={(value) => setTypePrix(value as "Prix départ" | "Prix franco")}
+          >
+            <SelectTriggerV2 size="sm" width="auto">
+              <SelectValueV2 />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="Prix départ">Prix départ</SelectItemV2>
+              <SelectItemV2 value="Prix franco">Prix franco</SelectItemV2>
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
       </div>
 
       {/* MODE COMPARAISON - Cards de sélection */}
@@ -1282,98 +1246,49 @@ function AnalyseValeurContent() {
       {/* INPUT RECHERCHE - Affiché ici quand mode comparaison ON */}
       {comparisonMode && perimetre !== "Marché" && (
         <div className="mb-4">
-          <Popover open={openRecherche} onOpenChange={setOpenRecherche}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={openRecherche}
-                className="h-[52px] justify-between border-[#EBEBEB] bg-[#ffffff] hover:bg-white rounded font-normal shadow-none"
-              >
-                {rechercheValue || getSearchPlaceholder}
-                {rechercheValue ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    className="ml-2 cursor-pointer inline-flex"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      resetRecherche();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        resetRecherche();
-                      }
-                    }}
-                  >
-                    <X className="h-4 w-4 shrink-0 hover:opacity-70" />
-                  </span>
-                ) : (
-                  <Search className="ml-2 h-4 w-4 shrink-0 text-blue" />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0">
-              <LazyCommand shouldFilter={false}>
-                <LazyCommandInput
-                  value={searchInputValue}
-                  onValueChange={setSearchInputValue}
-                  placeholder={getSearchPlaceholder}
+          <Autocomplete
+            options={sortedData.map((item) => ({ value: item.label, label: item.label }))}
+            value={rechercheValue}
+            onValueChange={(value) => {
+              setRechercheValue(value);
+
+              // Vérifier si c'est une option valide (sélection)
+              const isValidOption = sortedData.some((item) => item.label === value);
+              if (isValidOption) {
+                const filterKey = perimetreToFilterKey[perimetre];
+                if (filterKey) {
+                  const newFilters = {
+                    ...filters,
+                    [filterKey]: value,
+                  };
+                  setFilters(newFilters);
+                  // Utiliser setTimeout pour éviter l'erreur de setState pendant le rendu
+                  setTimeout(() => {
+                    updateURL(perimetre, newFilters);
+                  }, 0);
+                }
+              }
+            }}
+            placeholder={getSearchPlaceholder}
+            emptyMessage="Aucun résultat trouvé."
+            minChars={3}
+            size="md"
+            className="w-[280px]"
+            hideSearchIcon
+            endAddon={
+              rechercheValue ? (
+                <X
+                  className="h-5 w-5 cursor-pointer text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetRecherche();
+                  }}
                 />
-                <LazyCommandList>
-                  <LazyCommandEmpty>Aucun résultat trouvé.</LazyCommandEmpty>
-                  <LazyCommandGroup>
-                    {sortedData.map((item, index) => (
-                      <LazyCommandItem
-                        key={`${item.label}-${index}`}
-                        value={item.label}
-                        onSelect={(currentValue) => {
-                          // Trouver l'item correspondant pour obtenir le label exact
-                          const selectedItem = sortedData.find(
-                            (dataItem) =>
-                              dataItem.label.toLowerCase() ===
-                              currentValue.toLowerCase()
-                          );
-                          const exactLabel =
-                            selectedItem?.label || currentValue;
-
-                          setRechercheValue(exactLabel);
-                          setSearchInputValue(currentValue);
-                          setOpenRecherche(false);
-
-                          // Mettre à jour le filtre correspondant au périmètre actuel
-                          const filterKey = perimetreToFilterKey[perimetre];
-                          if (filterKey) {
-                            setFilters((prev) => {
-                              const newFilters = {
-                                ...prev,
-                                [filterKey]: exactLabel,
-                              };
-                              updateURL(perimetre, newFilters);
-                              return newFilters;
-                            });
-                          }
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            rechercheValue === item.label
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                        />
-                        {item.label}
-                      </LazyCommandItem>
-                    ))}
-                  </LazyCommandGroup>
-                </LazyCommandList>
-              </LazyCommand>
-            </PopoverContent>
-          </Popover>
+              ) : (
+                <Search className="h-5 w-5 text-primary" />
+              )
+            }
+          />
         </div>
       )}
 
@@ -1382,44 +1297,41 @@ function AnalyseValeurContent() {
         <div className="flex flex-wrap gap-2">
         {/* Filtres hiérarchiques (Marché, Catégorie, etc.) */}
         {hierarchyFilters.map((filterType) => (
-          <Card
+          <InlineField
             key={filterType}
-            className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none"
+            label={
+              filterType === "marche"
+                ? "Marché"
+                : filterType === "marcheDetaille"
+                ? "Marché détaillé"
+                : filterType === "categorie"
+                ? "Catégorie"
+                : filterType === "groupeFamille"
+                ? "Groupe Famille"
+                : filterType === "famille"
+                ? "Famille"
+                : filterType === "sousFamille"
+                ? "Sous Famille"
+                : filterType.charAt(0).toUpperCase() + filterType.slice(1)
+            }
           >
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700 break-words">
-                {filterType === "marche"
-                  ? "Marché"
-                  : filterType === "marcheDetaille"
-                  ? "Marché détaillé"
-                  : filterType === "categorie"
-                  ? "Catégorie"
-                  : filterType === "groupeFamille"
-                  ? "Groupe Famille"
-                  : filterType === "famille"
-                  ? "Famille"
-                  : filterType === "sousFamille"
-                  ? "Sous Famille"
-                  : filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-              </Label>
-              <Select
-                value={filters[filterType] || "tous"}
-                onValueChange={(value) => handleFilterChange(filterType, value)}
-              >
-                <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                  <SelectValue placeholder="tous" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tous">tous</SelectItem>
-                  {getFilterOptions(filterType).map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </Card>
+            <SelectV2
+              value={filters[filterType] || "tous"}
+              onValueChange={(value) => handleFilterChange(filterType, value)}
+            >
+              <SelectTriggerV2 size="sm" width="auto">
+                <SelectValueV2 placeholder="tous" />
+              </SelectTriggerV2>
+              <SelectContentV2>
+                <SelectItemV2 value="tous">tous</SelectItemV2>
+                {getFilterOptions(filterType).map((option) => (
+                  <SelectItemV2 key={option} value={option}>
+                    {option}
+                  </SelectItemV2>
+                ))}
+              </SelectContentV2>
+            </SelectV2>
+          </InlineField>
         ))}
 
         {/* Pays avec multi-sélection */}
@@ -2014,7 +1926,7 @@ function AnalyseValeurContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {dataWithSubLevelCounts.length === 0 ? (
+              {paginatedData.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={perimetre === "Produit" ? 11 : 8}
@@ -2024,7 +1936,7 @@ function AnalyseValeurContent() {
                   </TableCell>
                 </TableRow>
               ) : (
-                dataWithSubLevelCounts.map((row, index) => {
+                paginatedData.map((row, index) => {
                   const isSelected = isElementSelected(row.label);
 
                   return (
@@ -2329,6 +2241,86 @@ function AnalyseValeurContent() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {totalItems > 0 && (
+          <div className="flex items-center justify-end gap-4 py-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Lignes par page:</span>
+              <SelectV2 value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
+                <SelectTriggerV2 size="sm" width="auto" className="w-[80px]">
+                  <SelectValueV2 />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="20">20</SelectItemV2>
+                  <SelectItemV2 value="30">30</SelectItemV2>
+                  <SelectItemV2 value="40">40</SelectItemV2>
+                  <SelectItemV2 value="50">50</SelectItemV2>
+                  <SelectItemV2 value="60">60</SelectItemV2>
+                </SelectContentV2>
+              </SelectV2>
+            </div>
+            <Pagination className="mx-0 w-auto justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {currentPage > 2 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(1)} className="cursor-pointer">
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                {currentPage > 3 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(currentPage - 1)} className="cursor-pointer">
+                      {currentPage - 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                <PaginationItem>
+                  <PaginationLink isActive className="cursor-default">
+                    {currentPage}
+                  </PaginationLink>
+                </PaginationItem>
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(currentPage + 1)} className="cursor-pointer">
+                      {currentPage + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                {currentPage < totalPages - 2 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                {currentPage < totalPages - 1 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(totalPages)} className="cursor-pointer">
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </TooltipProvider>
     </main>
   );
