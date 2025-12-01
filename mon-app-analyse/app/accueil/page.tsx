@@ -714,9 +714,9 @@ export default function AccueilPage() {
                           e.preventDefault()
                           card.onToggleUnit?.()
                         }}
-                        className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                        className="px-1.5 py-0.5 text-[12px] font-bold bg-white text-foreground rounded border border-black hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
                       >
-                        {card.unit} <SwitchIcon className="w-4 h-3.5" />
+                        {card.unit} <SwitchIcon className="w-4 h-3.5 text-foreground" />
                       </button>
                     )}
                     {hasMode && (
@@ -1367,18 +1367,17 @@ export default function AccueilPage() {
               </div>
             </Card>
 
-            <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium text-gray-700">Période</Label>
-                <Button
-                  variant="outline"
-                  className="w-auto justify-between border-gray-200 bg-white font-normal shadow-none gap-2"
-                >
-                  01/01/2025 - 13/11/2025
-                  <CalendarIcon className="h-4 w-4 text-blue-500" />
-                </Button>
-              </div>
-            </Card>
+            <InlineField label="Période">
+              <DatePickerV2
+                mode="period"
+                size="sm"
+                value={period}
+                onValueChange={setPeriod}
+                minDate={{ month: 0, year: 2018 }}
+                maxDate={{ month: 11, year: 2025 }}
+                showValidateButton
+              />
+            </InlineField>
           </div>
         </div>
 

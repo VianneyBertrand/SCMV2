@@ -5,7 +5,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-m font-medium transition-all outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-m font-bold transition-all outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -52,7 +52,8 @@ const buttonVariants = cva(
       {
         variant: "outline",
         reversed: true,
-        className: "ring-white text-white hover:ring-white/80 hover:text-white/80 active:ring-white/60 active:text-white/60",
+        className:
+          "ring-white text-white hover:ring-white/80 hover:text-white/80 active:ring-white/60 active:text-white/60",
       },
       {
         variant: "ghost",
@@ -68,7 +69,8 @@ const buttonVariants = cva(
       {
         variant: "outline-accent",
         reversed: true,
-        className: "ring-white text-white hover:ring-white/80 hover:text-white/80 active:ring-white/60 active:text-white/60",
+        className:
+          "ring-white text-white hover:ring-white/80 hover:text-white/80 active:ring-white/60 active:text-white/60",
       },
       {
         variant: "ghost-accent",
@@ -79,12 +81,14 @@ const buttonVariants = cva(
       {
         variant: "destructive",
         reversed: true,
-        className: "bg-white text-destructive hover:bg-white/90 active:bg-white/80",
+        className:
+          "bg-white text-destructive hover:bg-white/90 active:bg-white/80",
       },
       {
         variant: "outline-destructive",
         reversed: true,
-        className: "ring-white text-white hover:ring-white/80 hover:text-white/80 active:ring-white/60 active:text-white/60",
+        className:
+          "ring-white text-white hover:ring-white/80 hover:text-white/80 active:ring-white/60 active:text-white/60",
       },
       {
         variant: "ghost-destructive",

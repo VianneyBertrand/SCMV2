@@ -39,7 +39,7 @@ const segmentedControlVariants = cva(
 const segmentedControlItemVariants = cva(
   [
     // Base styles
-    "inline-flex items-center justify-center rounded-md px-3",
+    "inline-flex items-center justify-center rounded-md px-4",
     "text-sm font-medium whitespace-nowrap",
     "transition-colors duration-150",
     // Focus styles

@@ -3,7 +3,7 @@
 
 import { FlaskConical } from 'lucide-react'
 import { useRef } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/componentsv2/ui/button'
 import { useSimulationStore } from '@/stores/simulationStore'
 
 /**
@@ -38,11 +38,11 @@ export function SimulationButton() {
       ref={buttonRef}
       variant="outline"
       size="sm"
-      className="gap-2 text-[16px] border-[#0970E6] text-[#0970E6] hover:bg-blue-50 hover:text-[#004E9B] hover:border-[#004E9B] mt-1"
+      className="mt-1"
       onClick={handleClick}
       disabled={isSimulationMode}
     >
-      <FlaskConical className="w-7 h-7" />
+      <FlaskConical className="w-5 h-5" />
       Simuler
     </Button>
   )

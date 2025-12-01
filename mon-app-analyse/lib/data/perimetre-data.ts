@@ -822,8 +822,18 @@ export const getSubLevels = (type: PerimetreType): PerimetreType[] => {
     return ["Catégorie", "Groupe Famille", "Famille", "Sous Famille", "Produit"];
   }
 
-  // Cas spécifiques pour Fournisseur, Portefeuille et Pays (périmètres transverses)
-  if (type === "Fournisseur" || type === "Portefeuille" || type === "Pays") {
+  // Cas spécifiques pour Fournisseur (uniquement FAM, SF, PRO)
+  if (type === "Fournisseur") {
+    return ["Famille", "Sous Famille", "Produit"];
+  }
+
+  // Cas spécifiques pour Portefeuille (uniquement GF, FAM, SF, PRO)
+  if (type === "Portefeuille") {
+    return ["Groupe Famille", "Famille", "Sous Famille", "Produit"];
+  }
+
+  // Cas spécifiques pour Pays (périmètres transverses)
+  if (type === "Pays") {
     return ["Marché", "Marché détaillé", "Catégorie", "Groupe Famille", "Famille", "Sous Famille", "Produit"];
   }
 
@@ -882,14 +892,28 @@ export const calculateSubLevelCounts = (
 
     // Pour chaque sous-niveau, extraire les valeurs uniques
     subLevels.forEach((subLevel) => {
-      const subLevelKey = perimetreToFilterKey[subLevel];
-      if (subLevelKey) {
-        const uniqueValues = new Set(
-          produitsFiltres
-            .map(p => p[subLevelKey as keyof PerimetreItem])
-            .filter(v => v != null)
-        );
-        counts[subLevel] = uniqueValues.size;
+      // Cas spécial pour Produit : on compte directement les produits filtrés
+      if (subLevel === "Produit") {
+        counts[subLevel] = produitsFiltres.length;
+      } else {
+        const subLevelKey = perimetreToFilterKey[subLevel];
+        if (subLevelKey) {
+          const uniqueValues = new Set(
+            produitsFiltres
+              .map(p => p[subLevelKey as keyof PerimetreItem])
+              .filter(v => v != null)
+          );
+          let count = uniqueValues.size;
+
+          // Pour Portefeuille, limiter le nombre de Groupe Famille à 1-2
+          if (currentPerimetre === "Portefeuille" && subLevel === "Groupe Famille") {
+            // Générer un nombre pseudo-aléatoire basé sur le label (1 ou 2)
+            const seed = currentItem.label.charCodeAt(0) + currentItem.label.length;
+            count = (seed % 2) + 1; // 1 ou 2
+          }
+
+          counts[subLevel] = count;
+        }
       }
     });
 

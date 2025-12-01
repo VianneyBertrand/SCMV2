@@ -301,7 +301,7 @@ export function MPFutureRow({
               onReferenceChange={onReferenceChange}
             />
           ) : (
-            code && <span className="text-gray-500" style={{ fontSize: '11px' }}>{code}</span>
+            code && <span className="text-gray-500" style={{ fontSize: '14px' }}>{code}</span>
           )}
         </div>
         <Button

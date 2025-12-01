@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/componentsv2/ui/tabs"
+import { SegmentedControl, SegmentedControlItem } from "@/componentsv2/ui/segmented-control"
 import {
   Tooltip,
   TooltipContent,
@@ -58,6 +59,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -65,6 +68,60 @@ import {
   Legend,
   Brush
 } from 'recharts';
+
+// Couleurs pour les bars du mode simulation (reprend les couleurs des lignes)
+const MP_COLORS: Record<string, string> = {
+  'farine-ble': '#E91E63',
+  'sucre': '#00BCD4',
+  'sel': '#4CAF50',
+  'lait': '#FF9800',
+  'beurre': '#9C27B0',
+  'huile': '#607D8B',
+  'oeufs': '#795548',
+  'levure': '#FFEB3B',
+  'amidon-mais': '#FFC107',
+  'gelatine': '#FF5722',
+  'presure': '#3F51B5',
+  'ferments-lactiques': '#009688',
+  'creme-fraiche': '#8BC34A',
+  // Couleurs supplémentaires pour d'autres MP
+  'Farine de blé': '#E91E63',
+  'Sucre': '#00BCD4',
+  'Sel': '#4CAF50',
+  'Lait': '#FF9800',
+  'Beurre': '#9C27B0',
+  'Huile': '#607D8B',
+  'Oeufs': '#795548',
+  'Levure': '#FFEB3B',
+}
+
+const EMBALLAGE_COLORS: Record<string, string> = {
+  'carton-ondule': '#FF6B6B',
+  'polypropylene': '#4ECDC4',
+  'polyethylene': '#45B7D1',
+  'aluminium': '#F7B731',
+  'verre': '#5F27CD',
+  'acier': '#00D2D3',
+  'papier-kraft': '#FD79A8',
+  'polystyrene-expanse': '#A29BFE',
+  'pet': '#6C5CE7',
+  'etiquettes-papier': '#FD79A8',
+  // Noms complets
+  'Carton ondulé': '#FF6B6B',
+  'Polypropylène': '#4ECDC4',
+  'Polyéthylène': '#45B7D1',
+  'Aluminium': '#F7B731',
+  'Verre': '#5F27CD',
+  'Acier': '#00D2D3',
+}
+
+// Fonction pour obtenir une couleur pour une clé donnée
+const getBarColor = (key: string, isEmballage: boolean = false): string => {
+  if (isEmballage) {
+    return EMBALLAGE_COLORS[key] || '#00BCD4'
+  }
+  return MP_COLORS[key] || '#E91E63'
+}
 
 // Composant HeatmapRect (copié depuis app/accueil/page.tsx)
 interface HeatmapRectProps {
@@ -557,14 +614,17 @@ function DetailContent() {
       case 'total':
         return 'Evolution du cours des MPA et MPI'
       case 'mpa':
-        return 'Evolution du cours des MPA'
+        return 'Évolution du cours des MP'
       case 'mpi':
-        return 'Evolution du cours des MPI'
+        return 'Évolution du cours des emballages'
     }
   }
 
   // Store de simulation
   const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
+  const isSimulationMode = useSimulationStore((state) => state.isSimulationMode)
+  const simulatedData = useSimulationStore((state) => state.simulatedData)
+  const originalData = useSimulationStore((state) => state.originalData)
   const initializeFromExistingData = useSimulationStore((state) => state.initializeFromExistingData)
 
   // Préparer les données de simulation (mémorisées)
@@ -598,10 +658,14 @@ function DetailContent() {
 
   // Initialiser les données de simulation quand la fenêtre s'ouvre
   // On attend que les deux listes aient des données avant d'initialiser
+  // IMPORTANT: Ne pas réinitialiser si on est déjà en mode simulation (pour pouvoir modifier)
   const hasInitializedRef = useRef(false)
   useEffect(() => {
-    console.log('Simulation useEffect - isWindowOpen:', isWindowOpen, 'hasInitialized:', hasInitializedRef.current, 'mpValues:', simulationMPValues.length, 'mpVolumes:', simulationMPVolumes.length)
-    if (isWindowOpen && !hasInitializedRef.current) {
+    console.log('Simulation useEffect - isWindowOpen:', isWindowOpen, 'isSimulationMode:', isSimulationMode, 'hasInitialized:', hasInitializedRef.current, 'mpValues:', simulationMPValues.length, 'mpVolumes:', simulationMPVolumes.length)
+
+    // Initialiser seulement si la fenêtre s'ouvre ET qu'on n'est PAS déjà en mode simulation
+    // Si on est en mode simulation, les données sont déjà là, pas besoin de réinitialiser
+    if (isWindowOpen && !hasInitializedRef.current && !isSimulationMode) {
       // Initialiser seulement quand les deux listes sont disponibles
       if (simulationMPValues.length > 0 && simulationMPVolumes.length > 0) {
         console.log('Initializing simulation data with:', simulationMPValues, simulationMPVolumes)
@@ -609,10 +673,13 @@ function DetailContent() {
         hasInitializedRef.current = true
       }
     }
-    if (!isWindowOpen) {
+
+    // Réinitialiser le flag seulement si la fenêtre se ferme ET qu'on n'est PAS en mode simulation
+    // En mode simulation, on garde le flag pour ne pas réinitialiser à la réouverture
+    if (!isWindowOpen && !isSimulationMode) {
       hasInitializedRef.current = false
     }
-  }, [isWindowOpen, simulationMPValues, simulationMPVolumes, simulationEmballageValues, simulationEmballageVolumes, initializeFromExistingData])
+  }, [isWindowOpen, isSimulationMode, simulationMPValues, simulationMPVolumes, simulationEmballageValues, simulationEmballageVolumes, initializeFromExistingData])
 
   // Calculer les sous-niveaux pour les liens de navigation
   const navigationLinks = useMemo(() => {
@@ -634,6 +701,147 @@ function DetailContent() {
         href: `/analyse-valeur?perimetre=${encodeURIComponent(level)}${filterKey ? `&${filterKey}=${encodeURIComponent(currentItem.label)}` : ''}`
       }))
   }, [currentItem, perimetre])
+
+  // Préparer les données de l'histogramme pour le mode simulation
+  const simulationHistogramData = useMemo(() => {
+    if (!isSimulationMode) return null
+
+    // Fonction pour formater une date { month, year } en "01/MM/YYYY"
+    const formatPeriodDate = (date: { month: number; year: number }) => {
+      const monthStr = String(date.month + 1).padStart(2, '0')
+      return `01/${monthStr}/${date.year}`
+    }
+
+    // Fonction pour détecter si un item a été modifié
+    const isModified = (simItem: any, origItem: any) => {
+      if (!origItem) return true
+      return simItem.priceFirst !== origItem.priceFirst ||
+             simItem.priceLast !== origItem.priceLast ||
+             (simItem.intermediatePrices && simItem.intermediatePrices.length > 0)
+    }
+
+    // Filtrer les MP modifiées
+    const modifiedMPs = simulatedData.mpValues.filter(mp => {
+      const orig = originalData.mpValues.find(o => o.id === mp.id)
+      return isModified(mp, orig)
+    })
+
+    // Filtrer les Emballages modifiés
+    const modifiedEmballages = simulatedData.emballageValues.filter(emb => {
+      const orig = originalData.emballageValues.find(o => o.id === emb.id)
+      return isModified(emb, orig)
+    })
+
+    // Déterminer le nombre de périodes (basé sur le découpage le plus détaillé)
+    let maxPeriods = 2 // Par défaut: première et dernière période
+    const allItems = [...modifiedMPs, ...modifiedEmballages]
+
+    // Trouver l'item avec le plus de périodes intermédiaires pour obtenir les dates
+    let itemWithDates: any = null
+    allItems.forEach(item => {
+      if (item.intermediatePrices && item.intermediatePrices.length > maxPeriods) {
+        maxPeriods = item.intermediatePrices.length
+        itemWithDates = item
+      }
+    })
+
+    // Construire les données par période pour MP et Emballage individuels
+    const chartData: any[] = []
+    // Construire les données agrégées pour la tab Total (MP total et Emballage total)
+    const totalChartData: any[] = []
+
+    for (let i = 0; i < maxPeriods; i++) {
+      // Déterminer le label de la période
+      let periodLabel = ''
+      if (itemWithDates && itemWithDates.intermediatePrices && itemWithDates.intermediatePrices[i]) {
+        // Utiliser la date de l'item avec découpage
+        periodLabel = formatPeriodDate(itemWithDates.intermediatePrices[i].date)
+      } else if (maxPeriods === 2) {
+        // Sans découpage, utiliser les dates de la période globale
+        const globalPeriod = period
+        if (globalPeriod?.from && globalPeriod?.to) {
+          periodLabel = i === 0
+            ? formatPeriodDate(globalPeriod.from)
+            : formatPeriodDate(globalPeriod.to)
+        } else {
+          periodLabel = i === 0 ? 'Début' : 'Fin'
+        }
+      } else {
+        periodLabel = `P${i + 1}`
+      }
+
+      const periodData: any = { period: periodLabel }
+
+      let mpTotal = 0
+      let emballageTotal = 0
+
+      // Ajouter les MP modifiées
+      modifiedMPs.forEach(mp => {
+        let price = 0
+        if (mp.intermediatePrices && mp.intermediatePrices.length > 0) {
+          const priceData = mp.intermediatePrices[i]
+          price = priceData ? priceData.price : 0
+        } else {
+          price = i === 0 ? mp.priceFirst : (i === maxPeriods - 1 ? mp.priceLast : 0)
+        }
+        periodData[mp.label] = price || null
+        mpTotal += price || 0
+      })
+
+      // Ajouter les Emballages modifiés
+      modifiedEmballages.forEach(emb => {
+        let price = 0
+        if (emb.intermediatePrices && emb.intermediatePrices.length > 0) {
+          const priceData = emb.intermediatePrices[i]
+          price = priceData ? priceData.price : 0
+        } else {
+          price = i === 0 ? emb.priceFirst : (i === maxPeriods - 1 ? emb.priceLast : 0)
+        }
+        periodData[emb.label] = price || null
+        emballageTotal += price || 0
+      })
+
+      chartData.push(periodData)
+      totalChartData.push({
+        period: periodLabel,
+        MP: mpTotal > 0 ? mpTotal : null,
+        Emballage: emballageTotal > 0 ? emballageTotal : null
+      })
+    }
+
+    return {
+      data: chartData,
+      totalData: totalChartData,
+      mpKeys: modifiedMPs.map(mp => mp.label),
+      emballageKeys: modifiedEmballages.map(emb => emb.label),
+      hasData: modifiedMPs.length > 0 || modifiedEmballages.length > 0
+    }
+  }, [isSimulationMode, simulatedData, originalData, period])
+
+  // Préparer les données de l'histogramme Evolution Prix pour le mode simulation
+  const simulationEvolutionData = useMemo(() => {
+    if (!isSimulationMode || !simulationHistogramData?.totalData) return null
+
+    // Calculer PA = MP + Emballage pour chaque période
+    // PA théorique = 80% du PA (exemple de baseline)
+    const evolutionData = simulationHistogramData.totalData.map((periodData: any) => {
+      const mpTotal = periodData.MP || 0
+      const emballageTotal = periodData.Emballage || 0
+      const pa = mpTotal + emballageTotal
+      const paTheorique = pa * 0.8 // PA théorique = 80% du PA simulé
+
+      return {
+        period: periodData.period,
+        PA: pa > 0 ? pa : null,
+        'PA théorique': pa > 0 ? paTheorique : null
+      }
+    })
+
+    return {
+      data: evolutionData,
+      hasData: evolutionData.some((d: any) => d.PA !== null)
+    }
+  }, [isSimulationMode, simulationHistogramData])
 
   // Données KPI (7 cards de base + cartes produit séparées)
   const kpiCards = useMemo(() => {
@@ -1117,14 +1325,14 @@ function DetailContent() {
 
   return (
     <main className="w-full px-[50px] py-4 relative">
-      {/* Bouton Retour */}
+      {/* Bouton Fermer */}
       <Button
         variant="ghost"
-        className="-ml-2 mb-2 gap-2 text-sm"
+        className="-ml-2 mb-2 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed"
         onClick={() => router.back()}
       >
-        <ArrowLeft className="h-4 w-4" />
-        Retour
+        <X className="h-4 w-4" />
+        Fermer
       </Button>
 
       {/* Titre + Simuler + Date */}
@@ -1155,29 +1363,17 @@ function DetailContent() {
 
       {/* Tabs */}
       <Tabs defaultValue="vue-ensemble" className="w-full">
-        <TabsList className="flex w-auto justify-start bg-transparent p-0 h-auto gap-0">
-          <TabsTrigger
-            value="vue-ensemble"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
-          >
+        <TabsList className="border-b-0">
+          <TabsTrigger value="vue-ensemble">
             Vue d&apos;ensemble
           </TabsTrigger>
-          <TabsTrigger
-            value="structure-cout"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
-          >
+          <TabsTrigger value="structure-cout">
             Structure de coût
           </TabsTrigger>
-          <TabsTrigger
-            value="recette"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
-          >
+          <TabsTrigger value="recette">
             Recette
           </TabsTrigger>
-          <TabsTrigger
-            value="evolution-prix"
-            className="rounded-none bg-transparent border-b-2 border-[#D9D9D9] data-[state=active]:border-[#0970E6] data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[14px] text-black font-medium data-[state=active]:font-bold data-[state=active]:text-[#0970E6] pb-2 px-4 hover:text-black hover:font-medium focus-visible:ring-0 transition-none"
-          >
+          <TabsTrigger value="evolution-prix">
             Évolution prix
           </TabsTrigger>
         </TabsList>
@@ -1520,26 +1716,14 @@ function DetailContent() {
             </button>
           </div>
 
-          <div className="flex gap-0 w-fit">
-            <button
-              onClick={() => setCostSubTab('total')}
-              className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${costSubTab === 'total' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}
-            >
-              Total
-            </button>
-            <button
-              onClick={() => setCostSubTab('mpa')}
-              className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${costSubTab === 'mpa' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}
-            >
-              MP
-            </button>
-            <button
-              onClick={() => setCostSubTab('mpi')}
-              className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${costSubTab === 'mpi' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}
-            >
-              Emballage
-            </button>
-          </div>
+          <SegmentedControl
+            value={costSubTab}
+            onValueChange={(value) => setCostSubTab(value as 'total' | 'mpa' | 'mpi')}
+          >
+            <SegmentedControlItem value="total">Total</SegmentedControlItem>
+            <SegmentedControlItem value="mpa">MP</SegmentedControlItem>
+            <SegmentedControlItem value="mpi">Emballage</SegmentedControlItem>
+          </SegmentedControl>
 
           <div className="space-y-12 !mt-4">
               {/* Heatmap */}
@@ -1847,7 +2031,8 @@ function DetailContent() {
                     </div>
                   </div>
 
-                  {/* Légendes centrées avec bouton "Tout désélectionner" */}
+                  {/* Légendes centrées avec bouton "Tout désélectionner" - masquées en mode simulation */}
+                  {!isSimulationMode && (
                   <div className="mb-2 flex items-center justify-center gap-6">
                     <div className="flex flex-wrap gap-4 justify-center items-center">
                     {costSubTab === 'total' && (
@@ -2125,86 +2310,125 @@ function DetailContent() {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
+                  )}
 
-                  {/* Graphique */}
+                  {/* Graphique ou Histogramme (mode simulation) */}
                   <div className="mb-6" style={{ paddingBottom: '20px' }}>
-                    <ResponsiveContainer width="100%" height={400} style={{ overflow: 'visible' }}>
-                    <LineChart data={getChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }} style={{ overflow: 'visible' }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <RechartsTooltip
-                        formatter={(value: number, name: string) => {
-                          // Pour les MP individuelles (pas MPA/MPI), afficher en €/kg
-                          if (name !== 'MPA' && name !== 'MPI') {
-                            return `${value.toFixed(3)}€/kg`
-                          }
-                          return value.toFixed(3)
-                        }}
-                      />
-
-                      {costSubTab === 'total' && (
-                        <>
-                          <Line
-                            type="monotone"
-                            dataKey="MPA"
-                            stroke="#E91E63"
-                            strokeWidth={2}
-                            dot={false}
-                            hide={!legendOpacity.MPA}
+                    {isSimulationMode && simulationHistogramData && simulationHistogramData.hasData ? (
+                      // Mode simulation: afficher l'histogramme
+                      <ResponsiveContainer width="100%" height={400}>
+                        <BarChart
+                          data={costSubTab === 'total' ? simulationHistogramData.totalData : simulationHistogramData.data}
+                          margin={{ left: 0, right: 10, top: 5, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+                          <YAxis
+                            tick={{ fontSize: 12 }}
+                            label={{ value: '€/kg', angle: -90, position: 'insideLeft' }}
+                            tickFormatter={(value) => value.toFixed(2)}
                           />
-                          <Line
-                            type="monotone"
-                            dataKey="MPI"
-                            stroke="#00BCD4"
-                            strokeWidth={2}
-                            dot={false}
-                            hide={!legendOpacity.MPI}
+                          <RechartsTooltip
+                            formatter={(value: number) => [`${value.toFixed(3)} €/kg`, '']}
                           />
-                        </>
-                      )}
+                          <Legend />
+                          {/* Tab Total: MP et Emballage agrégés */}
+                          {costSubTab === 'total' && (
+                            <>
+                              <Bar dataKey="MP" fill="#E91E63" name="MP" />
+                              <Bar dataKey="Emballage" fill="#00BCD4" name="Emballage" />
+                            </>
+                          )}
+                          {/* Tab MP: chaque MP individuellement */}
+                          {costSubTab === 'mpa' && simulationHistogramData.mpKeys.map((key) => (
+                            <Bar key={key} dataKey={key} fill={getBarColor(key, false)} name={key} />
+                          ))}
+                          {/* Tab Emballage: chaque Emballage individuellement */}
+                          {costSubTab === 'mpi' && simulationHistogramData.emballageKeys.map((key) => (
+                            <Bar key={key} dataKey={key} fill={getBarColor(key, true)} name={key} />
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      // Mode normal: afficher le LineChart
+                      <ResponsiveContainer width="100%" height={400} style={{ overflow: 'visible' }}>
+                      <LineChart data={getChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }} style={{ overflow: 'visible' }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <RechartsTooltip
+                          formatter={(value: number, name: string) => {
+                            // Pour les MP individuelles (pas MPA/MPI), afficher en €/kg
+                            if (name !== 'MPA' && name !== 'MPI') {
+                              return `${value.toFixed(3)}€/kg`
+                            }
+                            return value.toFixed(3)
+                          }}
+                        />
 
-                      {costSubTab === 'mpa' && (
-                        <>
-                          <Line type="monotone" dataKey="farine-ble" stroke="#E91E63" strokeWidth={2} dot={false} hide={!legendOpacity['farine-ble']} />
-                          <Line type="monotone" dataKey="sucre" stroke="#00BCD4" strokeWidth={2} dot={false} hide={!legendOpacity.sucre} />
-                          <Line type="monotone" dataKey="sel" stroke="#4CAF50" strokeWidth={2} dot={false} hide={!legendOpacity.sel} />
-                          <Line type="monotone" dataKey="lait" stroke="#FF9800" strokeWidth={2} dot={false} hide={!legendOpacity.lait} />
-                          <Line type="monotone" dataKey="beurre" stroke="#9C27B0" strokeWidth={2} dot={false} hide={!legendOpacity.beurre} />
-                          <Line type="monotone" dataKey="huile" stroke="#607D8B" strokeWidth={2} dot={false} hide={!legendOpacity.huile} />
-                          <Line type="monotone" dataKey="oeufs" stroke="#795548" strokeWidth={2} dot={false} hide={!legendOpacity.oeufs} />
-                          <Line type="monotone" dataKey="levure" stroke="#FFEB3B" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.levure} />
-                          <Line type="monotone" dataKey="amidon-mais" stroke="#FFC107" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['amidon-mais']} />
-                          <Line type="monotone" dataKey="gelatine" stroke="#FF5722" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.gelatine} />
-                          <Line type="monotone" dataKey="presure" stroke="#3F51B5" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.presure} />
-                          <Line type="monotone" dataKey="ferments-lactiques" stroke="#009688" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['ferments-lactiques']} />
-                          <Line type="monotone" dataKey="creme-fraiche" stroke="#8BC34A" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['creme-fraiche']} />
-                        </>
-                      )}
+                        {costSubTab === 'total' && (
+                          <>
+                            <Line
+                              type="monotone"
+                              dataKey="MPA"
+                              stroke="#E91E63"
+                              strokeWidth={2}
+                              dot={false}
+                              hide={!legendOpacity.MPA}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="MPI"
+                              stroke="#00BCD4"
+                              strokeWidth={2}
+                              dot={false}
+                              hide={!legendOpacity.MPI}
+                            />
+                          </>
+                        )}
 
-                      {costSubTab === 'mpi' && (
-                        <>
-                          {/* 10 emballages - 4 actifs (ligne continue) + 6 inactifs (ligne pointillée) */}
-                          <Line type="monotone" dataKey="carton-ondule" stroke="#FF6B6B" strokeWidth={2} dot={false} hide={!legendOpacity['carton-ondule']} />
-                          <Line type="monotone" dataKey="polypropylene" stroke="#4ECDC4" strokeWidth={2} dot={false} hide={!legendOpacity['polypropylene']} />
-                          <Line type="monotone" dataKey="polyethylene" stroke="#45B7D1" strokeWidth={2} dot={false} hide={!legendOpacity['polyethylene']} />
-                          <Line type="monotone" dataKey="aluminium" stroke="#F7B731" strokeWidth={2} dot={false} hide={!legendOpacity['aluminium']} />
-                          <Line type="monotone" dataKey="verre" stroke="#5F27CD" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['verre']} />
-                          <Line type="monotone" dataKey="acier" stroke="#00D2D3" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['acier']} />
-                          <Line type="monotone" dataKey="papier-kraft" stroke="#FD79A8" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['papier-kraft']} />
-                          <Line type="monotone" dataKey="polystyrene-expanse" stroke="#A29BFE" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['polystyrene-expanse']} />
-                          <Line type="monotone" dataKey="pet" stroke="#6C5CE7" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['pet']} />
-                          <Line type="monotone" dataKey="etiquettes-papier" stroke="#FD79A8" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['etiquettes-papier']} />
-                        </>
-                      )}
-                      <Brush
-                        dataKey="date"
-                        height={30}
-                        stroke="#0970E6"
-                        fill="#FFFFFF"
-                      />
-                    </LineChart>
-                    </ResponsiveContainer>
+                        {costSubTab === 'mpa' && (
+                          <>
+                            <Line type="monotone" dataKey="farine-ble" stroke="#E91E63" strokeWidth={2} dot={false} hide={!legendOpacity['farine-ble']} />
+                            <Line type="monotone" dataKey="sucre" stroke="#00BCD4" strokeWidth={2} dot={false} hide={!legendOpacity.sucre} />
+                            <Line type="monotone" dataKey="sel" stroke="#4CAF50" strokeWidth={2} dot={false} hide={!legendOpacity.sel} />
+                            <Line type="monotone" dataKey="lait" stroke="#FF9800" strokeWidth={2} dot={false} hide={!legendOpacity.lait} />
+                            <Line type="monotone" dataKey="beurre" stroke="#9C27B0" strokeWidth={2} dot={false} hide={!legendOpacity.beurre} />
+                            <Line type="monotone" dataKey="huile" stroke="#607D8B" strokeWidth={2} dot={false} hide={!legendOpacity.huile} />
+                            <Line type="monotone" dataKey="oeufs" stroke="#795548" strokeWidth={2} dot={false} hide={!legendOpacity.oeufs} />
+                            <Line type="monotone" dataKey="levure" stroke="#FFEB3B" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.levure} />
+                            <Line type="monotone" dataKey="amidon-mais" stroke="#FFC107" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['amidon-mais']} />
+                            <Line type="monotone" dataKey="gelatine" stroke="#FF5722" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.gelatine} />
+                            <Line type="monotone" dataKey="presure" stroke="#3F51B5" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity.presure} />
+                            <Line type="monotone" dataKey="ferments-lactiques" stroke="#009688" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['ferments-lactiques']} />
+                            <Line type="monotone" dataKey="creme-fraiche" stroke="#8BC34A" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['creme-fraiche']} />
+                          </>
+                        )}
+
+                        {costSubTab === 'mpi' && (
+                          <>
+                            {/* 10 emballages - 4 actifs (ligne continue) + 6 inactifs (ligne pointillée) */}
+                            <Line type="monotone" dataKey="carton-ondule" stroke="#FF6B6B" strokeWidth={2} dot={false} hide={!legendOpacity['carton-ondule']} />
+                            <Line type="monotone" dataKey="polypropylene" stroke="#4ECDC4" strokeWidth={2} dot={false} hide={!legendOpacity['polypropylene']} />
+                            <Line type="monotone" dataKey="polyethylene" stroke="#45B7D1" strokeWidth={2} dot={false} hide={!legendOpacity['polyethylene']} />
+                            <Line type="monotone" dataKey="aluminium" stroke="#F7B731" strokeWidth={2} dot={false} hide={!legendOpacity['aluminium']} />
+                            <Line type="monotone" dataKey="verre" stroke="#5F27CD" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['verre']} />
+                            <Line type="monotone" dataKey="acier" stroke="#00D2D3" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['acier']} />
+                            <Line type="monotone" dataKey="papier-kraft" stroke="#FD79A8" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['papier-kraft']} />
+                            <Line type="monotone" dataKey="polystyrene-expanse" stroke="#A29BFE" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['polystyrene-expanse']} />
+                            <Line type="monotone" dataKey="pet" stroke="#6C5CE7" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['pet']} />
+                            <Line type="monotone" dataKey="etiquettes-papier" stroke="#FD79A8" strokeWidth={1} strokeDasharray="5 5" dot={false} hide={!legendOpacity['etiquettes-papier']} />
+                          </>
+                        )}
+                        <Brush
+                          dataKey="date"
+                          height={30}
+                          stroke="#0970E6"
+                          fill="#FFFFFF"
+                        />
+                      </LineChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2212,7 +2436,9 @@ function DetailContent() {
               {/* Tableau */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-[20px] font-medium">Détail de la structure de coût</h2>
+                  <h2 className="text-[20px] font-medium">
+                    {costSubTab === 'mpi' ? 'Détail des emballages' : costSubTab === 'mpa' ? 'Détail des MP' : 'Détail de la structure de coût'}
+                  </h2>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -2383,6 +2609,25 @@ function DetailContent() {
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>Part du volume dans le total</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              <ChevronsUpDown className="h-4 w-4 cursor-pointer text-[#121212]" />
+                              </div>
+                            </TableHead>
+                            <TableHead
+                              className="font-semibold cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('partRecyclee')}
+                            >
+                              <div className="flex items-center gap-2">
+                                Part recyclée
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4 text-[#121212]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Part de matériaux recyclés dans l&apos;emballage</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -2633,6 +2878,7 @@ function DetailContent() {
                             <>
                               <TableCell>{volumeUnit === 'UVC' ? row.volumeUVC : row.volume}</TableCell>
                               <TableCell>{row.partVolume}</TableCell>
+                              <TableCell>{row.partRecyclee || `${Math.floor(15 + Math.abs(row.id?.charCodeAt(0) || 0) % 70)}%`}</TableCell>
                             </>
                           )}
                           <TableCell>
@@ -2715,173 +2961,6 @@ function DetailContent() {
                   </Table>
                 </div>
               </div>
-
-              {/* Tableau Details d'emballage - uniquement pour MPI et périmètre Produit */}
-              {costSubTab === 'mpi' && perimetre === "Produit" && (
-                <div className="mt-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-[20px] font-medium">Details d&apos;emballage</h2>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="w-4 h-4 text-[#121212]" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Détail des matériaux composant l&apos;emballage</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Mot-clé"
-                          value={emballageSearchKeyword}
-                          onChange={(e) => setEmballageSearchKeyword(e.target.value)}
-                          className="pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      </div>
-                      <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
-                        <Download className="w-4 h-4 text-gray-600" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="overflow-hidden rounded-lg border">
-                    <Table className="table-fixed w-full">
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 hover:bg-gray-50">
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[180px]">
-                            <div className="flex items-center gap-1">
-                              Emballage
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[100px]">
-                            <div className="flex items-center gap-1">
-                              Section
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
-                            <div className="flex items-center gap-1">
-                              Poids section
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
-                            <div className="flex items-center gap-1">
-                              Nombre de sections
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
-                            <div className="flex items-center gap-1">
-                              Part du matériau
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
-                            <div className="flex items-center gap-1">
-                              Poids matériau
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[200px]">
-                            <div className="flex items-center gap-1">
-                              Matériau
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold w-[70px]">Poids recyclé</TableHead>
-                          <TableHead className="font-semibold w-[70px]">Part recyclée</TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[100px]">
-                            <div className="flex items-center gap-1">
-                              Origine matériau
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
-                            <div className="flex items-center gap-1">
-                              Code mintec
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
-                            <div className="flex items-center gap-1">
-                              Coefficient coût
-                              <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
-                            </div>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {getFilteredEmballageData().map((emballage) => {
-                          const totals = getEmballageTotals(emballage)
-                          return (
-                            <React.Fragment key={emballage.id}>
-                              {/* Ligne Total */}
-                              <TableRow className="bg-white hover:bg-gray-50 font-semibold">
-                                <TableCell className="font-bold">Total</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                                <TableCell>{totals.totalPoids}</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell>{totals.totalPoidsRecycle}</TableCell>
-                                <TableCell>{totals.partRecyclee}</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                              </TableRow>
-                              {/* Ligne Emballage */}
-                              <TableRow className="bg-white hover:bg-gray-50">
-                                <TableCell className="font-medium">{emballage.emballage}</TableCell>
-                                <TableCell>{emballage.section}</TableCell>
-                                <TableCell>{emballage.poidsSection}</TableCell>
-                                <TableCell className="text-center">{emballage.nombreSections}</TableCell>
-                                <TableCell>{emballage.materiaux[0].partMateriau}</TableCell>
-                                <TableCell>{emballage.materiaux[0].poidsMateriau}</TableCell>
-                                <TableCell>
-                                  <a href="#" className="text-[#D32F2F] hover:underline">{emballage.materiaux[0].materiau}</a>
-                                </TableCell>
-                                <TableCell>{emballage.materiaux[0].poidsRecycle}</TableCell>
-                                <TableCell>{emballage.materiaux[0].partRecyclee}</TableCell>
-                                <TableCell>{emballage.materiaux[0].origineMateriau}</TableCell>
-                                <TableCell>{emballage.materiaux[0].codeMintec}</TableCell>
-                                <TableCell>{emballage.materiaux[0].coefficientCout}</TableCell>
-                              </TableRow>
-                              {/* Lignes Matériaux supplémentaires */}
-                              {emballage.materiaux.slice(1).map((materiau, idx) => (
-                                <TableRow key={idx} className="bg-white hover:bg-gray-50">
-                                  <TableCell></TableCell>
-                                  <TableCell></TableCell>
-                                  <TableCell></TableCell>
-                                  <TableCell></TableCell>
-                                  <TableCell>{materiau.partMateriau}</TableCell>
-                                  <TableCell>{materiau.poidsMateriau}</TableCell>
-                                  <TableCell>
-                                    <a href="#" className="text-[#D32F2F] hover:underline">{materiau.materiau}</a>
-                                  </TableCell>
-                                  <TableCell>{materiau.poidsRecycle}</TableCell>
-                                  <TableCell>{materiau.partRecyclee}</TableCell>
-                                  <TableCell>{materiau.origineMateriau}</TableCell>
-                                  <TableCell>{materiau.codeMintec}</TableCell>
-                                  <TableCell>{materiau.coefficientCout}</TableCell>
-                                </TableRow>
-                              ))}
-                            </React.Fragment>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
           </div>
         </TabsContent>
 
@@ -2903,14 +2982,13 @@ function DetailContent() {
             </TooltipProvider>
           </div>
           <div className="flex justify-between items-center mb-4">
-            <div className="flex gap-0 w-fit">
-              <button onClick={() => setRecetteSubTab('mpa')} className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${recetteSubTab === 'mpa' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}>
-                MP
-              </button>
-              <button onClick={() => setRecetteSubTab('mpi')} className={`px-4 py-2 text-[14px] first:rounded-l last:rounded-r transition-colors ${recetteSubTab === 'mpi' ? 'bg-[#0970E6] text-white font-bold' : 'bg-[#F2F2F2] text-black font-medium'}`}>
-                Emballage
-              </button>
-            </div>
+            <SegmentedControl
+              value={recetteSubTab}
+              onValueChange={(value) => setRecetteSubTab(value as 'mpa' | 'mpi')}
+            >
+              <SegmentedControlItem value="mpa">MP</SegmentedControlItem>
+              <SegmentedControlItem value="mpi">Emballage</SegmentedControlItem>
+            </SegmentedControl>
             <Button variant="ghost" size="icon" className="p-0">
               <Download className="text-[#0970E6]" width={24} height={24} />
             </Button>
@@ -2934,6 +3012,173 @@ function DetailContent() {
               ))}
             </CardContent>
           </Card>
+
+          {/* Tableau Details d'emballage - uniquement pour Emballage et périmètre Produit */}
+          {recetteSubTab === 'mpi' && perimetre === "Produit" && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[20px] font-medium">Details d&apos;emballage</h2>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-4 h-4 text-[#121212]" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Détail des matériaux composant l&apos;emballage</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Mot-clé"
+                      value={emballageSearchKeyword}
+                      onChange={(e) => setEmballageSearchKeyword(e.target.value)}
+                      className="pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+                    <Download className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border">
+                <Table className="table-fixed w-full">
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 hover:bg-gray-50">
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[180px]">
+                        <div className="flex items-center gap-1">
+                          Emballage
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[100px]">
+                        <div className="flex items-center gap-1">
+                          Section
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
+                        <div className="flex items-center gap-1">
+                          Poids section
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
+                        <div className="flex items-center gap-1">
+                          Nombre de sections
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
+                        <div className="flex items-center gap-1">
+                          Part du matériau
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
+                        <div className="flex items-center gap-1">
+                          Poids matériau
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[200px]">
+                        <div className="flex items-center gap-1">
+                          Matériau
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold w-[70px]">Poids recyclé</TableHead>
+                      <TableHead className="font-semibold w-[70px]">Part recyclée</TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[100px]">
+                        <div className="flex items-center gap-1">
+                          Origine matériau
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[70px]">
+                        <div className="flex items-center gap-1">
+                          Code mintec
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-gray-100 w-[80px]">
+                        <div className="flex items-center gap-1">
+                          Coefficient coût
+                          <ChevronsUpDown className="h-4 w-4 text-[#121212]" />
+                        </div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredEmballageData().map((emballage) => {
+                      const totals = getEmballageTotals(emballage)
+                      return (
+                        <React.Fragment key={emballage.id}>
+                          {/* Ligne Total */}
+                          <TableRow className="bg-white hover:bg-gray-50 font-semibold">
+                            <TableCell className="font-bold">Total</TableCell>
+                            <TableCell></TableCell>
+                            <TableCell></TableCell>
+                            <TableCell></TableCell>
+                            <TableCell></TableCell>
+                            <TableCell>{totals.totalPoids}</TableCell>
+                            <TableCell></TableCell>
+                            <TableCell>{totals.totalPoidsRecycle}</TableCell>
+                            <TableCell>{totals.partRecyclee}</TableCell>
+                            <TableCell></TableCell>
+                            <TableCell></TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                          {/* Ligne Emballage */}
+                          <TableRow className="bg-white hover:bg-gray-50">
+                            <TableCell className="font-medium">{emballage.emballage}</TableCell>
+                            <TableCell>{emballage.section}</TableCell>
+                            <TableCell>{emballage.poidsSection}</TableCell>
+                            <TableCell className="text-center">{emballage.nombreSections}</TableCell>
+                            <TableCell>{emballage.materiaux[0].partMateriau}</TableCell>
+                            <TableCell>{emballage.materiaux[0].poidsMateriau}</TableCell>
+                            <TableCell>
+                              <a href="#" className="text-[#D32F2F] hover:underline">{emballage.materiaux[0].materiau}</a>
+                            </TableCell>
+                            <TableCell>{emballage.materiaux[0].poidsRecycle}</TableCell>
+                            <TableCell>{emballage.materiaux[0].partRecyclee}</TableCell>
+                            <TableCell>{emballage.materiaux[0].origineMateriau}</TableCell>
+                            <TableCell>{emballage.materiaux[0].codeMintec}</TableCell>
+                            <TableCell>{emballage.materiaux[0].coefficientCout}</TableCell>
+                          </TableRow>
+                          {/* Lignes Matériaux supplémentaires */}
+                          {emballage.materiaux.slice(1).map((materiau, idx) => (
+                            <TableRow key={idx} className="bg-white hover:bg-gray-50">
+                              <TableCell></TableCell>
+                              <TableCell></TableCell>
+                              <TableCell></TableCell>
+                              <TableCell></TableCell>
+                              <TableCell>{materiau.partMateriau}</TableCell>
+                              <TableCell>{materiau.poidsMateriau}</TableCell>
+                              <TableCell>
+                                <a href="#" className="text-[#D32F2F] hover:underline">{materiau.materiau}</a>
+                              </TableCell>
+                              <TableCell>{materiau.poidsRecycle}</TableCell>
+                              <TableCell>{materiau.partRecyclee}</TableCell>
+                              <TableCell>{materiau.origineMateriau}</TableCell>
+                              <TableCell>{materiau.codeMintec}</TableCell>
+                              <TableCell>{materiau.coefficientCout}</TableCell>
+                            </TableRow>
+                          ))}
+                        </React.Fragment>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="evolution-prix" className="mt-10">
@@ -2971,7 +3216,8 @@ function DetailContent() {
                   </div>
                 </div>
 
-                {/* Légendes centrées */}
+                {/* Légendes centrées - masquées en mode simulation */}
+                {!isSimulationMode && (
                 <div className="flex items-center justify-center gap-4 mb-2">
                   <div
                     className="flex items-center gap-2 cursor-pointer"
@@ -3047,89 +3293,115 @@ function DetailContent() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
+                )}
 
-                {/* Graphique */}
+                {/* Graphique ou Histogramme (mode simulation) */}
                 <div style={{ paddingBottom: '20px' }}>
-                  <ResponsiveContainer width="100%" height={500} style={{ overflow: 'visible' }}>
-                    <LineChart data={getEvolutionChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }} style={{ overflow: 'visible' }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <RechartsTooltip
-                        formatter={(value: number, name: string) => {
-                          const labels: Record<string, string> = {
-                            'PA': 'PA',
-                            'cout-theorique': 'PA théorique',
-                            'PV': 'PV',
-                            'PV-LCL': 'PV LCL',
-                            'Marge-PV': 'Marge PV',
-                            'Marge-PV-LCL': 'Marge PV LCL'
-                          }
-                          return [value.toFixed(1), labels[name] || name]
-                        }}
-                      />
-                      {evolutionLegendOpacity.PA && (
-                        <Line
-                          type="monotone"
-                          dataKey="PA"
-                          stroke="#E91E63"
-                          strokeWidth={2}
-                          dot={false}
+                  {isSimulationMode && simulationEvolutionData && simulationEvolutionData.hasData ? (
+                    // Mode simulation: afficher l'histogramme PA et PA théorique
+                    <ResponsiveContainer width="100%" height={500}>
+                      <BarChart
+                        data={simulationEvolutionData.data}
+                        margin={{ left: 0, right: 10, top: 5, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+                        <YAxis
+                          tick={{ fontSize: 12 }}
+                          label={{ value: '€/kg', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => value.toFixed(2)}
                         />
-                      )}
-                      {evolutionLegendOpacity['cout-theorique'] && (
-                        <Line
-                          type="monotone"
-                          dataKey="cout-theorique"
-                          stroke="#607D8B"
-                          strokeWidth={2}
-                          dot={false}
+                        <RechartsTooltip
+                          formatter={(value: number) => [`${value.toFixed(3)} €/kg`, '']}
                         />
-                      )}
-                      {perimetre === "Produit" && evolutionLegendOpacity.PV && (
-                        <Line
-                          type="monotone"
-                          dataKey="PV"
-                          stroke="#4CAF50"
-                          strokeWidth={2}
-                          dot={false}
+                        <Legend />
+                        <Bar dataKey="PA" fill="#E91E63" name="PA" />
+                        <Bar dataKey="PA théorique" fill="#607D8B" name="PA théorique" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    // Mode normal: afficher le LineChart
+                    <ResponsiveContainer width="100%" height={500} style={{ overflow: 'visible' }}>
+                      <LineChart data={getEvolutionChartData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }} style={{ overflow: 'visible' }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <RechartsTooltip
+                          formatter={(value: number, name: string) => {
+                            const labels: Record<string, string> = {
+                              'PA': 'PA',
+                              'cout-theorique': 'PA théorique',
+                              'PV': 'PV',
+                              'PV-LCL': 'PV LCL',
+                              'Marge-PV': 'Marge PV',
+                              'Marge-PV-LCL': 'Marge PV LCL'
+                            }
+                            return [value.toFixed(1), labels[name] || name]
+                          }}
                         />
-                      )}
-                      {perimetre === "Produit" && evolutionLegendOpacity['PV-LCL'] && (
-                        <Line
-                          type="monotone"
-                          dataKey="PV-LCL"
-                          stroke="#FF9800"
-                          strokeWidth={2}
-                          dot={false}
+                        {evolutionLegendOpacity.PA && (
+                          <Line
+                            type="monotone"
+                            dataKey="PA"
+                            stroke="#E91E63"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        )}
+                        {evolutionLegendOpacity['cout-theorique'] && (
+                          <Line
+                            type="monotone"
+                            dataKey="cout-theorique"
+                            stroke="#607D8B"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        )}
+                        {perimetre === "Produit" && evolutionLegendOpacity.PV && (
+                          <Line
+                            type="monotone"
+                            dataKey="PV"
+                            stroke="#4CAF50"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        )}
+                        {perimetre === "Produit" && evolutionLegendOpacity['PV-LCL'] && (
+                          <Line
+                            type="monotone"
+                            dataKey="PV-LCL"
+                            stroke="#FF9800"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        )}
+                        {perimetre === "Produit" && evolutionLegendOpacity['Marge-PV'] && (
+                          <Line
+                            type="monotone"
+                            dataKey="Marge-PV"
+                            stroke="#9C27B0"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        )}
+                        {perimetre === "Produit" && evolutionLegendOpacity['Marge-PV-LCL'] && (
+                          <Line
+                            type="monotone"
+                            dataKey="Marge-PV-LCL"
+                            stroke="#00BCD4"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        )}
+                        <Brush
+                          dataKey="date"
+                          height={30}
+                          stroke="#0970E6"
+                          fill="#FFFFFF"
                         />
-                      )}
-                      {perimetre === "Produit" && evolutionLegendOpacity['Marge-PV'] && (
-                        <Line
-                          type="monotone"
-                          dataKey="Marge-PV"
-                          stroke="#9C27B0"
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      )}
-                      {perimetre === "Produit" && evolutionLegendOpacity['Marge-PV-LCL'] && (
-                        <Line
-                          type="monotone"
-                          dataKey="Marge-PV-LCL"
-                          stroke="#00BCD4"
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      )}
-                      <Brush
-                        dataKey="date"
-                        height={30}
-                        stroke="#0970E6"
-                        fill="#FFFFFF"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>

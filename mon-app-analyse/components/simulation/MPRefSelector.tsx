@@ -44,7 +44,7 @@ export function MPRefSelector({ mpId, currentCode, onReferenceChange }: MPRefSel
   // Si pas de références disponibles, afficher juste le code
   if (references.length === 0) {
     return (
-      <span className="text-gray-500" style={{ fontSize: '12px' }}>
+      <span className="text-gray-500" style={{ fontSize: '14px' }}>
         {currentCode || '-'}
       </span>
     )
@@ -62,7 +62,7 @@ export function MPRefSelector({ mpId, currentCode, onReferenceChange }: MPRefSel
         <button
           type="button"
           className="text-[#0970E6] hover:text-[#004E9B] hover:underline cursor-pointer focus:outline-none text-left"
-          style={{ fontSize: '12px' }}
+          style={{ fontSize: '14px' }}
         >
           {currentCode || 'Sélectionner'}
         </button>

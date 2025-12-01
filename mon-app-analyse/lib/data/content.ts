@@ -354,6 +354,25 @@ const getRandomItem = <T,>(array: T[], index: number): T => {
   return array[index % array.length];
 };
 
+// Générateur de nombres pseudo-aléatoires avec seed (pour consistance)
+const seededRandom = (seed: number): number => {
+  const x = Math.sin(seed * 9999) * 10000;
+  return x - Math.floor(x);
+};
+
+// Générer le mapping fournisseur -> nombre de produits (10-42)
+const generateFournisseurProductCounts = (): Map<string, number> => {
+  const counts = new Map<string, number>();
+  fournisseurs.forEach((f, index) => {
+    // Nombre aléatoire entre 10 et 42 basé sur le seed
+    const randomCount = Math.floor(seededRandom(index + 1) * 33) + 10; // 10 à 42
+    counts.set(f, randomCount);
+  });
+  return counts;
+};
+
+const fournisseurProductCounts = generateFournisseurProductCounts();
+
 // Données des périmètres
 export const perimetreData: Record<PerimetreType, PerimetreItem[]> = {
   Marché: [
@@ -782,7 +801,7 @@ const generateProducts = (): PerimetreItem[] => {
         groupeFamille: sf.groupeFamille,
         famille: sf.famille,
         sousFamille: sf.nom,
-        fournisseur: getRandomItem(fournisseurs, productCounter),
+        fournisseur: "", // Sera assigné après
         portefeuille: getRandomItem(portefeuilles, productCounter),
         pays: getRandomItem(pays, productCounter),
       };
@@ -791,7 +810,27 @@ const generateProducts = (): PerimetreItem[] => {
     }
   });
 
-  return products;
+  // Assigner les fournisseurs selon les comptages définis (10-42 par fournisseur)
+  let productIndex = 0;
+  const shuffledProducts = [...products].sort(() => seededRandom(productIndex++) - 0.5);
+
+  let currentProductIndex = 0;
+  fournisseurs.forEach((fournisseur) => {
+    const count = fournisseurProductCounts.get(fournisseur) || 20;
+    for (let i = 0; i < count && currentProductIndex < shuffledProducts.length; i++) {
+      shuffledProducts[currentProductIndex].fournisseur = fournisseur;
+      currentProductIndex++;
+    }
+  });
+
+  // Assigner les produits restants (si plus de produits que de slots)
+  while (currentProductIndex < shuffledProducts.length) {
+    const fournisseur = fournisseurs[currentProductIndex % fournisseurs.length];
+    shuffledProducts[currentProductIndex].fournisseur = fournisseur;
+    currentProductIndex++;
+  }
+
+  return shuffledProducts;
 };
 
 // Générer les produits

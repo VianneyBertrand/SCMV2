@@ -2,8 +2,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Minus, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Minus, Plus } from 'lucide-react'
 import { IconButton } from '@/componentsv2/ui/icon-button'
 import {
   Select,
@@ -250,8 +249,8 @@ function PriceLine({
                 evolution === 0
                   ? 'text-gray-500'
                   : evolution > 0
-                    ? 'text-green-600'
-                    : 'text-red-600'
+                    ? 'text-red-600'
+                    : 'text-green-600'
               }`}
               onClick={handleEvolutionClick}
             >
@@ -355,7 +354,7 @@ export function MPValueItemCard({
               onReferenceChange={onReferenceChange}
             />
           ) : (
-            code && <span className="text-gray-500" style={{ fontSize: '12px' }}>{code}</span>
+            code && <span className="text-gray-500" style={{ fontSize: '14px' }}>{code}</span>
           )}
         </div>
 
@@ -365,7 +364,7 @@ export function MPValueItemCard({
             value={decoupage}
             onValueChange={(value) => onDecoupageChange(value as DecoupageType)}
           >
-            <SelectTrigger size="sm" width="auto" className="w-[160px]">
+            <SelectTrigger size="sm" width="auto" className="w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -376,15 +375,6 @@ export function MPValueItemCard({
               ))}
             </SelectContent>
           </Select>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-[#0970E6] hover:text-[#004E9B] hover:bg-gray-100 active:text-[#003161] active:bg-gray-200"
-            onClick={onRemove}
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
@@ -410,8 +400,8 @@ export function MPValueItemCard({
                 totalEvolution === 0
                   ? 'text-gray-900'
                   : totalEvolution > 0
-                    ? 'text-green-600'
-                    : 'text-red-600'
+                    ? 'text-red-600'
+                    : 'text-green-600'
               }`}
             >
               {totalEvolution >= 0 ? '+' : ''}{totalEvolution.toFixed(2)}%

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Info } from 'lucide-react'
-import { Button } from '@/componentsv2/ui/button'
+import { Button as ButtonV2 } from '@/componentsv2/ui/button'
 import { Field, FieldLabel } from '@/componentsv2/ui/field'
 import { DatePicker, type MonthYear } from '@/componentsv2/ui/date-picker'
 import { SegmentedControl, SegmentedControlItem } from '@/componentsv2/ui/segmented-control'
@@ -84,6 +84,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   const [rightColumnType, setRightColumnType] = useState<'mp' | 'emballage'>('mp')
 
   const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
+  const isSimulationMode = useSimulationStore((state) => state.isSimulationMode)
   const closeWindow = useSimulationStore((state) => state.closeWindow)
   const startSimulation = useSimulationStore((state) => state.startSimulation)
   const resetToOriginal = useSimulationStore((state) => state.resetToOriginal)
@@ -97,6 +98,12 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   console.log('simulatedData:', simulatedData)
 
   const handleClose = () => {
+    // Si déjà en mode simulation, fermer sans confirmation (les changements sont préservés)
+    if (isSimulationMode) {
+      closeWindow()
+      return
+    }
+    // Si pas en mode simulation et qu'il y a des changements, demander confirmation
     if (hasChanges()) {
       setShowConfirmDialog(true)
     } else {
@@ -106,6 +113,8 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
 
   const handleConfirmClose = () => {
     setShowConfirmDialog(false)
+    // Seulement quitter le mode simulation si on n'est PAS déjà en mode simulation
+    // (ce cas ne devrait plus arriver car on ferme directement en mode simulation)
     exitSimulation()
   }
 
@@ -148,24 +157,24 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
                 />
               </Field>
             </div>
-            <Button
+            <ButtonV2
               variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-[#0970E6] hover:text-[#004E9B] hover:bg-gray-100 active:text-[#003161] active:bg-gray-200 self-start"
+              size="icon-sm"
+              className="self-start"
               onClick={handleClose}
             >
               <X className="h-4 w-4" />
-            </Button>
+            </ButtonV2>
           </div>
 
           {/* Colonnes */}
-          <div className="flex gap-4 p-4 flex-1 overflow-hidden min-h-0">
+          <div className="flex gap-8 p-4 flex-1 overflow-hidden min-h-0">
             {/* Colonne gauche */}
             <div className="flex-1 flex flex-col min-h-0">
               <div className="px-4 mb-4">
                 <div className="flex items-center gap-2">
                   <h4 className="title-xs-regular text-foreground">
-                    {leftColumnType === 'emballage' ? 'Emballage en Valeur (€)' : 'MP en Valeur (€)'}
+                    {leftColumnType === 'emballage' ? 'Evolution du cours des emballages' : 'Evolution du cours des MP'}
                   </h4>
                   <TooltipProvider>
                     <Tooltip>
@@ -201,7 +210,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               <div className="px-4 mb-4">
                 <div className="flex items-center gap-2">
                   <h4 className="title-xs-regular text-foreground">
-                    {rightColumnType === 'emballage' ? 'Emballage en Volume (%)' : 'MP en Volume (%)'}
+                    {rightColumnType === 'emballage' ? 'Répartition en volume des emballages' : 'Répartition en volume des MP'}
                   </h4>
                   <TooltipProvider>
                     <Tooltip>
@@ -234,27 +243,25 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
 
           {/* Footer */}
           <div className="px-4 py-3 border-t border-gray-200 flex justify-between items-center rounded-b-lg">
-            <Button
+            <ButtonV2
               variant="outline"
-              className="h-11 px-4 text-sm"
-              style={{ fontSize: '14px' }}
+              size="sm"
               onClick={() => {
                 resetToOriginal()
                 setResetKey(k => k + 1)
               }}
             >
               Réinitialiser
-            </Button>
+            </ButtonV2>
 
-            <Button
+            <ButtonV2
               variant="default"
-              className="h-11 px-4 text-sm bg-[#0970E6] hover:bg-[#004E9B] active:bg-[#003161] text-white"
-              style={{ fontSize: '14px' }}
+              size="sm"
               onClick={handleSimulate}
               disabled={!hasData}
             >
-              Simuler ✓
-            </Button>
+              Simuler
+            </ButtonV2>
           </div>
         </div>
       </div>

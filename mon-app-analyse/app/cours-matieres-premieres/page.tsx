@@ -30,12 +30,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 // Lazy load heavy components - Command and Calendar
-const LazyCommand = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.Command })), { ssr: false }) as any;
-const LazyCommandEmpty = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandEmpty })), { ssr: false }) as any;
-const LazyCommandGroup = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandGroup })), { ssr: false }) as any;
-const LazyCommandInput = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandInput })), { ssr: false }) as any;
-const LazyCommandItem = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandItem })), { ssr: false }) as any;
-const LazyCommandList = dynamic(() => import("@/components/ui/command").then(mod => ({ default: mod.CommandList })), { ssr: false }) as any;
 const LazyCalendar = dynamic(() => import("@/components/ui/calendar").then(mod => ({ default: mod.Calendar })), { ssr: false }) as any;
 import {
   Popover,
@@ -50,6 +44,18 @@ import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIco
 import { CurveIcon } from "@/components/ui/curve-icon";
 import dynamic from 'next/dynamic';
 import { useRestoredPageState } from "@/hooks/usePageState";
+import { InlineField } from "@/componentsv2/ui/inline-field";
+import { DatePicker as DatePickerV2, type MonthYear } from "@/componentsv2/ui/date-picker";
+import { Button as ButtonV2 } from "@/componentsv2/ui/button";
+import { Autocomplete } from "@/componentsv2/ui/autocomplete";
+import {
+  Select as SelectV2,
+  SelectContent as SelectContentV2,
+  SelectItem as SelectItemV2,
+  SelectTrigger as SelectTriggerV2,
+  SelectValue as SelectValueV2,
+} from "@/componentsv2/ui/select";
+import { usePeriodStore } from "@/stores/periodStore";
 
 // Lazy load Recharts components
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false });
@@ -90,7 +96,7 @@ interface CoursMatieresPageState {
   groupeFamille: string;
   famille: string;
   sousFamille: string;
-  fournisseurSelections: string[];
+  fournisseur: string;
   portefeuille: string;
   selectedMatieres: MatierePremiere[];
   periodeGraphique: "mois" | "semaine" | "jour";
@@ -393,6 +399,10 @@ export default function CoursMatieresPremieres() {
   // Restaurer l'état sauvegardé
   const restoredState = useRestoredPageState<CoursMatieresPageState>('cours-matieres');
 
+  // Period store (partagé avec les autres pages)
+  const period = usePeriodStore((state) => state.period);
+  const setPeriod = usePeriodStore((state) => state.setPeriod);
+
   // États filtres
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(2024, 11, 11),
@@ -404,17 +414,11 @@ export default function CoursMatieresPremieres() {
   const [groupeFamille, setGroupeFamille] = useState(restoredState?.groupeFamille ?? "tous");
   const [famille, setFamille] = useState(restoredState?.famille ?? "tous");
   const [sousFamille, setSousFamille] = useState(restoredState?.sousFamille ?? "tous");
-  const [fournisseurSelections, setFournisseurSelections] = useState<string[]>(restoredState?.fournisseurSelections ?? []);
-  const [tempFournisseurSelections, setTempFournisseurSelections] = useState<string[]>(restoredState?.fournisseurSelections ?? []);
+  const [fournisseur, setFournisseur] = useState(restoredState?.fournisseur ?? "tous");
   const [portefeuille, setPortefeuille] = useState(restoredState?.portefeuille ?? "tous");
-
-  // État recherche fournisseur
-  const [fournisseurSearch, setFournisseurSearch] = useState("");
-  const [openFournisseur, setOpenFournisseur] = useState(false);
 
   // États recherche et sélection
   const [searchTerm, setSearchTerm] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
   const [selectedMatieres, setSelectedMatieres] = useState<MatierePremiere[]>(
     restoredState?.selectedMatieres ?? [
       matieresPremieres[0],
@@ -480,23 +484,18 @@ export default function CoursMatieresPremieres() {
     return data;
   };
 
-  // Filtrage des matières pour l'autocomplétion
+  // Filtrage des matières pour l'autocomplétion (sans searchTerm, géré par Autocomplete)
   const filteredMatieres = useMemo(() => {
     return matieresPremieres.filter((m) => {
-      const matchSearch =
-        m.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.code.toLowerCase().includes(searchTerm.toLowerCase());
-
       const matchPays = paysDestination === "tous" || m.paysDestination === paysDestination;
       const matchCategorie = categorie === "tous" || m.categorie === categorie;
       const matchGroupeFamille = groupeFamille === "tous" || m.groupeFamille === groupeFamille;
       const matchFamille = famille === "tous" || m.famille === famille;
       const matchSousFamille = sousFamille === "tous" || m.sousFamille === sousFamille;
-      const matchFournisseur = fournisseurSelections.length === 0 || fournisseurSelections.includes(m.fournisseur);
+      const matchFournisseur = fournisseur === "tous" || m.fournisseur === fournisseur;
       const matchPortefeuille = portefeuille === "tous" || m.portefeuille === portefeuille;
 
       return (
-        matchSearch &&
         matchPays &&
         matchCategorie &&
         matchGroupeFamille &&
@@ -506,7 +505,16 @@ export default function CoursMatieresPremieres() {
         matchPortefeuille
       );
     });
-  }, [searchTerm, paysDestination, categorie, groupeFamille, famille, sousFamille, fournisseurSelections, portefeuille]);
+  }, [paysDestination, categorie, groupeFamille, famille, sousFamille, fournisseur, portefeuille]);
+
+  // Options pour l'Autocomplete
+  const autocompleteOptions = useMemo(() => {
+    return filteredMatieres.map((m) => ({
+      value: m.id,
+      label: `${m.code} - ${m.nom}`,
+      data: m,
+    }));
+  }, [filteredMatieres]);
 
   const handleSelectMatiere = useCallback(
     (matiere: MatierePremiere) => {
@@ -514,7 +522,6 @@ export default function CoursMatieresPremieres() {
         setSelectedMatieres([...selectedMatieres, matiere]);
       }
       setSearchTerm("");
-      setShowDropdown(false);
     },
     [selectedMatieres]
   );
@@ -562,13 +569,6 @@ export default function CoursMatieresPremieres() {
     setLegendOpacityEvolution(allFalse);
   }, [selectedMatieres]);
 
-  // Synchroniser les sélections temporaires quand on ouvre le popover
-  useEffect(() => {
-    if (openFournisseur) {
-      setTempFournisseurSelections(fournisseurSelections);
-    }
-  }, [openFournisseur, fournisseurSelections]);
-
   // S'assurer que la matière sélectionnée pour le graphique annuel est valide
   useEffect(() => {
     if (selectedMatieres.length > 0) {
@@ -588,7 +588,7 @@ export default function CoursMatieresPremieres() {
       groupeFamille,
       famille,
       sousFamille,
-      fournisseurSelections,
+      fournisseur,
       portefeuille,
       selectedMatieres,
       periodeGraphique,
@@ -604,7 +604,7 @@ export default function CoursMatieresPremieres() {
         console.error('Erreur lors de la sauvegarde de l\'état:', error);
       }
     }
-  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseurSelections, portefeuille, selectedMatieres, periodeGraphique, base100, base100Annuel, matiereSelectionneeAnnuelle]);
+  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseur, portefeuille, selectedMatieres, periodeGraphique, base100, base100Annuel, matiereSelectionneeAnnuelle]);
 
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = useMemo(() => {
@@ -615,10 +615,10 @@ export default function CoursMatieresPremieres() {
       groupeFamille !== "tous" ||
       famille !== "tous" ||
       sousFamille !== "tous" ||
-      fournisseurSelections.length > 0 ||
+      fournisseur !== "tous" ||
       portefeuille !== "tous"
     );
-  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseurSelections, portefeuille]);
+  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseur, portefeuille]);
 
   const handleResetFilters = useCallback(() => {
     setPaysDestination("tous");
@@ -627,8 +627,7 @@ export default function CoursMatieresPremieres() {
     setGroupeFamille("tous");
     setFamille("tous");
     setSousFamille("tous");
-    setFournisseurSelections([]);
-    setTempFournisseurSelections([]);
+    setFournisseur("tous");
     setPortefeuille("tous");
   }, []);
 
@@ -688,7 +687,6 @@ export default function CoursMatieresPremieres() {
   };
 
   const fournisseurs = ["Labeyrie Fine Foods", "Picard Surgelés", "Lactalis Foodservice", "Fleury Michon", "Danone Professionnel", "Nestlé Professional", "Sysco France", "Transgourmet", "Metro Cash & Carry", "Brake France"];
-  const filteredFournisseurs = fournisseurs.filter((f) => f.toLowerCase().includes(fournisseurSearch.toLowerCase()));
 
   return (
     <main className="w-full px-[50px] py-4">
@@ -700,341 +698,199 @@ export default function CoursMatieresPremieres() {
       {/* FILTRES - Ligne 1 : Période, Pays */}
       <div className="mb-6 flex flex-wrap gap-x-2 gap-y-4">
         {/* Période */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Période</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-auto justify-between border-gray-200 bg-white text-[16px] font-medium font-ubuntu shadow-none">
-                  01/01/2025 - 13/11/2025
-                  <CalendarIcon className="h-4 w-4 text-blue" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <LazyCalendar mode="range" selected={{ from: dateRange.from, to: dateRange.to }} numberOfMonths={2} />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </Card>
+        <InlineField label="Période">
+          <DatePickerV2
+            mode="period"
+            size="sm"
+            value={period}
+            onValueChange={setPeriod}
+            minDate={{ month: 0, year: 2018 }}
+            maxDate={{ month: 11, year: 2025 }}
+            showValidateButton
+          />
+        </InlineField>
 
         {/* Pays destination */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Pays destination</Label>
-            <Select value={paysDestination} onValueChange={setPaysDestination}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                <SelectItem value="France" className="py-3">France</SelectItem>
-                <SelectItem value="Espagne" className="py-3">Espagne</SelectItem>
-                <SelectItem value="Belgique" className="py-3">Belgique</SelectItem>
-                <SelectItem value="Roumanie" className="py-3">Roumanie</SelectItem>
-                <SelectItem value="Pologne" className="py-3">Pologne</SelectItem>
-                <SelectItem value="Italie" className="py-3">Italie</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Pays destination">
+          <SelectV2 value={paysDestination} onValueChange={setPaysDestination}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              <SelectItemV2 value="France">France</SelectItemV2>
+              <SelectItemV2 value="Espagne">Espagne</SelectItemV2>
+              <SelectItemV2 value="Belgique">Belgique</SelectItemV2>
+              <SelectItemV2 value="Roumanie">Roumanie</SelectItemV2>
+              <SelectItemV2 value="Pologne">Pologne</SelectItemV2>
+              <SelectItemV2 value="Italie">Italie</SelectItemV2>
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
         {/* Unité */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Unité</Label>
-            <Select value={unite} onValueChange={setUnite}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                <SelectItem value="m³" className="py-3">Cubic mètre (m³)</SelectItem>
-                <SelectItem value="Kg" className="py-3">Kilogramme (Kg)</SelectItem>
-                <SelectItem value="T" className="py-3">Tonne (T)</SelectItem>
-                <SelectItem value="L" className="py-3">Litre (L)</SelectItem>
-                <SelectItem value="m²" className="py-3">Mètre carré (m²)</SelectItem>
-                <SelectItem value="U" className="py-3">Unité (U)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Unité">
+          <SelectV2 value={unite} onValueChange={setUnite}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              <SelectItemV2 value="m³">Cubic mètre (m³)</SelectItemV2>
+              <SelectItemV2 value="Kg">Kilogramme (Kg)</SelectItemV2>
+              <SelectItemV2 value="T">Tonne (T)</SelectItemV2>
+              <SelectItemV2 value="L">Litre (L)</SelectItemV2>
+              <SelectItemV2 value="m²">Mètre carré (m²)</SelectItemV2>
+              <SelectItemV2 value="U">Unité (U)</SelectItemV2>
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
       </div>
 
       {/* FILTRES - Ligne 2 : Filtres hiérarchiques */}
       <div className="mb-4 flex flex-wrap gap-2">
         {/* Catégorie */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Catégorie</Label>
-            <Select value={categorie} onValueChange={(v) => { setCategorie(v); setGroupeFamille("tous"); setFamille("tous"); setSousFamille("tous"); }}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                {getFilteredOptions("categorie").map((option) => (
-                  <SelectItem key={option} value={option} className="py-3">{option}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Catégorie">
+          <SelectV2 value={categorie} onValueChange={(v) => { setCategorie(v); setGroupeFamille("tous"); setFamille("tous"); setSousFamille("tous"); }}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              {getFilteredOptions("categorie").map((option) => (
+                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+              ))}
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
         {/* Groupe Famille */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Groupe Famille</Label>
-            <Select value={groupeFamille} onValueChange={(v) => { setGroupeFamille(v); setFamille("tous"); setSousFamille("tous"); }}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                {getFilteredOptions("groupeFamille").map((option) => (
-                  <SelectItem key={option} value={option} className="py-3">{option}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Groupe Famille">
+          <SelectV2 value={groupeFamille} onValueChange={(v) => { setGroupeFamille(v); setFamille("tous"); setSousFamille("tous"); }}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              {getFilteredOptions("groupeFamille").map((option) => (
+                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+              ))}
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
         {/* Famille */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Famille</Label>
-            <Select value={famille} onValueChange={(v) => { setFamille(v); setSousFamille("tous"); }}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                {getFilteredOptions("famille").map((option) => (
-                  <SelectItem key={option} value={option} className="py-3">{option}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Famille">
+          <SelectV2 value={famille} onValueChange={(v) => { setFamille(v); setSousFamille("tous"); }}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              {getFilteredOptions("famille").map((option) => (
+                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+              ))}
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
         {/* Sous famille */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Sous famille</Label>
-            <Select value={sousFamille} onValueChange={setSousFamille}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                {getFilteredOptions("sousFamille").map((option) => (
-                  <SelectItem key={option} value={option} className="py-3">{option}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Sous famille">
+          <SelectV2 value={sousFamille} onValueChange={setSousFamille}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              {getFilteredOptions("sousFamille").map((option) => (
+                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+              ))}
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
-        {/* Fournisseur avec multi-sélection */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Fournisseur</Label>
-            <Popover open={openFournisseur} onOpenChange={setOpenFournisseur}>
-              <PopoverTrigger asChild>
-                <div
-                  className={`flex h-auto min-h-[36px] w-auto items-center whitespace-nowrap rounded-md border border-gray-200 bg-white text-[16px] shadow-none cursor-pointer hover:bg-white focus:outline-none focus:ring-1 focus:ring-ring ${fournisseurSelections.length === 0 ? 'pl-3 py-2' : 'p-0.5'}`}
-                  onClick={() => setOpenFournisseur(true)}
-                >
-                  {fournisseurSelections.length === 0 ? (
-                    <span className="text-muted-foreground">tous</span>
-                  ) : (
-                    <div className="flex items-center gap-2 flex-1 overflow-hidden flex-wrap">
-                      {fournisseurSelections.slice(0, 2).map((f, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"
-                        >
-                          <span className="text-[14px] font-medium">{f}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFournisseurSelections(prev => prev.filter(item => item !== f));
-                              setTempFournisseurSelections(prev => prev.filter(item => item !== f));
-                            }}
-                            className="text-[#0970E6] hover:text-[#075bb3]"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                      {fournisseurSelections.length > 2 && (
-                        <span className="text-xs text-gray-500 ml-1">
-                          +{fournisseurSelections.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <ChevronDownIcon className="h-4 w-4 text-[#0970E6] ml-2 mr-2 flex-shrink-0" />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0" align="start">
-                <div className="flex flex-col">
-                  {/* Champ de recherche */}
-                  <div className="p-3 border-b">
-                    <Input
-                      placeholder="Rechercher fournisseur..."
-                      value={fournisseurSearch}
-                      onChange={(e) => setFournisseurSearch(e.target.value)}
-                      className="h-8"
-                    />
-                  </div>
-
-                  {/* Bouton Tout désélectionner */}
-                  {tempFournisseurSelections.length > 0 && (
-                    <div className="px-3 pt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs text-gray-600 hover:text-gray-900"
-                        onClick={() => setTempFournisseurSelections([])}
-                      >
-                        Tout désélectionner
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Liste avec checkboxes */}
-                  <div className="max-h-[300px] overflow-y-auto p-2">
-                    {filteredFournisseurs.map((f) => (
-                      <div
-                        key={f}
-                        className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded cursor-pointer"
-                        onClick={() => {
-                          setTempFournisseurSelections(prev =>
-                            prev.includes(f)
-                              ? prev.filter(item => item !== f)
-                              : [...prev, f]
-                          );
-                        }}
-                      >
-                        <Checkbox
-                          checked={tempFournisseurSelections.includes(f)}
-                          onCheckedChange={(checked) => {
-                            setTempFournisseurSelections(prev =>
-                              checked
-                                ? [...prev, f]
-                                : prev.filter(item => item !== f)
-                            );
-                          }}
-                        />
-                        <span className="text-sm">{f}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Bouton Valider */}
-                  <div className="p-3 border-t">
-                    <Button
-                      className="w-full bg-[#0970E6] hover:bg-[#075bb3] text-white"
-                      onClick={() => {
-                        setFournisseurSelections(tempFournisseurSelections);
-                        setOpenFournisseur(false);
-                      }}
-                    >
-                      Valider
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </Card>
+        {/* Fournisseur */}
+        <InlineField label="Fournisseur">
+          <SelectV2 value={fournisseur} onValueChange={setFournisseur}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              {fournisseurs.map((f) => (
+                <SelectItemV2 key={f} value={f}>{f}</SelectItemV2>
+              ))}
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
         {/* Portefeuille */}
-        <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium text-gray-700 break-words">Portefeuille</Label>
-            <Select value={portefeuille} onValueChange={setPortefeuille}>
-              <SelectTrigger className="w-auto border-gray-200 bg-white shadow-none">
-                <SelectValue placeholder="tous" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous" className="py-3">tous</SelectItem>
-                {PORTEFEUILLE_NAMES.map((nom) => (
-                  <SelectItem key={nom} value={nom} className="py-3">{nom}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <InlineField label="Portefeuille">
+          <SelectV2 value={portefeuille} onValueChange={setPortefeuille}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="tous" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="tous">tous</SelectItemV2>
+              {PORTEFEUILLE_NAMES.map((nom) => (
+                <SelectItemV2 key={nom} value={nom}>{nom}</SelectItemV2>
+              ))}
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
 
         {/* Bouton Réinitialiser */}
-        {hasActiveFilters && (
-          <Button variant="outline" onClick={handleResetFilters} className="h-[52px] border-gray-300 bg-white hover:bg-gray-50">
-            Réinitialiser
-          </Button>
-        )}
+        <ButtonV2
+          variant="outline"
+          onClick={handleResetFilters}
+          className={hasActiveFilters ? "" : "invisible"}
+        >
+          Réinitialiser
+        </ButtonV2>
       </div>
 
       {/* Input recherche avec autocomplétion */}
-      <div className="mt-4">
-        <Popover open={showDropdown} onOpenChange={setShowDropdown}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={showDropdown}
-              className="w-full max-w-[500px] h-[52px] justify-between border-[#EBEBEB] bg-[#ffffff] rounded font-normal shadow-none mb-6"
-            >
-            {searchTerm || "Rechercher une matière première"}
-            {searchTerm ? (
-              <span
-                role="button"
-                tabIndex={0}
-                className="ml-2 cursor-pointer inline-flex"
+      <div className="mt-4 mb-6">
+        <Autocomplete
+          options={autocompleteOptions}
+          value={searchTerm}
+          onValueChange={(value) => {
+            // Vérifier si c'est une sélection (id de matière)
+            const selectedMatiere = filteredMatieres.find((m) => m.id === value);
+            if (selectedMatiere) {
+              handleSelectMatiere(selectedMatiere);
+              setSearchTerm("");
+            } else {
+              setSearchTerm(value);
+            }
+          }}
+          placeholder="Rechercher une matière première"
+          emptyMessage="Aucune matière première trouvée."
+          minChars={3}
+          size="md"
+          className="w-full max-w-[500px]"
+          hideSearchIcon
+          renderItem={(option) => (
+            <div className="flex items-center">
+              <Check className={cn("mr-2 h-4 w-4", selectedMatieres.find(m => m.id === option.value) ? "opacity-100" : "opacity-0")} />
+              <span className="font-medium text-gray-700">{(option.data as MatierePremiere)?.code}</span>
+              <span className="text-gray-600 ml-2">- {(option.data as MatierePremiere)?.nom}</span>
+            </div>
+          )}
+          endAddon={
+            searchTerm ? (
+              <X
+                className="h-5 w-5 cursor-pointer text-muted-foreground hover:text-foreground"
                 onClick={(e) => {
-                  e.preventDefault();
                   e.stopPropagation();
                   setSearchTerm("");
-                  setShowDropdown(false);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSearchTerm("");
-                    setShowDropdown(false);
-                  }
-                }}
-              >
-                <X className="h-4 w-4 shrink-0 hover:opacity-70" />
-              </span>
+              />
             ) : (
-              <Search className="ml-2 h-4 w-4 shrink-0 text-blue" />
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[500px] p-0" align="start">
-          <LazyCommand shouldFilter={false}>
-            <LazyCommandInput
-              value={searchTerm}
-              onValueChange={setSearchTerm}
-              placeholder="Rechercher une matière première..."
-            />
-            <LazyCommandList>
-              <LazyCommandEmpty>Aucune matière première trouvée.</LazyCommandEmpty>
-              <LazyCommandGroup>
-                {filteredMatieres.map((matiere) => (
-                  <LazyCommandItem key={matiere.id} value={matiere.nom} onSelect={() => handleSelectMatiere(matiere)} className="py-2">
-                    <Check className={cn("mr-2 h-4 w-4", selectedMatieres.find(m => m.id === matiere.id) ? "opacity-100" : "opacity-0")} />
-                    <span className="font-medium text-gray-700">{matiere.code}</span>
-                    <span className="text-gray-600 ml-2">- {matiere.nom}</span>
-                  </LazyCommandItem>
-                ))}
-              </LazyCommandGroup>
-            </LazyCommandList>
-          </LazyCommand>
-        </PopoverContent>
-      </Popover>
+              <Search className="h-5 w-5 text-primary" />
+            )
+          }
+        />
       </div>
 
       {/* Tags matières sélectionnées */}
@@ -1044,9 +900,9 @@ export default function CoursMatieresPremieres() {
             <TooltipProvider key={matiere.id}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200 cursor-default">
+                  <div className="flex items-center gap-2 bg-white text-foreground px-3 py-1.5 rounded-full border border-neutral cursor-default">
                     <span className="text-[14px] font-medium">{matiere.code} - {matiere.nom}</span>
-                    <button onClick={() => handleRemoveMatiere(matiere.id)} className="text-[#0970E6] hover:text-blue-800">
+                    <button onClick={() => handleRemoveMatiere(matiere.id)} className="text-primary hover:text-primary/80">
                       <X className="w-3 h-3" />
                     </button>
                   </div>

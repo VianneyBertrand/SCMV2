@@ -3,6 +3,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Button as ButtonV2 } from "@/componentsv2/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -783,8 +784,9 @@ function AnalyseValeurContent() {
 
   // Retour au périmètre précédent (mémoïsé)
   const handleBackNavigation = useCallback(() => {
-    // Si l'historique est vide, ne rien faire (le bouton sera désactivé)
+    // Si l'historique est vide, retourner à la page précédente (accueil)
     if (navigationHistory.length === 0) {
+      router.back();
       return;
     }
 
@@ -804,7 +806,7 @@ function AnalyseValeurContent() {
 
     // Retirer cet état de l'historique
     setNavigationHistory((prev) => prev.slice(0, -1));
-  }, [navigationHistory, updateURL]);
+  }, [navigationHistory, updateURL, router]);
 
   // Helper pour obtenir les options d'un filtre (mémoïsé pour éviter les recalculs)
   const getFilterOptions = useCallback(
@@ -1030,9 +1032,8 @@ function AnalyseValeurContent() {
       {/* Bouton retour */}
       <Button
         variant="ghost"
-        className="-ml-2 mb-2 gap-2 text-sm"
+        className="-ml-2 mb-2 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed"
         onClick={handleBackNavigation}
-        disabled={navigationHistory.length === 0}
       >
         <ArrowLeft className="h-4 w-4" />
         Retour
@@ -1117,7 +1118,7 @@ function AnalyseValeurContent() {
             emptyMessage="Aucun résultat trouvé."
             minChars={3}
             size="md"
-            className="w-[280px]"
+            className="w-[296px]"
             hideSearchIcon
             endAddon={
               rechercheValue ? (
@@ -1273,7 +1274,7 @@ function AnalyseValeurContent() {
             emptyMessage="Aucun résultat trouvé."
             minChars={3}
             size="md"
-            className="w-[280px]"
+            className="w-[296px]"
             hideSearchIcon
             endAddon={
               rechercheValue ? (
@@ -1336,9 +1337,9 @@ function AnalyseValeurContent() {
 
         {/* Pays avec multi-sélection */}
         {otherFilters.includes("pays") && (
-          <Card className={`border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none ${hierarchyFilters.length > 0 ? 'ml-2' : ''}`}>
+          <Card className={`border-[#EBEBEB] bg-[#F7F7F7] rounded py-2 pr-2 pl-4 shadow-none ${hierarchyFilters.length > 0 ? 'ml-2' : ''}`}>
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700 break-words">
+              <Label className="body-m-regular text-foreground break-words">
                 Pays
               </Label>
               <Popover open={openPays} onOpenChange={setOpenPays}>
@@ -1461,9 +1462,9 @@ function AnalyseValeurContent() {
 
         {/* Fournisseur avec multi-sélection */}
         {showFournisseurFilter && (
-          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
+          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded py-2 pr-2 pl-4 shadow-none">
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700 break-words">
+              <Label className="body-m-regular text-foreground break-words">
                 Fournisseur
               </Label>
               <Popover open={openFournisseur} onOpenChange={setOpenFournisseur}>
@@ -1586,9 +1587,9 @@ function AnalyseValeurContent() {
 
         {/* Portefeuille avec multi-sélection */}
         {otherFilters.includes("portefeuille") && (
-          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded p-2 shadow-none">
+          <Card className="border-[#EBEBEB] bg-[#F7F7F7] rounded py-2 pr-2 pl-4 shadow-none">
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700 break-words">
+              <Label className="body-m-regular text-foreground break-words">
                 Portefeuille
               </Label>
               <Popover open={openPortefeuille} onOpenChange={setOpenPortefeuille}>
@@ -1711,13 +1712,13 @@ function AnalyseValeurContent() {
 
         {/* Bouton Réinitialiser */}
         {hasActiveFilters && (
-          <Button
+          <ButtonV2
             variant="outline"
+            size="default"
             onClick={handleResetFilters}
-            className="h-[52px] border-blue text-blue bg-white hover:border-[#004E9B] hover:text-[#004E9B]"
           >
             Réinitialiser
-          </Button>
+          </ButtonV2>
         )}
         </div>
 
@@ -1756,7 +1757,7 @@ function AnalyseValeurContent() {
                         e.preventDefault();
                         toggleVolumeUnit();
                       }}
-                      className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                      className="px-1.5 py-0.5 text-[12px] font-bold bg-white text-foreground rounded border border-black hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
                     >
                       {volumeUnit} <SwitchIcon className="w-4 h-3.5" />
                     </button>

@@ -2,8 +2,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Minus, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Minus, Plus } from 'lucide-react'
 import { IconButton } from '@/componentsv2/ui/icon-button'
 import { MPRefSelector } from './MPRefSelector'
 
@@ -289,17 +288,9 @@ export function MPRow({
               onReferenceChange={onReferenceChange}
             />
           ) : (
-            code && <span className="text-gray-500" style={{ fontSize: '12px' }}>{code}</span>
+            code && <span className="text-gray-500" style={{ fontSize: '14px' }}>{code}</span>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-[#0970E6] hover:text-[#004E9B] hover:bg-gray-100 active:text-[#003161] active:bg-gray-200"
-          onClick={onRemove}
-        >
-          <X className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Valeur principale */}
@@ -445,8 +436,8 @@ export function MPRow({
                   totalEvolution === 0
                     ? 'text-gray-500'
                     : totalEvolution > 0
-                      ? 'text-green-600'
-                      : 'text-red-600'
+                      ? 'text-red-600'
+                      : 'text-green-600'
                 }`}
                 onClick={handleTotalEvolutionClick}
               >
