@@ -342,9 +342,9 @@ export function MPValueItemCard({
   }
 
   return (
-    <div className="pt-6 pb-6 border-b border-gray-200 last:border-b-0 first:pt-0">
+    <div className="pt-2 pb-2 border-b border-gray-200 last:border-b-0 first:pt-0">
       {/* Header: Label, Code, Découpage Select, et bouton X */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-6">
         <div className="flex flex-col items-start flex-1">
           <span className="body-m-bold text-foreground">{label}</span>
           {id && onReferenceChange ? (
@@ -364,7 +364,7 @@ export function MPValueItemCard({
             value={decoupage}
             onValueChange={(value) => onDecoupageChange(value as DecoupageType)}
           >
-            <SelectTrigger size="sm" width="auto" className="w-[200px]">
+            <SelectTrigger size="sm" width="auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -393,7 +393,7 @@ export function MPValueItemCard({
 
         {/* Ligne évolution totale (seulement avec découpage) */}
         {hasDecoupage && (
-          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-200">
+          <div className="flex items-center gap-1 mt-2">
             <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>Évolution totale</span>
             <div
               className={`h-8 px-3 text-sm text-center rounded flex items-center justify-center font-bold ${

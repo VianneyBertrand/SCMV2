@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { X, Info } from 'lucide-react'
 import { Button as ButtonV2 } from '@/componentsv2/ui/button'
-import { Field, FieldLabel } from '@/componentsv2/ui/field'
+import { InlineField } from '@/componentsv2/ui/inline-field'
 import { DatePicker, type MonthYear } from '@/componentsv2/ui/date-picker'
 import { SegmentedControl, SegmentedControlItem } from '@/componentsv2/ui/segmented-control'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/componentsv2/ui/tooltip'
@@ -77,6 +77,9 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
     }
 
     setPeriod(newPeriod)
+
+    // Mettre à jour les découpages pour refléter la nouvelle période
+    updateAllDecoupagesForPeriod(newPeriod)
   }
 
   // États pour les SegmentedControls (MP ou Emballage) - un pour chaque colonne
@@ -91,6 +94,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   const exitSimulation = useSimulationStore((state) => state.exitSimulation)
   const hasChanges = useSimulationStore((state) => state.hasChanges)
   const simulatedData = useSimulationStore((state) => state.simulatedData)
+  const updateAllDecoupagesForPeriod = useSimulationStore((state) => state.updateAllDecoupagesForPeriod)
 
   console.log('SimulationWindow render, isWindowOpen:', isWindowOpen)
   console.log('availableMPValues:', availableMPValues?.length)
@@ -139,32 +143,32 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
 
       {/* Dialog centrée */}
       <div className="fixed inset-0 z-[65] flex items-center justify-center pointer-events-none">
-        <div className="w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[85vh] pointer-events-auto">
+        <div className="relative w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[85vh] pointer-events-auto">
+          {/* Close button */}
+          <ButtonV2
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-4 right-4"
+            onClick={handleClose}
+          >
+            <X className="h-5 w-5" />
+          </ButtonV2>
           {/* Header */}
-          <div className="px-8 pt-8 pb-3 rounded-t-lg flex items-center justify-between">
-            <div className="flex flex-col gap-8">
-              <h2 className="title-xs text-foreground">{getSimulationTitle(perimetre, label)}</h2>
-              <Field className="w-fit flex items-center gap-2">
-                <FieldLabel htmlFor="simulation-period" className="mb-0">Période</FieldLabel>
-                <DatePicker
-                  id="simulation-period"
-                  mode="period"
-                  value={period}
-                  onValueChange={handlePeriodChange}
-                  minDate={{ month: 0, year: 2020 }}
-                  maxDate={{ month: 0, year: 2028 }}
-                  className="w-[320px]"
-                />
-              </Field>
-            </div>
-            <ButtonV2
-              variant="ghost"
-              size="icon-sm"
-              className="self-start"
-              onClick={handleClose}
-            >
-              <X className="h-4 w-4" />
-            </ButtonV2>
+          <div className="px-8 pt-8 pb-6">
+            <h2 className="title-xs text-foreground">{getSimulationTitle(perimetre, label)}</h2>
+          </div>
+          <div className="px-8 pb-3">
+            <InlineField label="Période">
+              <DatePicker
+                mode="period"
+                size="sm"
+                value={period}
+                onValueChange={handlePeriodChange}
+                minDate={{ month: 0, year: 2020 }}
+                maxDate={{ month: 0, year: 2028 }}
+                showValidateButton
+              />
+            </InlineField>
           </div>
 
           {/* Colonnes */}

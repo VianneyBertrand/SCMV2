@@ -1424,9 +1424,9 @@ function DetailContent() {
                               e.preventDefault()
                               card.onToggleUnit?.()
                             }}
-                            className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                            className="px-1.5 py-0.5 text-[12px] font-bold bg-white text-foreground rounded border border-foreground hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
                           >
-                            {card.unit} <SwitchIcon className="w-4 h-3.5" />
+                            {card.unit} <SwitchIcon className="w-4 h-3.5 text-foreground" />
                           </button>
                         )}
                         {hasMode && (

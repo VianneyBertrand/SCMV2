@@ -117,6 +117,9 @@ interface SimulationState {
   // Helpers
   hasChanges: () => boolean
   initializeFromExistingData: (mpValues: MPValueItem[], mpVolumes: MPVolumeItem[], emballageValues?: MPValueItem[], emballageVolumes?: MPVolumeItem[]) => void
+
+  // Action pour mettre à jour tous les découpages quand la période change
+  updateAllDecoupagesForPeriod: (newPeriod: { from?: { month: number; year: number }; to?: { month: number; year: number } }) => void
 }
 
 /**
@@ -681,6 +684,155 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({
       originalData,
       simulatedData,
+    })
+  },
+
+  // Mettre à jour tous les découpages quand la période change
+  updateAllDecoupagesForPeriod: (newPeriod: { from?: { month: number; year: number }; to?: { month: number; year: number } }) => {
+    const { simulatedData } = get()
+    if (!newPeriod.from || !newPeriod.to) return
+
+    // Calculer le nombre de mois de la nouvelle période
+    const fromDate = new Date(newPeriod.from.year, newPeriod.from.month)
+    const toDate = new Date(newPeriod.to.year, newPeriod.to.month)
+    const totalMonths = (toDate.getFullYear() - fromDate.getFullYear()) * 12 + (toDate.getMonth() - fromDate.getMonth())
+
+    // Fonction pour déterminer les découpages disponibles pour une durée donnée
+    const getAvailableDecoupages = (months: number): DecoupageType[] => {
+      const options: DecoupageType[] = ['none']
+      if (months >= 2) options.push('1month')
+      if (months >= 6) options.push('3months')
+      if (months >= 12) options.push('6months')
+      if (months >= 24) options.push('1year')
+      return options
+    }
+
+    // Fonction pour trouver le découpage le plus proche disponible
+    const getClosestDecoupage = (current: DecoupageType, available: DecoupageType[]): DecoupageType => {
+      if (available.includes(current)) return current
+      // Ordre de préférence: du plus fin au plus large
+      const order: DecoupageType[] = ['1month', '3months', '6months', '1year', 'none']
+      const currentIndex = order.indexOf(current)
+      // Chercher le plus proche dans l'ordre
+      for (let i = currentIndex; i < order.length; i++) {
+        if (available.includes(order[i])) return order[i]
+      }
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (available.includes(order[i])) return order[i]
+      }
+      return 'none'
+    }
+
+    // Fonction pour générer les prix intermédiaires en préservant les valeurs existantes
+    const regenerateIntermediatePrices = (
+      item: MPValueItem,
+      decoupage: DecoupageType
+    ): IntermediatePrice[] => {
+      if (decoupage === 'none') return []
+
+      // Déterminer l'intervalle selon le découpage
+      let intervalMonths = 1
+      if (decoupage === '3months') intervalMonths = 3
+      else if (decoupage === '6months') intervalMonths = 6
+      else if (decoupage === '1year') intervalMonths = 12
+
+      const prices: IntermediatePrice[] = []
+      const existingPrices = item.intermediatePrices || []
+      let currentDate = new Date(newPeriod.from!.year, newPeriod.from!.month)
+      let periodIndex = 0
+      let lastKnownPrice = item.priceFirst
+
+      while (currentDate <= toDate) {
+        const dateKey = { month: currentDate.getMonth(), year: currentDate.getFullYear() }
+
+        // Chercher si on a déjà un prix pour cette date
+        const existingPrice = existingPrices.find(
+          p => p.date.month === dateKey.month && p.date.year === dateKey.year
+        )
+
+        let price: number
+        if (existingPrice) {
+          // Utiliser le prix existant
+          price = existingPrice.price
+          lastKnownPrice = price
+        } else {
+          // Nouvelle période: copier le dernier prix connu
+          price = lastKnownPrice
+        }
+
+        prices.push({
+          periodIndex,
+          date: dateKey,
+          price: Math.round(price * 1000) / 1000
+        })
+
+        // Avancer à la prochaine période
+        currentDate.setMonth(currentDate.getMonth() + intervalMonths)
+        periodIndex++
+      }
+
+      return prices
+    }
+
+    const availableDecoupages = getAvailableDecoupages(totalMonths)
+
+    // Mettre à jour les MP Values
+    const updatedMPValues = simulatedData.mpValues.map(mp => {
+      if (!mp.decoupage || mp.decoupage === 'none') return mp
+
+      const newDecoupage = getClosestDecoupage(mp.decoupage, availableDecoupages)
+      const newIntermediatePrices = regenerateIntermediatePrices(mp, newDecoupage)
+
+      // Mettre à jour priceFirst et priceLast depuis les prix intermédiaires
+      let priceFirst = mp.priceFirst
+      let priceLast = mp.priceLast
+      if (newIntermediatePrices.length > 0) {
+        priceFirst = newIntermediatePrices[0].price
+        priceLast = newIntermediatePrices[newIntermediatePrices.length - 1].price
+      }
+      const evolution = priceFirst !== 0 ? ((priceLast - priceFirst) / priceFirst) * 100 : 0
+
+      return {
+        ...mp,
+        decoupage: newDecoupage,
+        intermediatePrices: newIntermediatePrices,
+        priceFirst,
+        priceLast,
+        evolution
+      }
+    })
+
+    // Mettre à jour les Emballage Values
+    const updatedEmballageValues = simulatedData.emballageValues.map(emb => {
+      if (!emb.decoupage || emb.decoupage === 'none') return emb
+
+      const newDecoupage = getClosestDecoupage(emb.decoupage, availableDecoupages)
+      const newIntermediatePrices = regenerateIntermediatePrices(emb, newDecoupage)
+
+      let priceFirst = emb.priceFirst
+      let priceLast = emb.priceLast
+      if (newIntermediatePrices.length > 0) {
+        priceFirst = newIntermediatePrices[0].price
+        priceLast = newIntermediatePrices[newIntermediatePrices.length - 1].price
+      }
+      const evolution = priceFirst !== 0 ? ((priceLast - priceFirst) / priceFirst) * 100 : 0
+
+      return {
+        ...emb,
+        decoupage: newDecoupage,
+        intermediatePrices: newIntermediatePrices,
+        priceFirst,
+        priceLast,
+        evolution
+      }
+    })
+
+    set({
+      simulatedData: {
+        ...simulatedData,
+        mpValues: updatedMPValues,
+        emballageValues: updatedEmballageValues,
+      }
     })
   },
 }))

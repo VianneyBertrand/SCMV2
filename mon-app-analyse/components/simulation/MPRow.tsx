@@ -276,9 +276,9 @@ export function MPRow({
   }, [isEditingTotalEvolution])
 
   return (
-    <div className="pt-6 pb-6 border-b border-gray-200 last:border-b-0 first:pt-0">
+    <div className="pt-2 pb-2 border-b border-gray-200 last:border-b-0 first:pt-0">
       {/* Label et Code */}
-      <div className="flex items-start justify-between mb-1">
+      <div className="flex items-start justify-between mb-6">
         <div className="flex flex-col items-start">
           <span className="body-m-bold text-foreground">{label}</span>
           {mpId && onReferenceChange ? (
