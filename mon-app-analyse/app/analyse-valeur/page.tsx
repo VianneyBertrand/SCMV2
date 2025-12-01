@@ -782,11 +782,21 @@ function AnalyseValeurContent() {
     [perimetre, filters, fournisseurSelections, paysSelections, portefeuilleSelections, updateURL]
   );
 
+  // Vérifier si on vient de la page accueil (via les liens spécifiques)
+  const fromAccueil = searchParams.get("from") === "accueil";
+
+  // Le bouton retour est actif seulement si:
+  // - On a un historique de navigation interne OU
+  // - On vient de la page accueil via les liens (from=accueil)
+  const canGoBack = navigationHistory.length > 0 || fromAccueil;
+
   // Retour au périmètre précédent (mémoïsé)
   const handleBackNavigation = useCallback(() => {
-    // Si l'historique est vide, retourner à la page précédente (accueil)
+    // Si l'historique est vide et on vient de accueil, retourner à accueil
     if (navigationHistory.length === 0) {
-      router.back();
+      if (fromAccueil) {
+        router.push('/accueil');
+      }
       return;
     }
 
@@ -806,7 +816,7 @@ function AnalyseValeurContent() {
 
     // Retirer cet état de l'historique
     setNavigationHistory((prev) => prev.slice(0, -1));
-  }, [navigationHistory, updateURL, router]);
+  }, [navigationHistory, updateURL, router, fromAccueil]);
 
   // Helper pour obtenir les options d'un filtre (mémoïsé pour éviter les recalculs)
   const getFilterOptions = useCallback(
@@ -1032,8 +1042,9 @@ function AnalyseValeurContent() {
       {/* Bouton retour */}
       <Button
         variant="ghost"
-        className="-ml-2 mb-2 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed"
+        className="-ml-2 mb-2 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-current"
         onClick={handleBackNavigation}
+        disabled={!canGoBack}
       >
         <ArrowLeft className="h-4 w-4" />
         Retour

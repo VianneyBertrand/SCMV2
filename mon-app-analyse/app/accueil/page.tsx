@@ -167,7 +167,7 @@ const createAnalyseValeurLink = (perimetre: PerimetreType): string => {
     "Portefeuille": "Portefeuille",
     "Pays": "Pays",
   }
-  return `/analyse-valeur?perimetre=${encodeURIComponent(perimetreMap[perimetre])}`
+  return `/analyse-valeur?perimetre=${encodeURIComponent(perimetreMap[perimetre])}&from=accueil`
 }
 
 // Composant pour un tableau d'opportunités
@@ -217,6 +217,7 @@ function OpportunityTable({ title, perimetre, items, activeFilters = {} }: Oppor
       }
     })
 
+    params.append('from', 'accueil')
     return `/analyse-valeur?${params.toString()}`
   }
 
