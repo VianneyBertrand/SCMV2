@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { X, Info } from 'lucide-react'
 import { Button as ButtonV2 } from '@/componentsv2/ui/button'
+import { IconButton } from '@/componentsv2/ui/icon-button'
 import { InlineField } from '@/componentsv2/ui/inline-field'
 import { DatePicker, type MonthYear } from '@/componentsv2/ui/date-picker'
 import { SegmentedControl, SegmentedControlItem } from '@/componentsv2/ui/segmented-control'
@@ -13,6 +14,7 @@ import { usePeriodStore } from '@/stores/periodStore'
 import { MPValueColumn } from './MPValueColumn'
 import { MPVolumeColumn } from './MPVolumeColumn'
 import { ConfirmCloseDialog } from './ConfirmCloseDialog'
+import { TotalPercentageDialog } from './TotalPercentageDialog'
 
 // Générer le titre dynamique
 function getSimulationTitle(perimetre: string, label: string): string {
@@ -38,31 +40,37 @@ interface SimulationWindowProps {
  */
 export function SimulationWindow({ availableMPValues, availableMPVolumes, perimetre, label }: SimulationWindowProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showPercentageDialog, setShowPercentageDialog] = useState(false)
   const [resetKey, setResetKey] = useState(0)
 
   // Récupérer la période globale du store (pour initialiser)
   const globalPeriod = usePeriodStore((state) => state.period)
 
-  // État local pour la période (initialisé avec la période globale, mais indépendant)
+  // État local pour la période effective (utilisée par les colonnes)
   const [period, setPeriod] = useState<{ from?: MonthYear; to?: MonthYear } | undefined>(undefined)
 
-  // Initialiser la période locale avec la période globale au premier rendu
+  // État temporaire pour la période en cours de sélection dans le DatePicker
+  const [pendingPeriod, setPendingPeriod] = useState<{ from?: MonthYear; to?: MonthYear } | undefined>(undefined)
+
+  // Initialiser les périodes avec la période globale au premier rendu
   useEffect(() => {
     if (period === undefined) {
-      setPeriod({
+      const initialPeriod = {
         from: globalPeriod.from,
         to: globalPeriod.to
-      })
+      }
+      setPeriod(initialPeriod)
+      setPendingPeriod(initialPeriod)
     }
   }, [globalPeriod, period])
 
   // Limite pour la période 1 (from) : pas après novembre 2025
   const maxFromDate: MonthYear = { month: 10, year: 2025 } // November 2025 (month is 0-indexed)
 
-  // Handler pour valider la période avec contrainte sur "from"
+  // Handler pour les changements dans le DatePicker (met à jour seulement l'état temporaire)
   const handlePeriodChange = (newPeriod: { from?: MonthYear; to?: MonthYear } | undefined) => {
     if (!newPeriod) {
-      setPeriod(newPeriod)
+      setPendingPeriod(newPeriod)
       return
     }
 
@@ -76,10 +84,17 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
       }
     }
 
-    setPeriod(newPeriod)
+    // Met à jour seulement l'état temporaire (pas les colonnes)
+    setPendingPeriod(newPeriod)
+  }
 
-    // Mettre à jour les découpages pour refléter la nouvelle période
-    updateAllDecoupagesForPeriod(newPeriod)
+  // Handler pour la validation du DatePicker (applique la période aux colonnes)
+  const handlePeriodValidate = () => {
+    if (pendingPeriod) {
+      setPeriod(pendingPeriod)
+      // Mettre à jour les découpages pour refléter la nouvelle période
+      updateAllDecoupagesForPeriod(pendingPeriod)
+    }
   }
 
   // États pour les SegmentedControls (MP ou Emballage) - un pour chaque colonne
@@ -123,6 +138,11 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   }
 
   const handleSimulate = () => {
+    // Vérifier que les totaux sont à 100% avant de simuler
+    if (!areTotalsValid) {
+      setShowPercentageDialog(true)
+      return
+    }
     // Lancer la simulation avec le contexte (périmètre et label)
     startSimulation(perimetre, label)
   }
@@ -133,6 +153,17 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
 
   // Vérifier si des données sont chargées
   const hasData = simulatedData.mpValues.length > 0 || simulatedData.mpVolumes.length > 0
+
+  // Calculer les totaux des pourcentages
+  const mpVolumeTotal = simulatedData.mpVolumes.reduce((sum, item) => sum + item.percentage, 0)
+  const emballageVolumeTotal = simulatedData.emballageVolumes.reduce((sum, item) => sum + item.percentage, 0)
+  const hasMPVolumes = simulatedData.mpVolumes.length > 0
+  const hasEmballageVolumes = simulatedData.emballageVolumes.length > 0
+
+  // Vérifier si les totaux sont valides (100% avec une tolérance de 0.01%)
+  const isMPTotalValid = !hasMPVolumes || Math.abs(mpVolumeTotal - 100) <= 0.01
+  const isEmballageTotalValid = !hasEmballageVolumes || Math.abs(emballageVolumeTotal - 100) <= 0.01
+  const areTotalsValid = isMPTotalValid && isEmballageTotalValid
 
   if (!isWindowOpen) return null
 
@@ -145,14 +176,15 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
       <div className="fixed inset-0 z-[65] flex items-center justify-center pointer-events-none">
         <div className="relative w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[85vh] pointer-events-auto">
           {/* Close button */}
-          <ButtonV2
+          <IconButton
             variant="ghost"
-            size="icon-sm"
+            size="s"
+            aria-label="Fermer"
             className="absolute top-4 right-4"
             onClick={handleClose}
           >
-            <X className="h-5 w-5" />
-          </ButtonV2>
+            <X />
+          </IconButton>
           {/* Header */}
           <div className="px-8 pt-8 pb-6">
             <h2 className="title-xs text-foreground">{getSimulationTitle(perimetre, label)}</h2>
@@ -162,8 +194,9 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               <DatePicker
                 mode="period"
                 size="sm"
-                value={period}
+                value={pendingPeriod}
                 onValueChange={handlePeriodChange}
+                onValidate={handlePeriodValidate}
                 minDate={{ month: 0, year: 2020 }}
                 maxDate={{ month: 0, year: 2028 }}
                 showValidateButton
@@ -178,7 +211,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               <div className="px-4 mb-4">
                 <div className="flex items-center gap-2">
                   <h4 className="title-xs-regular text-foreground">
-                    {leftColumnType === 'emballage' ? 'Evolution du cours des emballages' : 'Evolution du cours des MP'}
+                    {leftColumnType === 'emballage' ? 'Evolution du cours des emballages (top 20)' : 'Evolution du cours des MP (top 20)'}
                   </h4>
                   <TooltipProvider>
                     <Tooltip>
@@ -214,7 +247,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               <div className="px-4 mb-4">
                 <div className="flex items-center gap-2">
                   <h4 className="title-xs-regular text-foreground">
-                    {rightColumnType === 'emballage' ? 'Répartition en volume des emballages' : 'Répartition en volume des MP'}
+                    {rightColumnType === 'emballage' ? 'Répartition en volume des emballages (top 20)' : 'Répartition en volume des MP (top 20)'}
                   </h4>
                   <TooltipProvider>
                     <Tooltip>
@@ -274,6 +307,15 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
         open={showConfirmDialog}
         onOpenChange={setShowConfirmDialog}
         onConfirm={handleConfirmClose}
+      />
+
+      <TotalPercentageDialog
+        open={showPercentageDialog}
+        onOpenChange={setShowPercentageDialog}
+        mpTotal={mpVolumeTotal}
+        emballageTotal={emballageVolumeTotal}
+        hasMPItems={hasMPVolumes}
+        hasEmballageItems={hasEmballageVolumes}
       />
     </>
   )

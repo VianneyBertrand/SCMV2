@@ -80,11 +80,13 @@ function SegmentedControl({
   onValueChange,
   size = "md",
   children,
+  defaultValue: _defaultValue,
   ...props
-}: Omit<React.ComponentProps<typeof ToggleGroupPrimitive.Root>, "type" | "value" | "onValueChange"> &
+}: Omit<React.ComponentProps<typeof ToggleGroupPrimitive.Root>, "type" | "value" | "onValueChange" | "defaultValue"> &
   VariantProps<typeof segmentedControlVariants> & {
     value: string
     onValueChange: (value: string) => void
+    defaultValue?: string
   }) {
   // Prevent deselection by ignoring empty string
   const handleValueChange = (newValue: string) => {

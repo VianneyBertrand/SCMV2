@@ -1,9 +1,11 @@
 // @ts-nocheck
 'use client'
 
+import { useState } from 'react'
 import { useSimulationStore, MPVolumeItem, MPValueItem } from '@/stores/simulationStore'
 import { MPRow } from './MPRow'
 import { MPAddDropdown } from './MPAddDropdown'
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog'
 
 interface MPVolumeColumnProps {
   availableOptions: MPVolumeItem[]
@@ -16,6 +18,9 @@ interface MPVolumeColumnProps {
  * Reste identique quel que soit le type de période (defined ou future)
  */
 export function MPVolumeColumn({ availableOptions, availableMPValues, columnType = 'mp' }: MPVolumeColumnProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; label: string } | null>(null)
+
   const simulatedData = useSimulationStore((state) => state.simulatedData)
   const originalData = useSimulationStore((state) => state.originalData)
 
@@ -24,6 +29,7 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
   const addMPVolume = useSimulationStore((state) => state.addMPVolume)
   const addMPValue = useSimulationStore((state) => state.addMPValue)
   const removeMPVolume = useSimulationStore((state) => state.removeMPVolume)
+  const removeMPValue = useSimulationStore((state) => state.removeMPValue)
   const updateMPReference = useSimulationStore((state) => state.updateMPReference)
 
   // Actions Emballage
@@ -31,6 +37,7 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
   const addEmballageVolume = useSimulationStore((state) => state.addEmballageVolume)
   const addEmballageValue = useSimulationStore((state) => state.addEmballageValue)
   const removeEmballageVolume = useSimulationStore((state) => state.removeEmballageVolume)
+  const removeEmballageValue = useSimulationStore((state) => state.removeEmballageValue)
   const updateEmballageReference = useSimulationStore((state) => state.updateEmballageReference)
 
   // Sélectionner les données en fonction du type de colonne
@@ -47,7 +54,23 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
   const addVolume = isEmballage ? addEmballageVolume : addMPVolume
   const addValue = isEmballage ? addEmballageValue : addMPValue
   const removeVolume = isEmballage ? removeEmballageVolume : removeMPVolume
+  const removeValue = isEmballage ? removeEmballageValue : removeMPValue
   const updateReference = isEmballage ? updateEmballageReference : updateMPReference
+
+  // Handler pour demander la suppression (ouvre la dialog de confirmation)
+  const handleRequestDelete = (id: string, label: string) => {
+    setItemToDelete({ id, label })
+    setDeleteDialogOpen(true)
+  }
+
+  // Handler pour confirmer la suppression (supprime des deux colonnes)
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      removeVolume(itemToDelete.id)
+      removeValue(itemToDelete.id)
+      setItemToDelete(null)
+    }
+  }
 
   // Ajouter un item dans les deux colonnes (gauche et droite)
   const handleAdd = (option: { id: string; label: string }) => {
@@ -119,7 +142,7 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
                 onIncrement1={() => updateVolume(item.id, item.percentage + 1)}
                 onDecrement01={() => updateVolume(item.id, Math.max(0, item.percentage - 0.1))}
                 onDecrement1={() => updateVolume(item.id, Math.max(0, item.percentage - 1))}
-                onRemove={() => removeVolume(item.id)}
+                onRemove={() => handleRequestDelete(item.id, item.label)}
                 onValueChange={(newValue) => updateVolume(item.id, newValue)}
               />
             )
@@ -146,6 +169,15 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
           buttonLabel={`Ajouter ${itemLabel}`}
         />
       </div>
+
+      {/* Dialog de confirmation de suppression */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemLabel={itemToDelete?.label || ''}
+        itemType={isEmballage ? 'emballage' : 'mp'}
+      />
     </div>
   )
 }

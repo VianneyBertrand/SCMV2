@@ -1,27 +1,27 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { format } from "date-fns"
-import { fr } from "date-fns/locale"
-import { cva, type VariantProps } from "class-variance-authority"
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
-import { DateRange } from "react-day-picker"
+import { cva } from "class-variance-authority";
+import { format, type Locale } from "date-fns";
+import { fr } from "date-fns/locale";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import * as React from "react";
+import { DateRange } from "react-day-picker";
 
-import { cn } from "@/lib/utils"
-import { Calendar } from "@/componentsv2/ui/calendar"
+import { Button } from "@/componentsv2/ui/button";
+import { Calendar } from "@/componentsv2/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/componentsv2/ui/popover"
+} from "@/componentsv2/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/componentsv2/ui/select"
-import { Button } from "@/componentsv2/ui/button"
+} from "@/componentsv2/ui/select";
+import { cn } from "@/lib/utils";
 
 /* =============================================================================
    DATE PICKER
@@ -63,72 +63,76 @@ import { Button } from "@/componentsv2/ui/button"
    ============================================================================= */
 
 export interface MonthYear {
-  month: number // 0-11
-  year: number
+  month: number; // 0-11
+  year: number;
 }
 
 interface DatePickerBaseProps {
   /** Trigger size */
-  size?: "sm" | "md"
+  size?: "sm" | "md";
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string;
   /** Optional icon on the left */
-  icon?: React.ReactNode
+  icon?: React.ReactNode;
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean;
   /** Error state - sets aria-invalid and error styling */
-  error?: boolean
+  error?: boolean;
   /** ID for Field integration (required for FieldLabel htmlFor) */
-  id?: string
+  id?: string;
   /** Locale for formatting (default: fr) */
-  locale?: Locale
+  locale?: Locale;
   /** Additional class name for trigger */
-  className?: string
+  className?: string;
   /** Show validate button at bottom right */
-  showValidateButton?: boolean
+  showValidateButton?: boolean;
   /** Validate button label (default: "Valider") */
-  validateButtonLabel?: string
+  validateButtonLabel?: string;
+  /** Callback when validate button is clicked (useful to trigger actions only on validation) */
+  onValidate?: () => void;
 }
 
 export interface DatePickerSingleProps extends DatePickerBaseProps {
-  mode: "single"
-  value?: Date
-  onValueChange?: (date: Date | undefined) => void
-  minDate?: Date
-  maxDate?: Date
-  disabledDates?: (date: Date) => boolean
+  mode: "single";
+  value?: Date;
+  onValueChange?: (date: Date | undefined) => void;
+  minDate?: Date;
+  maxDate?: Date;
+  disabledDates?: (date: Date) => boolean;
 }
 
 export interface DatePickerRangeProps extends DatePickerBaseProps {
-  mode: "range"
-  value?: DateRange
-  onValueChange?: (range: DateRange | undefined) => void
-  minDate?: Date
-  maxDate?: Date
-  disabledDates?: (date: Date) => boolean
+  mode: "range";
+  value?: DateRange;
+  onValueChange?: (range: DateRange | undefined) => void;
+  minDate?: Date;
+  maxDate?: Date;
+  disabledDates?: (date: Date) => boolean;
 }
 
 export interface DatePickerMonthProps extends DatePickerBaseProps {
-  mode: "month"
-  value?: MonthYear
-  onValueChange?: (monthYear: MonthYear | undefined) => void
-  minDate?: MonthYear
-  maxDate?: MonthYear
+  mode: "month";
+  value?: MonthYear;
+  onValueChange?: (monthYear: MonthYear | undefined) => void;
+  minDate?: MonthYear;
+  maxDate?: MonthYear;
 }
 
 export interface DatePickerPeriodProps extends DatePickerBaseProps {
-  mode: "period"
-  value?: { from?: MonthYear; to?: MonthYear }
-  onValueChange?: (period: { from?: MonthYear; to?: MonthYear } | undefined) => void
-  minDate?: MonthYear
-  maxDate?: MonthYear
+  mode: "period";
+  value?: { from?: MonthYear; to?: MonthYear };
+  onValueChange?: (
+    period: { from?: MonthYear; to?: MonthYear } | undefined
+  ) => void;
+  minDate?: MonthYear;
+  maxDate?: MonthYear;
 }
 
 export type DatePickerProps =
   | DatePickerSingleProps
   | DatePickerRangeProps
   | DatePickerMonthProps
-  | DatePickerPeriodProps
+  | DatePickerPeriodProps;
 
 /* =============================================================================
    TRIGGER STYLES
@@ -170,70 +174,103 @@ const datePickerTriggerVariants = cva(
       size: "md",
     },
   }
-)
+);
 
 /* =============================================================================
    CONSTANTS
    ============================================================================= */
 
 const MONTHS = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
-] as const
+  "Janvier",
+  "Février",
+  "Mars",
+  "Avril",
+  "Mai",
+  "Juin",
+  "Juillet",
+  "Août",
+  "Septembre",
+  "Octobre",
+  "Novembre",
+  "Décembre",
+] as const;
 
 const MONTHS_SHORT = [
-  "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
-  "Juil", "Août", "Sep", "Oct", "Nov", "Déc"
-] as const
+  "Jan",
+  "Fév",
+  "Mar",
+  "Avr",
+  "Mai",
+  "Juin",
+  "Juil",
+  "Août",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Déc",
+] as const;
 
-const CURRENT_YEAR = new Date().getFullYear()
-const DEFAULT_YEAR_RANGE = { start: CURRENT_YEAR - 100, end: CURRENT_YEAR + 10 }
+const CURRENT_YEAR = new Date().getFullYear();
+const DEFAULT_YEAR_RANGE = {
+  start: CURRENT_YEAR - 100,
+  end: CURRENT_YEAR + 10,
+};
 
 const DEFAULT_PLACEHOLDERS: Record<DatePickerProps["mode"], string> = {
   single: "JJ/MM/AAAA",
   range: "JJ/MM/AAAA - JJ/MM/AAAA",
   month: "MM/AAAA",
   period: "01/MM/AAAA - 01/MM/AAAA",
-}
+};
 
 /* =============================================================================
    UTILITIES
    ============================================================================= */
 
 function generateYearRange(start: number, end: number): number[] {
-  return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
 }
 
 function formatSingleDate(date: Date | undefined, locale: Locale): string {
-  if (!date) return ""
-  return format(date, "dd/MM/yyyy", { locale })
+  if (!date) return "";
+  return format(date, "dd/MM/yyyy", { locale });
 }
 
 function formatRangeDate(range: DateRange | undefined, locale: Locale): string {
-  if (!range?.from) return ""
-  if (!range.to) return format(range.from, "dd/MM/yyyy", { locale })
-  return `${format(range.from, "dd/MM/yyyy", { locale })} - ${format(range.to, "dd/MM/yyyy", { locale })}`
+  if (!range?.from) return "";
+  if (!range.to) return format(range.from, "dd/MM/yyyy", { locale });
+  return `${format(range.from, "dd/MM/yyyy", { locale })} - ${format(
+    range.to,
+    "dd/MM/yyyy",
+    { locale }
+  )}`;
 }
 
 function formatMonthYear(monthYear: MonthYear | undefined): string {
-  if (!monthYear) return ""
-  return `${MONTHS[monthYear.month]} ${monthYear.year}`
+  if (!monthYear) return "";
+  return `${MONTHS[monthYear.month]} ${monthYear.year}`;
 }
 
-function formatPeriod(period: { from?: MonthYear; to?: MonthYear } | undefined): string {
-  if (!period?.from) return ""
-  const fromStr = `01/${String(period.from.month + 1).padStart(2, "0")}/${period.from.year}`
-  if (!period.to) return fromStr
-  const toStr = `01/${String(period.to.month + 1).padStart(2, "0")}/${period.to.year}`
-  return `${fromStr} - ${toStr}`
+function formatPeriod(
+  period: { from?: MonthYear; to?: MonthYear } | undefined
+): string {
+  if (!period?.from) return "";
+  const fromStr = `01/${String(period.from.month + 1).padStart(2, "0")}/${
+    period.from.year
+  }`;
+  if (!period.to) return fromStr;
+  const toStr = `01/${String(period.to.month + 1).padStart(2, "0")}/${
+    period.to.year
+  }`;
+  return `${fromStr} - ${toStr}`;
 }
 
 function createDate(year: number, month: number): Date {
-  return new Date(year, month, 1)
+  return new Date(year, month, 1);
 }
 
 function addMonths(date: Date, months: number): Date {
-  return new Date(date.getFullYear(), date.getMonth() + months, 1)
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
 }
 
 /* =============================================================================
@@ -241,22 +278,26 @@ function addMonths(date: Date, months: number): Date {
    ============================================================================= */
 
 interface MonthYearNavigationProps {
-  month: Date
-  onMonthChange: (date: Date) => void
-  yearRange: number[]
+  month: Date;
+  onMonthChange: (date: Date) => void;
+  yearRange: number[];
 }
 
-function MonthYearNavigation({ month, onMonthChange, yearRange }: MonthYearNavigationProps) {
-  const handlePrevMonth = () => onMonthChange(addMonths(month, -1))
-  const handleNextMonth = () => onMonthChange(addMonths(month, 1))
+function MonthYearNavigation({
+  month,
+  onMonthChange,
+  yearRange,
+}: MonthYearNavigationProps) {
+  const handlePrevMonth = () => onMonthChange(addMonths(month, -1));
+  const handleNextMonth = () => onMonthChange(addMonths(month, 1));
 
   const handleMonthSelect = (value: string) => {
-    onMonthChange(createDate(month.getFullYear(), parseInt(value, 10)))
-  }
+    onMonthChange(createDate(month.getFullYear(), parseInt(value, 10)));
+  };
 
   const handleYearSelect = (value: string) => {
-    onMonthChange(createDate(parseInt(value, 10), month.getMonth()))
-  }
+    onMonthChange(createDate(parseInt(value, 10), month.getMonth()));
+  };
 
   return (
     <div className="flex items-center justify-between">
@@ -270,7 +311,10 @@ function MonthYearNavigation({ month, onMonthChange, yearRange }: MonthYearNavig
       </Button>
 
       <div className="flex items-center gap-1">
-        <Select value={String(month.getMonth())} onValueChange={handleMonthSelect}>
+        <Select
+          value={String(month.getMonth())}
+          onValueChange={handleMonthSelect}
+        >
           <SelectTrigger variant="ghost" size="sm" width="auto">
             <SelectValue>{MONTHS[month.getMonth()]}</SelectValue>
           </SelectTrigger>
@@ -283,7 +327,10 @@ function MonthYearNavigation({ month, onMonthChange, yearRange }: MonthYearNavig
           </SelectContent>
         </Select>
 
-        <Select value={String(month.getFullYear())} onValueChange={handleYearSelect}>
+        <Select
+          value={String(month.getFullYear())}
+          onValueChange={handleYearSelect}
+        >
           <SelectTrigger variant="ghost" size="sm" width="auto">
             <SelectValue>{month.getFullYear()}</SelectValue>
           </SelectTrigger>
@@ -306,7 +353,7 @@ function MonthYearNavigation({ month, onMonthChange, yearRange }: MonthYearNavig
         <ChevronRightIcon className="size-5" />
       </Button>
     </div>
-  )
+  );
 }
 
 /* =============================================================================
@@ -314,12 +361,12 @@ function MonthYearNavigation({ month, onMonthChange, yearRange }: MonthYearNavig
    ============================================================================= */
 
 interface SingleDateContentProps {
-  value: Date | undefined
-  onSelect: (date: Date | undefined) => void
-  minDate?: Date
-  maxDate?: Date
-  disabledDates?: (date: Date) => boolean
-  locale: Locale
+  value: Date | undefined;
+  onSelect: (date: Date | undefined) => void;
+  minDate?: Date;
+  maxDate?: Date;
+  disabledDates?: (date: Date) => boolean;
+  locale: Locale;
 }
 
 function SingleDateContent({
@@ -332,22 +379,22 @@ function SingleDateContent({
 }: SingleDateContentProps) {
   const [displayedMonth, setDisplayedMonth] = React.useState<Date>(
     () => value ?? new Date()
-  )
+  );
 
   const yearRange = React.useMemo(() => {
-    const start = minDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.start
-    const end = maxDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.end
-    return generateYearRange(start, end)
-  }, [minDate, maxDate])
+    const start = minDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.start;
+    const end = maxDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.end;
+    return generateYearRange(start, end);
+  }, [minDate, maxDate]);
 
   const disabledMatcher = React.useMemo(() => {
-    if (!minDate && !maxDate && !disabledDates) return undefined
+    if (!minDate && !maxDate && !disabledDates) return undefined;
     return (date: Date) => {
-      if (minDate && date < minDate) return true
-      if (maxDate && date > maxDate) return true
-      return disabledDates?.(date) ?? false
-    }
-  }, [minDate, maxDate, disabledDates])
+      if (minDate && date < minDate) return true;
+      if (maxDate && date > maxDate) return true;
+      return disabledDates?.(date) ?? false;
+    };
+  }, [minDate, maxDate, disabledDates]);
 
   return (
     <div className="p-4 flex flex-col gap-8">
@@ -370,7 +417,7 @@ function SingleDateContent({
         classNames={{ month_caption: "hidden" }}
       />
     </div>
-  )
+  );
 }
 
 /* =============================================================================
@@ -378,12 +425,12 @@ function SingleDateContent({
    ============================================================================= */
 
 interface RangeDateContentProps {
-  value: DateRange | undefined
-  onSelect: (range: DateRange | undefined) => void
-  minDate?: Date
-  maxDate?: Date
-  disabledDates?: (date: Date) => boolean
-  locale: Locale
+  value: DateRange | undefined;
+  onSelect: (range: DateRange | undefined) => void;
+  minDate?: Date;
+  maxDate?: Date;
+  disabledDates?: (date: Date) => boolean;
+  locale: Locale;
 }
 
 function RangeDateContent({
@@ -396,25 +443,25 @@ function RangeDateContent({
 }: RangeDateContentProps) {
   const [displayedMonth1, setDisplayedMonth1] = React.useState<Date>(
     () => value?.from ?? new Date()
-  )
+  );
   const [displayedMonth2, setDisplayedMonth2] = React.useState<Date>(
     () => value?.to ?? addMonths(value?.from ?? new Date(), 1)
-  )
+  );
 
   const yearRange = React.useMemo(() => {
-    const start = minDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.start
-    const end = maxDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.end
-    return generateYearRange(start, end)
-  }, [minDate, maxDate])
+    const start = minDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.start;
+    const end = maxDate?.getFullYear() ?? DEFAULT_YEAR_RANGE.end;
+    return generateYearRange(start, end);
+  }, [minDate, maxDate]);
 
   const disabledMatcher = React.useMemo(() => {
-    if (!minDate && !maxDate && !disabledDates) return undefined
+    if (!minDate && !maxDate && !disabledDates) return undefined;
     return (date: Date) => {
-      if (minDate && date < minDate) return true
-      if (maxDate && date > maxDate) return true
-      return disabledDates?.(date) ?? false
-    }
-  }, [minDate, maxDate, disabledDates])
+      if (minDate && date < minDate) return true;
+      if (maxDate && date > maxDate) return true;
+      return disabledDates?.(date) ?? false;
+    };
+  }, [minDate, maxDate, disabledDates]);
 
   return (
     <div className="p-4 flex flex-col gap-8">
@@ -462,7 +509,7 @@ function RangeDateContent({
         />
       </div>
     </div>
-  )
+  );
 }
 
 /* =============================================================================
@@ -470,10 +517,10 @@ function RangeDateContent({
    ============================================================================= */
 
 interface MonthPickerContentProps {
-  value: MonthYear | undefined
-  onValueChange: (value: MonthYear | undefined) => void
-  minDate?: MonthYear
-  maxDate?: MonthYear
+  value: MonthYear | undefined;
+  onValueChange: (value: MonthYear | undefined) => void;
+  minDate?: MonthYear;
+  maxDate?: MonthYear;
 }
 
 function MonthPickerContent({
@@ -484,28 +531,31 @@ function MonthPickerContent({
 }: MonthPickerContentProps) {
   const [displayedMonth, setDisplayedMonth] = React.useState<Date>(() => {
     if (value) {
-      return createDate(value.year, value.month)
+      return createDate(value.year, value.month);
     }
-    return new Date()
-  })
+    return new Date();
+  });
 
   // Stable ref for callback to avoid stale closures
-  const onValueChangeRef = React.useRef(onValueChange)
+  const onValueChangeRef = React.useRef(onValueChange);
   React.useEffect(() => {
-    onValueChangeRef.current = onValueChange
-  }, [onValueChange])
+    onValueChangeRef.current = onValueChange;
+  }, [onValueChange]);
 
   const yearRange = React.useMemo(() => {
-    const start = minDate?.year ?? DEFAULT_YEAR_RANGE.start
-    const end = maxDate?.year ?? DEFAULT_YEAR_RANGE.end
-    return generateYearRange(start, end)
-  }, [minDate, maxDate])
+    const start = minDate?.year ?? DEFAULT_YEAR_RANGE.start;
+    const end = maxDate?.year ?? DEFAULT_YEAR_RANGE.end;
+    return generateYearRange(start, end);
+  }, [minDate, maxDate]);
 
   // Notify parent when month changes
   const handleMonthChange = React.useCallback((date: Date) => {
-    setDisplayedMonth(date)
-    onValueChangeRef.current?.({ month: date.getMonth(), year: date.getFullYear() })
-  }, [])
+    setDisplayedMonth(date);
+    onValueChangeRef.current?.({
+      month: date.getMonth(),
+      year: date.getFullYear(),
+    });
+  }, []);
 
   return (
     <div className="p-4">
@@ -515,7 +565,7 @@ function MonthPickerContent({
         yearRange={yearRange}
       />
     </div>
-  )
+  );
 }
 
 /* =============================================================================
@@ -523,10 +573,12 @@ function MonthPickerContent({
    ============================================================================= */
 
 interface PeriodPickerContentProps {
-  value: { from?: MonthYear; to?: MonthYear } | undefined
-  onValueChange: (value: { from?: MonthYear; to?: MonthYear } | undefined) => void
-  minDate?: MonthYear
-  maxDate?: MonthYear
+  value: { from?: MonthYear; to?: MonthYear } | undefined;
+  onValueChange: (
+    value: { from?: MonthYear; to?: MonthYear } | undefined
+  ) => void;
+  minDate?: MonthYear;
+  maxDate?: MonthYear;
 }
 
 function PeriodPickerContent({
@@ -537,72 +589,84 @@ function PeriodPickerContent({
 }: PeriodPickerContentProps) {
   const [displayedMonth1, setDisplayedMonth1] = React.useState<Date>(() => {
     if (value?.from) {
-      return createDate(value.from.year, value.from.month)
+      return createDate(value.from.year, value.from.month);
     }
-    return new Date()
-  })
+    return new Date();
+  });
   const [displayedMonth2, setDisplayedMonth2] = React.useState<Date>(() => {
     if (value?.to) {
-      return createDate(value.to.year, value.to.month)
+      return createDate(value.to.year, value.to.month);
     }
-    return addMonths(value?.from ? createDate(value.from.year, value.from.month) : new Date(), 1)
-  })
+    return addMonths(
+      value?.from ? createDate(value.from.year, value.from.month) : new Date(),
+      1
+    );
+  });
 
   // Stable ref for callback to avoid stale closures
-  const onValueChangeRef = React.useRef(onValueChange)
+  const onValueChangeRef = React.useRef(onValueChange);
   React.useEffect(() => {
-    onValueChangeRef.current = onValueChange
-  }, [onValueChange])
+    onValueChangeRef.current = onValueChange;
+  }, [onValueChange]);
 
   const yearRange = React.useMemo(() => {
-    const start = minDate?.year ?? DEFAULT_YEAR_RANGE.start
-    const end = maxDate?.year ?? DEFAULT_YEAR_RANGE.end
-    return generateYearRange(start, end)
-  }, [minDate, maxDate])
+    const start = minDate?.year ?? DEFAULT_YEAR_RANGE.start;
+    const end = maxDate?.year ?? DEFAULT_YEAR_RANGE.end;
+    return generateYearRange(start, end);
+  }, [minDate, maxDate]);
 
   // Helper to compare dates (year + month)
   const isDateBefore = (a: Date, b: Date) => {
-    if (a.getFullYear() < b.getFullYear()) return true
-    if (a.getFullYear() > b.getFullYear()) return false
-    return a.getMonth() < b.getMonth()
-  }
+    if (a.getFullYear() < b.getFullYear()) return true;
+    if (a.getFullYear() > b.getFullYear()) return false;
+    return a.getMonth() < b.getMonth();
+  };
 
   const isDateAfter = (a: Date, b: Date) => {
-    if (a.getFullYear() > b.getFullYear()) return true
-    if (a.getFullYear() < b.getFullYear()) return false
-    return a.getMonth() > b.getMonth()
-  }
+    if (a.getFullYear() > b.getFullYear()) return true;
+    if (a.getFullYear() < b.getFullYear()) return false;
+    return a.getMonth() > b.getMonth();
+  };
 
   // When period 1 (from) changes: if it's after period 2, push period 2 forward
-  const handleMonth1Change = React.useCallback((date: Date) => {
-    setDisplayedMonth1(date)
-    let newMonth2 = displayedMonth2
+  const handleMonth1Change = React.useCallback(
+    (date: Date) => {
+      setDisplayedMonth1(date);
+      let newMonth2 = displayedMonth2;
 
-    // If new "from" is after "to", adjust "to" to be same as "from"
-    if (isDateAfter(date, displayedMonth2)) {
-      newMonth2 = date
-      setDisplayedMonth2(newMonth2)
-    }
+      // If new "from" is after "to", adjust "to" to be same as "from"
+      if (isDateAfter(date, displayedMonth2)) {
+        newMonth2 = date;
+        setDisplayedMonth2(newMonth2);
+      }
 
-    const from = { month: date.getMonth(), year: date.getFullYear() }
-    const to = { month: newMonth2.getMonth(), year: newMonth2.getFullYear() }
-    onValueChangeRef.current?.({ from, to })
-  }, [displayedMonth2])
+      const from = { month: date.getMonth(), year: date.getFullYear() };
+      const to = { month: newMonth2.getMonth(), year: newMonth2.getFullYear() };
+      onValueChangeRef.current?.({ from, to });
+    },
+    [displayedMonth2]
+  );
 
   // When period 2 (to) changes: if it's before period 1, clamp to period 1
-  const handleMonth2Change = React.useCallback((date: Date) => {
-    let newDate = date
+  const handleMonth2Change = React.useCallback(
+    (date: Date) => {
+      let newDate = date;
 
-    // If new "to" is before "from", clamp to "from"
-    if (isDateBefore(date, displayedMonth1)) {
-      newDate = displayedMonth1
-    }
+      // If new "to" is before "from", clamp to "from"
+      if (isDateBefore(date, displayedMonth1)) {
+        newDate = displayedMonth1;
+      }
 
-    setDisplayedMonth2(newDate)
-    const from = { month: displayedMonth1.getMonth(), year: displayedMonth1.getFullYear() }
-    const to = { month: newDate.getMonth(), year: newDate.getFullYear() }
-    onValueChangeRef.current?.({ from, to })
-  }, [displayedMonth1])
+      setDisplayedMonth2(newDate);
+      const from = {
+        month: displayedMonth1.getMonth(),
+        year: displayedMonth1.getFullYear(),
+      };
+      const to = { month: newDate.getMonth(), year: newDate.getFullYear() };
+      onValueChangeRef.current?.({ from, to });
+    },
+    [displayedMonth1]
+  );
 
   return (
     <div className="p-4">
@@ -619,7 +683,7 @@ function PeriodPickerContent({
         />
       </div>
     </div>
-  )
+  );
 }
 
 /* =============================================================================
@@ -639,52 +703,65 @@ function DatePicker(props: DatePickerProps) {
     className,
     showValidateButton = false,
     validateButtonLabel = "Valider",
-  } = props
+    onValidate,
+  } = props;
 
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false);
 
   // Compute display value
   const displayValue = React.useMemo(() => {
     switch (mode) {
       case "single":
-        return formatSingleDate(props.value, locale)
+        return formatSingleDate(props.value, locale);
       case "range":
-        return formatRangeDate(props.value, locale)
+        return formatRangeDate(props.value, locale);
       case "month":
-        return formatMonthYear(props.value)
+        return formatMonthYear(props.value);
       case "period":
-        return formatPeriod(props.value)
+        return formatPeriod(props.value);
     }
-  }, [mode, props, locale])
+  }, [mode, props, locale]);
 
-  const isEmpty = !displayValue
-  const placeholderText = placeholder ?? DEFAULT_PLACEHOLDERS[mode]
+  const isEmpty = !displayValue;
+  const placeholderText = placeholder ?? DEFAULT_PLACEHOLDERS[mode];
 
   // Handlers
-  const handleSingleSelect = React.useCallback((date: Date | undefined) => {
-    if (mode === "single") {
-      props.onValueChange?.(date)
-      if (date) setOpen(false)
-    }
-  }, [mode, props])
+  const handleSingleSelect = React.useCallback(
+    (date: Date | undefined) => {
+      if (mode === "single") {
+        props.onValueChange?.(date);
+        if (date) setOpen(false);
+      }
+    },
+    [mode, props]
+  );
 
-  const handleRangeSelect = React.useCallback((range: DateRange | undefined) => {
-    if (mode === "range") {
-      props.onValueChange?.(range)
-    }
-  }, [mode, props])
+  const handleRangeSelect = React.useCallback(
+    (range: DateRange | undefined) => {
+      if (mode === "range") {
+        props.onValueChange?.(range);
+      }
+    },
+    [mode, props]
+  );
 
-  const handleMonthSelect = React.useCallback((value: MonthYear | undefined) => {
-    if (mode === "month") {
-      props.onValueChange?.(value)
-    }
-  }, [mode, props])
+  const handleMonthSelect = React.useCallback(
+    (value: MonthYear | undefined) => {
+      if (mode === "month") {
+        props.onValueChange?.(value);
+      }
+    },
+    [mode, props]
+  );
 
-  const handlePeriodSelect = React.useCallback((value: { from?: MonthYear; to?: MonthYear } | undefined) => {
-    if (mode === "period") {
-      props.onValueChange?.(value)
-    }
-  }, [mode, props])
+  const handlePeriodSelect = React.useCallback(
+    (value: { from?: MonthYear; to?: MonthYear } | undefined) => {
+      if (mode === "period") {
+        props.onValueChange?.(value);
+      }
+    },
+    [mode, props]
+  );
 
   // Popover width based on mode
   const popoverWidth = {
@@ -692,7 +769,7 @@ function DatePicker(props: DatePickerProps) {
     range: "w-[680px]",
     month: "w-[320px]",
     period: "w-[680px]",
-  }[mode]
+  }[mode];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -704,7 +781,18 @@ function DatePicker(props: DatePickerProps) {
           aria-invalid={error || undefined}
           aria-haspopup="dialog"
           aria-expanded={open}
-          aria-label={displayValue || `Sélectionner ${mode === "single" ? "une date" : mode === "range" ? "une plage de dates" : mode === "month" ? "un mois" : "une période"}`}
+          aria-label={
+            displayValue ||
+            `Sélectionner ${
+              mode === "single"
+                ? "une date"
+                : mode === "range"
+                ? "une plage de dates"
+                : mode === "month"
+                ? "un mois"
+                : "une période"
+            }`
+          }
           data-empty={isEmpty || undefined}
           className={cn(datePickerTriggerVariants({ size }), className)}
         >
@@ -722,7 +810,11 @@ function DatePicker(props: DatePickerProps) {
         </button>
       </PopoverTrigger>
 
-      <PopoverContent className={cn("p-0 z-[100]", popoverWidth)} align="start" sideOffset={4}>
+      <PopoverContent
+        className={cn("p-0 z-[100]", popoverWidth)}
+        align="start"
+        sideOffset={4}
+      >
         {mode === "single" && (
           <SingleDateContent
             value={props.value}
@@ -765,15 +857,17 @@ function DatePicker(props: DatePickerProps) {
 
         {showValidateButton && (
           <div className="flex justify-end px-4 pb-4">
-            <Button size="sm" onClick={() => setOpen(false)}>
+            <Button size="sm" onClick={() => {
+              onValidate?.();
+              setOpen(false);
+            }}>
               {validateButtonLabel}
             </Button>
           </div>
         )}
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
-export { DatePicker }
-export type { MonthYear }
+export { DatePicker };

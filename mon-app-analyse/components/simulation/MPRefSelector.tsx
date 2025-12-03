@@ -69,7 +69,7 @@ export function MPRefSelector({ mpId, currentCode, onReferenceChange }: MPRefSel
       </PopoverTrigger>
       <PopoverContent className="w-[350px] p-0 z-[70]" align="start" side="bottom">
         <Command>
-          <CommandInput placeholder="Rechercher une référence..." />
+          <CommandInput placeholder="Rechercher une référence..." className="!text-base" />
           <CommandList className="max-h-[250px]">
             <CommandEmpty>Aucune référence trouvée.</CommandEmpty>
             <CommandGroup>
@@ -78,7 +78,7 @@ export function MPRefSelector({ mpId, currentCode, onReferenceChange }: MPRefSel
                   key={ref.code}
                   value={`${ref.code} ${ref.label} ${ref.market}`}
                   onSelect={() => handleSelect(ref)}
-                  className="flex flex-col items-start py-2"
+                  className="flex flex-col items-start py-2 hover:bg-muted hover:text-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                 >
                   <div className="flex items-center w-full">
                     <Check
@@ -88,9 +88,9 @@ export function MPRefSelector({ mpId, currentCode, onReferenceChange }: MPRefSel
                       )}
                     />
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate">{ref.label}</span>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span className="font-mono font-semibold text-[#0970E6]">{ref.code}</span>
+                      <span className="!text-base truncate">{ref.label}</span>
+                      <div className="flex items-center gap-2 !text-sm text-muted-foreground">
+                        <span className="text-[#0970E6]">{ref.code}</span>
                         <span>•</span>
                         <span>{ref.market}</span>
                       </div>

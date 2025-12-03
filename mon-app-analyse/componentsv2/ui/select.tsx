@@ -191,9 +191,10 @@ function SelectLabel({
 }
 
 interface SelectItemProps
-  extends React.ComponentProps<typeof SelectPrimitive.Item>,
+  extends Omit<React.ComponentProps<typeof SelectPrimitive.Item>, 'children'>,
     VariantProps<typeof selectItemVariants>,
     Pick<ListItemContentProps, "control" | "startContent" | "endContent" | "description"> {
+  children?: React.ReactNode
   /** Show check indicator when selected (default: true) */
   showIndicator?: boolean
 }

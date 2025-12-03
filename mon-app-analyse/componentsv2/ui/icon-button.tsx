@@ -186,13 +186,13 @@ function IconButton({
 
   // Clone the icon to apply size classes
   const iconElement = React.isValidElement(children)
-    ? React.cloneElement(children as React.ReactElement<{ className?: string }>, {
+    ? React.cloneElement(children as React.ReactElement<{ className?: string; "aria-hidden"?: boolean }>, {
         className: cn(
           iconSize,
           "pointer-events-none",
           (children as React.ReactElement<{ className?: string }>).props.className
         ),
-        "aria-hidden": true,
+        "aria-hidden": true as const,
       })
     : children;
 

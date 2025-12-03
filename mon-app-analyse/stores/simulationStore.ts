@@ -1,6 +1,21 @@
 import { create } from 'zustand'
 
 /**
+ * Date limite des prix connus (novembre 2025 inclus)
+ * Les prix après cette date sont inconnus et doivent reprendre le dernier prix connu
+ */
+export const LAST_KNOWN_PRICE_DATE = { month: 10, year: 2025 } // Novembre 2025 (0-indexed)
+
+/**
+ * Vérifie si une date est après la date limite des prix connus
+ */
+export function isAfterKnownPriceDate(date: { month: number; year: number }): boolean {
+  if (date.year > LAST_KNOWN_PRICE_DATE.year) return true
+  if (date.year === LAST_KNOWN_PRICE_DATE.year && date.month > LAST_KNOWN_PRICE_DATE.month) return true
+  return false
+}
+
+/**
  * Types de découpage disponibles
  */
 export type DecoupageType = 'none' | '1month' | '3months' | '6months' | '1year'
@@ -307,9 +322,9 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   // Mise à jour du code et label référence dans les deux colonnes
   // Si priceFirst et priceLast sont fournis, met à jour les prix et recalcule l'évolution
-  // Met également à jour originalData pour que les % d'évolution soient réinitialisés à 0%
+  // Ne modifie que simulatedData pour permettre la réinitialisation aux valeurs originales
   updateMPReference: (id: string, newCode: string, newLabel: string, priceFirst?: number, priceLast?: number) => {
-    const { simulatedData, originalData } = get()
+    const { simulatedData } = get()
 
     const updateMPValue = (mp: MPValueItem) => {
       if (mp.id === id) {
@@ -327,17 +342,10 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     }
 
     set({
-      // Mettre à jour les données simulées
       simulatedData: {
         ...simulatedData,
         mpValues: simulatedData.mpValues.map(updateMPValue),
         mpVolumes: simulatedData.mpVolumes.map(updateMPVolume),
-      },
-      // Mettre à jour aussi les données originales pour réinitialiser les % d'évolution
-      originalData: {
-        ...originalData,
-        mpValues: originalData.mpValues.map(updateMPValue),
-        mpVolumes: originalData.mpVolumes.map(updateMPVolume),
       },
     })
   },
@@ -347,13 +355,20 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const { simulatedData } = get()
 
     // Fonction pour générer les prix intermédiaires
+    // Les prix sont connus jusqu'à novembre 2025, après on copie le dernier prix connu
     const generateIntermediatePrices = (priceFirst: number, priceLast: number): IntermediatePrice[] => {
       if (decoupage === 'none' || !period.from || !period.to) return []
 
       // Calculer le nombre de mois entre les deux dates
       const fromDate = new Date(period.from.year, period.from.month)
       const toDate = new Date(period.to.year, period.to.month)
-      const totalMonths = (toDate.getFullYear() - fromDate.getFullYear()) * 12 + (toDate.getMonth() - fromDate.getMonth())
+
+      // Date limite des prix connus (novembre 2025)
+      const lastKnownDate = new Date(LAST_KNOWN_PRICE_DATE.year, LAST_KNOWN_PRICE_DATE.month)
+
+      // Calculer les mois pour l'interpolation (jusqu'à la date limite ou la fin de période)
+      const interpolationEndDate = toDate <= lastKnownDate ? toDate : lastKnownDate
+      const totalKnownMonths = Math.max(0, (interpolationEndDate.getFullYear() - fromDate.getFullYear()) * 12 + (interpolationEndDate.getMonth() - fromDate.getMonth()))
 
       // Déterminer l'intervalle selon le découpage
       let intervalMonths = 1
@@ -364,17 +379,27 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       const prices: IntermediatePrice[] = []
       let currentDate = new Date(period.from.year, period.from.month)
       let periodIndex = 0
+      let lastKnownPrice = priceFirst
 
       while (currentDate <= toDate) {
-        // Calculer le prix interpolé linéairement
-        const monthsFromStart = (currentDate.getFullYear() - fromDate.getFullYear()) * 12 + (currentDate.getMonth() - fromDate.getMonth())
-        const ratio = totalMonths > 0 ? monthsFromStart / totalMonths : 0
-        const interpolatedPrice = priceFirst + (priceLast - priceFirst) * ratio
+        const currentDateObj = { month: currentDate.getMonth(), year: currentDate.getFullYear() }
+        let price: number
+
+        if (!isAfterKnownPriceDate(currentDateObj)) {
+          // Date connue: interpolation linéaire entre priceFirst et priceLast (jusqu'à la limite)
+          const monthsFromStart = (currentDate.getFullYear() - fromDate.getFullYear()) * 12 + (currentDate.getMonth() - fromDate.getMonth())
+          const ratio = totalKnownMonths > 0 ? Math.min(monthsFromStart / totalKnownMonths, 1) : 0
+          price = priceFirst + (priceLast - priceFirst) * ratio
+          lastKnownPrice = price
+        } else {
+          // Date future (après novembre 2025): copier le dernier prix connu
+          price = lastKnownPrice
+        }
 
         prices.push({
           periodIndex,
-          date: { month: currentDate.getMonth(), year: currentDate.getFullYear() },
-          price: Math.round(interpolatedPrice * 1000) / 1000
+          date: currentDateObj,
+          price: Math.round(price * 1000) / 1000
         })
 
         // Avancer à la prochaine période
@@ -403,17 +428,30 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   updateMPIntermediatePrice: (id: string, periodIndex: number, price: number) => {
     const { simulatedData } = get()
+    const roundedPrice = Math.round(price * 1000) / 1000
+
     const updatedMPValues = simulatedData.mpValues.map(mp => {
       if (mp.id === id && mp.intermediatePrices) {
-        const updatedPrices = mp.intermediatePrices.map(p =>
-          p.periodIndex === periodIndex ? { ...p, price: Math.round(price * 1000) / 1000 } : p
-        )
-        // Mettre à jour priceFirst et priceLast si c'est la première ou dernière période
+        // Propager le prix à toutes les périodes suivantes (palier de prix)
+        const updatedPrices = mp.intermediatePrices.map(p => {
+          if (p.periodIndex === periodIndex) {
+            // La période modifiée
+            return { ...p, price: roundedPrice }
+          } else if (p.periodIndex > periodIndex) {
+            // Les périodes suivantes : propager le nouveau prix
+            return { ...p, price: roundedPrice }
+          }
+          return p
+        })
+
+        // Mettre à jour priceFirst et priceLast
         let priceFirst = mp.priceFirst
         let priceLast = mp.priceLast
-        if (periodIndex === 0) priceFirst = price
-        if (periodIndex === updatedPrices.length - 1) priceLast = price
+        if (periodIndex === 0) priceFirst = roundedPrice
+        // priceLast est toujours le prix de la dernière période
+        priceLast = updatedPrices[updatedPrices.length - 1].price
         const evolution = priceFirst !== 0 ? ((priceLast - priceFirst) / priceFirst) * 100 : 0
+
         return { ...mp, intermediatePrices: updatedPrices, priceFirst, priceLast, evolution }
       }
       return mp
@@ -534,7 +572,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   updateEmballageReference: (id: string, newCode: string, newLabel: string, priceFirst?: number, priceLast?: number) => {
-    const { simulatedData, originalData } = get()
+    const { simulatedData } = get()
 
     const updateEmballageValue = (emb: MPValueItem) => {
       if (emb.id === id) {
@@ -557,11 +595,6 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
         emballageValues: simulatedData.emballageValues.map(updateEmballageValue),
         emballageVolumes: simulatedData.emballageVolumes.map(updateEmballageVolume),
       },
-      originalData: {
-        ...originalData,
-        emballageValues: originalData.emballageValues.map(updateEmballageValue),
-        emballageVolumes: originalData.emballageVolumes.map(updateEmballageVolume),
-      },
     })
   },
 
@@ -570,12 +603,19 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const { simulatedData } = get()
 
     // Fonction pour générer les prix intermédiaires
+    // Les prix sont connus jusqu'à novembre 2025, après on copie le dernier prix connu
     const generateIntermediatePrices = (priceFirst: number, priceLast: number): IntermediatePrice[] => {
       if (decoupage === 'none' || !period.from || !period.to) return []
 
       const fromDate = new Date(period.from.year, period.from.month)
       const toDate = new Date(period.to.year, period.to.month)
-      const totalMonths = (toDate.getFullYear() - fromDate.getFullYear()) * 12 + (toDate.getMonth() - fromDate.getMonth())
+
+      // Date limite des prix connus (novembre 2025)
+      const lastKnownDate = new Date(LAST_KNOWN_PRICE_DATE.year, LAST_KNOWN_PRICE_DATE.month)
+
+      // Calculer les mois pour l'interpolation (jusqu'à la date limite ou la fin de période)
+      const interpolationEndDate = toDate <= lastKnownDate ? toDate : lastKnownDate
+      const totalKnownMonths = Math.max(0, (interpolationEndDate.getFullYear() - fromDate.getFullYear()) * 12 + (interpolationEndDate.getMonth() - fromDate.getMonth()))
 
       let intervalMonths = 1
       if (decoupage === '3months') intervalMonths = 3
@@ -585,16 +625,27 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       const prices: IntermediatePrice[] = []
       let currentDate = new Date(period.from.year, period.from.month)
       let periodIndex = 0
+      let lastKnownPrice = priceFirst
 
       while (currentDate <= toDate) {
-        const monthsFromStart = (currentDate.getFullYear() - fromDate.getFullYear()) * 12 + (currentDate.getMonth() - fromDate.getMonth())
-        const ratio = totalMonths > 0 ? monthsFromStart / totalMonths : 0
-        const interpolatedPrice = priceFirst + (priceLast - priceFirst) * ratio
+        const currentDateObj = { month: currentDate.getMonth(), year: currentDate.getFullYear() }
+        let price: number
+
+        if (!isAfterKnownPriceDate(currentDateObj)) {
+          // Date connue: interpolation linéaire entre priceFirst et priceLast (jusqu'à la limite)
+          const monthsFromStart = (currentDate.getFullYear() - fromDate.getFullYear()) * 12 + (currentDate.getMonth() - fromDate.getMonth())
+          const ratio = totalKnownMonths > 0 ? Math.min(monthsFromStart / totalKnownMonths, 1) : 0
+          price = priceFirst + (priceLast - priceFirst) * ratio
+          lastKnownPrice = price
+        } else {
+          // Date future (après novembre 2025): copier le dernier prix connu
+          price = lastKnownPrice
+        }
 
         prices.push({
           periodIndex,
-          date: { month: currentDate.getMonth(), year: currentDate.getFullYear() },
-          price: Math.round(interpolatedPrice * 1000) / 1000
+          date: currentDateObj,
+          price: Math.round(price * 1000) / 1000
         })
 
         currentDate.setMonth(currentDate.getMonth() + intervalMonths)
@@ -622,16 +673,30 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   updateEmballageIntermediatePrice: (id: string, periodIndex: number, price: number) => {
     const { simulatedData } = get()
+    const roundedPrice = Math.round(price * 1000) / 1000
+
     const updatedEmballageValues = simulatedData.emballageValues.map(emb => {
       if (emb.id === id && emb.intermediatePrices) {
-        const updatedPrices = emb.intermediatePrices.map(p =>
-          p.periodIndex === periodIndex ? { ...p, price: Math.round(price * 1000) / 1000 } : p
-        )
+        // Propager le prix à toutes les périodes suivantes (palier de prix)
+        const updatedPrices = emb.intermediatePrices.map(p => {
+          if (p.periodIndex === periodIndex) {
+            // La période modifiée
+            return { ...p, price: roundedPrice }
+          } else if (p.periodIndex > periodIndex) {
+            // Les périodes suivantes : propager le nouveau prix
+            return { ...p, price: roundedPrice }
+          }
+          return p
+        })
+
+        // Mettre à jour priceFirst et priceLast
         let priceFirst = emb.priceFirst
         let priceLast = emb.priceLast
-        if (periodIndex === 0) priceFirst = price
-        if (periodIndex === updatedPrices.length - 1) priceLast = price
+        if (periodIndex === 0) priceFirst = roundedPrice
+        // priceLast est toujours le prix de la dernière période
+        priceLast = updatedPrices[updatedPrices.length - 1].price
         const evolution = priceFirst !== 0 ? ((priceLast - priceFirst) / priceFirst) * 100 : 0
+
         return { ...emb, intermediatePrices: updatedPrices, priceFirst, priceLast, evolution }
       }
       return emb

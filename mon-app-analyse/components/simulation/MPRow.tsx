@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Minus, Plus } from 'lucide-react'
+import { Minus, Plus, Trash2 } from 'lucide-react'
 import { IconButton } from '@/componentsv2/ui/icon-button'
 import { MPRefSelector } from './MPRefSelector'
 
@@ -291,6 +291,15 @@ export function MPRow({
             code && <span className="text-gray-500" style={{ fontSize: '14px' }}>{code}</span>
           )}
         </div>
+        <IconButton
+          variant="ghost"
+          size="xs"
+          aria-label="Supprimer"
+          onClick={onRemove}
+          className="text-primary hover:text-primary-hover"
+        >
+          <Trash2 className="h-4 w-4" />
+        </IconButton>
       </div>
 
       {/* Valeur principale */}

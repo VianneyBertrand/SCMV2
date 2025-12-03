@@ -242,7 +242,7 @@ export function Autocomplete({
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
         sideOffset={4}
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        onOpenAutoFocus={(e: Event) => e.preventDefault()}
       >
         <div
           ref={listRef}
