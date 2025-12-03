@@ -80,16 +80,19 @@ export function SimulationTag({ value, randomize = true, seed, isOpportunity = f
   // Normal: positif = rouge (mauvais), négatif = vert (bon)
   // Opportunité: positif = vert (bon), négatif = rouge (mauvais)
   let colorClass: string
+  let bgStyle: string
   if (isOpportunity) {
-    colorClass = isPositive ? 'border-green-600 text-green-600' : 'border-red-600 text-red-600'
+    colorClass = isPositive ? 'text-[#2C815E]' : 'text-red-600'
+    bgStyle = isPositive ? 'var(--reversed-positive)' : 'var(--reversed-negative)'
   } else {
-    colorClass = isPositive ? 'border-red-600 text-red-600' : 'border-green-600 text-green-600'
+    colorClass = isPositive ? 'text-red-600' : 'text-[#2C815E]'
+    bgStyle = isPositive ? 'var(--reversed-negative)' : 'var(--reversed-positive)'
   }
 
   return (
     <span
-      className={`inline-flex items-center px-1.5 rounded font-bold bg-white border ml-2 ${colorClass}`}
-      style={{ fontSize: '12px', height: '24px' }}
+      className={`inline-flex items-center rounded-2xl body-s-bold ml-2 ${colorClass}`}
+      style={{ backgroundColor: bgStyle, padding: '4px 8px' }}
     >
       {formattedValue}
     </span>

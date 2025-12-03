@@ -188,7 +188,7 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, typ
           <div>
             <p className="font-semibold mb-4">{label}</p>
             <div className="space-y-1">
-              <p>Répartition : {percentage} du CA théorique</p>
+              <p>Répartition : {percentage} du CA</p>
               <p>Valorisation : {valorisation || 'N/A'}</p>
               <p>Evolution : {evolution}</p>
               <p>Impact : {impact}</p>

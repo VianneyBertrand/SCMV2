@@ -161,7 +161,7 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
       </div>
 
       {/* Bouton Ajouter en bas */}
-      <div className="px-4 py-3 border-t border-gray-200 bg-white">
+      <div className="px-4 py-3 bg-white">
         <MPAddDropdown
           options={filteredOptions}
           onAdd={handleAdd}

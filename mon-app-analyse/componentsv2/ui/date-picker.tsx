@@ -118,6 +118,11 @@ export interface DatePickerMonthProps extends DatePickerBaseProps {
   maxDate?: MonthYear;
 }
 
+export interface QuickDateChip {
+  label: string;
+  date: MonthYear;
+}
+
 export interface DatePickerPeriodProps extends DatePickerBaseProps {
   mode: "period";
   value?: { from?: MonthYear; to?: MonthYear };
@@ -126,6 +131,8 @@ export interface DatePickerPeriodProps extends DatePickerBaseProps {
   ) => void;
   minDate?: MonthYear;
   maxDate?: MonthYear;
+  /** Quick select chips for the "from" date */
+  quickFromDates?: QuickDateChip[];
 }
 
 export type DatePickerProps =
@@ -579,6 +586,7 @@ interface PeriodPickerContentProps {
   ) => void;
   minDate?: MonthYear;
   maxDate?: MonthYear;
+  quickFromDates?: QuickDateChip[];
 }
 
 function PeriodPickerContent({
@@ -586,6 +594,7 @@ function PeriodPickerContent({
   onValueChange,
   minDate,
   maxDate,
+  quickFromDates,
 }: PeriodPickerContentProps) {
   const [displayedMonth1, setDisplayedMonth1] = React.useState<Date>(() => {
     if (value?.from) {
@@ -668,6 +677,26 @@ function PeriodPickerContent({
     [displayedMonth1]
   );
 
+  // Handler for quick date chip click
+  const handleQuickDateClick = React.useCallback(
+    (quickDate: MonthYear) => {
+      const newFromDate = createDate(quickDate.year, quickDate.month);
+      setDisplayedMonth1(newFromDate);
+
+      // If new "from" is after "to", adjust "to" to be same as "from"
+      let newMonth2 = displayedMonth2;
+      if (isDateAfter(newFromDate, displayedMonth2)) {
+        newMonth2 = newFromDate;
+        setDisplayedMonth2(newMonth2);
+      }
+
+      const from = { month: quickDate.month, year: quickDate.year };
+      const to = { month: newMonth2.getMonth(), year: newMonth2.getFullYear() };
+      onValueChangeRef.current?.({ from, to });
+    },
+    [displayedMonth2]
+  );
+
   return (
     <div className="p-4">
       <div className="grid grid-cols-2 gap-4">
@@ -682,6 +711,20 @@ function PeriodPickerContent({
           yearRange={yearRange}
         />
       </div>
+      {quickFromDates && quickFromDates.length > 0 && (
+        <div className="flex gap-2 mt-4">
+          {quickFromDates.map((chip, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => handleQuickDateClick(chip.date)}
+              className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-transparent text-foreground ring-1 ring-inset ring-neutral hover:ring-neutral-hover transition-colors"
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -852,6 +895,7 @@ function DatePicker(props: DatePickerProps) {
             onValueChange={handlePeriodSelect}
             minDate={props.minDate}
             maxDate={props.maxDate}
+            quickFromDates={props.quickFromDates}
           />
         )}
 

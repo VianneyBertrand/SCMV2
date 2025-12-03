@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react'
 import { X, Info } from 'lucide-react'
 import { Button as ButtonV2 } from '@/componentsv2/ui/button'
 import { IconButton } from '@/componentsv2/ui/icon-button'
-import { InlineField } from '@/componentsv2/ui/inline-field'
+import { Field, FieldLabel } from '@/componentsv2/ui/field'
 import { DatePicker, type MonthYear } from '@/componentsv2/ui/date-picker'
 import { SegmentedControl, SegmentedControlItem } from '@/componentsv2/ui/segmented-control'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/componentsv2/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/componentsv2/ui/tooltip'
 import { useSimulationStore, MPValueItem, MPVolumeItem } from '@/stores/simulationStore'
 import { usePeriodStore } from '@/stores/periodStore'
 import { MPValueColumn } from './MPValueColumn'
@@ -177,7 +177,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
         <div className="relative w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[85vh] pointer-events-auto">
           {/* Close button */}
           <IconButton
-            variant="ghost"
+            variant="ghost-accent"
             size="s"
             aria-label="Fermer"
             className="absolute top-4 right-4"
@@ -186,11 +186,12 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
             <X />
           </IconButton>
           {/* Header */}
-          <div className="px-8 pt-8 pb-6">
+          <div className="px-8 pt-8 pb-6 text-center">
             <h2 className="title-xs text-foreground">{getSimulationTitle(perimetre, label)}</h2>
           </div>
           <div className="px-8 pb-3">
-            <InlineField label="Période">
+            <div className="inline-flex flex-col gap-1">
+              <FieldLabel>Période de simulation</FieldLabel>
               <DatePicker
                 mode="period"
                 size="sm"
@@ -200,8 +201,9 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
                 minDate={{ month: 0, year: 2020 }}
                 maxDate={{ month: 0, year: 2028 }}
                 showValidateButton
+                quickFromDates={[{ label: "Décembre 2025", date: { month: 11, year: 2025 } }]}
               />
-            </InlineField>
+            </div>
           </div>
 
           {/* Colonnes */}
@@ -211,18 +213,16 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               <div className="px-4 mb-4">
                 <div className="flex items-center gap-2">
                   <h4 className="title-xs-regular text-foreground">
-                    {leftColumnType === 'emballage' ? 'Evolution du cours des emballages (top 20)' : 'Evolution du cours des MP (top 20)'}
+                    Simulation des cours
                   </h4>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{leftColumnType === 'emballage' ? 'Prix des emballages par période' : 'Prix des matières premières par période'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip delayDuration={700}>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="z-[70]">
+                      <p>{leftColumnType === 'emballage' ? 'Modifier les prix des emballages pour simuler leur impact sur les coûts' : 'Modifier les prix des matières premières pour simuler leur impact sur les coûts'}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
               <div className="px-4 mb-4">
@@ -247,18 +247,16 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
               <div className="px-4 mb-4">
                 <div className="flex items-center gap-2">
                   <h4 className="title-xs-regular text-foreground">
-                    {rightColumnType === 'emballage' ? 'Répartition en volume des emballages (top 20)' : 'Répartition en volume des MP (top 20)'}
+                    Simulation de la recette
                   </h4>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{rightColumnType === 'emballage' ? 'Répartition des emballages en volume' : 'Répartition des matières premières en volume'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip delayDuration={700}>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="z-[70]">
+                      <p>{rightColumnType === 'emballage' ? 'Ajuster la répartition des emballages dans la recette' : 'Ajuster la répartition des matières premières dans la recette'}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
               <div className="px-4 mb-4">
@@ -279,7 +277,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t border-gray-200 flex justify-between items-center rounded-b-lg">
+          <div className="px-4 py-3 flex justify-between items-center rounded-b-lg">
             <ButtonV2
               variant="outline"
               size="sm"

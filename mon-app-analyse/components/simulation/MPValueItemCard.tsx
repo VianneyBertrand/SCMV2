@@ -1,9 +1,6 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Minus, Plus } from 'lucide-react'
-import { IconButton } from '@/componentsv2/ui/icon-button'
 import {
   Select,
   SelectContent,
@@ -12,6 +9,7 @@ import {
   SelectValue,
 } from '@/componentsv2/ui/select'
 import { MPRefSelector } from './MPRefSelector'
+import { StepperInput } from './StepperInput'
 import { DecoupageType, IntermediatePrice } from '@/stores/simulationStore'
 
 interface MPValueItemCardProps {
@@ -68,7 +66,7 @@ function formatPeriodDate(date?: { month: number; year: number }) {
   return `01/${monthNames[date.month]}/${date.year}`
 }
 
-// Composant pour une ligne de prix
+// Composant pour une ligne de prix avec StepperInput
 function PriceLine({
   label,
   price,
@@ -82,77 +80,13 @@ function PriceLine({
   onPriceChange: (price: number) => void
   isFirst?: boolean
 }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const [isEditingEvolution, setIsEditingEvolution] = useState(false)
-  const [editEvolution, setEditEvolution] = useState('')
-  const evolutionInputRef = useRef<HTMLInputElement>(null)
-
   // Calculer l'évolution par rapport à la ligne précédente
   const evolution = previousPrice !== undefined && previousPrice > 0
     ? ((price - previousPrice) / previousPrice) * 100
     : 0
 
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
-    }
-  }, [isEditing])
-
-  useEffect(() => {
-    if (isEditingEvolution && evolutionInputRef.current) {
-      evolutionInputRef.current.focus()
-      evolutionInputRef.current.select()
-    }
-  }, [isEditingEvolution])
-
-  const handlePriceClick = () => {
-    setEditValue(price.toFixed(3))
-    setIsEditing(true)
-  }
-
-  const handlePriceBlur = () => {
-    const newValue = parseFloat(editValue)
-    if (!isNaN(newValue) && newValue >= 0) {
-      onPriceChange(newValue)
-    }
-    setIsEditing(false)
-  }
-
-  const handlePriceKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handlePriceBlur()
-    else if (e.key === 'Escape') setIsEditing(false)
-  }
-
-  const handleEvolutionClick = () => {
+  const handleEvolutionChange = (newEvolution: number) => {
     if (previousPrice !== undefined && previousPrice > 0) {
-      setEditEvolution(evolution.toFixed(2))
-      setIsEditingEvolution(true)
-    }
-  }
-
-  const handleEvolutionBlur = () => {
-    if (previousPrice !== undefined && previousPrice > 0) {
-      const newEvolution = parseFloat(editEvolution)
-      if (!isNaN(newEvolution)) {
-        const newPrice = previousPrice * (1 + newEvolution / 100)
-        onPriceChange(Math.max(0, newPrice))
-      }
-    }
-    setIsEditingEvolution(false)
-  }
-
-  const handleEvolutionKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleEvolutionBlur()
-    else if (e.key === 'Escape') setIsEditingEvolution(false)
-  }
-
-  const handleEvolutionChange = (delta: number) => {
-    if (previousPrice !== undefined && previousPrice > 0) {
-      const newEvolution = evolution + delta
       const newPrice = previousPrice * (1 + newEvolution / 100)
       onPriceChange(Math.max(0, newPrice))
     }
@@ -164,111 +98,35 @@ function PriceLine({
   }
 
   return (
-    <div className="flex items-center gap-1 mt-1">
-      <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>{label}</span>
+    <div className="flex items-center gap-2 mt-1">
+      <span className="text-gray-500 w-[110px]" style={{ fontSize: '14px' }}>{label}</span>
 
-      {/* Bouton - */}
-      <IconButton
-        variant="outline"
-        size="xs"
-        aria-label="Diminuer (Shift pour -1%)"
-        onClick={(e: React.MouseEvent) => {
-          if (e.shiftKey) {
-            onPriceChange(Math.max(0, price * 0.99))
-          } else {
-            onPriceChange(Math.max(0, price * 0.999))
-          }
-        }}
-      >
-        <Minus />
-      </IconButton>
-
-      {/* Input prix */}
-      {isEditing ? (
-        <input
-          ref={inputRef}
-          type="text"
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handlePriceBlur}
-          onKeyDown={handlePriceKeyDown}
-          className="h-8 w-28 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
-        />
-      ) : (
-        <div
-          className="h-8 w-28 px-2 text-sm font-semibold text-gray-900 text-center rounded border border-gray-300 flex items-center justify-center cursor-text hover:bg-gray-100"
-          onClick={handlePriceClick}
-        >
-          {price.toFixed(3)}€/kg
-        </div>
-      )}
-
-      {/* Bouton + */}
-      <IconButton
-        variant="outline"
-        size="xs"
-        aria-label="Augmenter (Shift pour +1%)"
-        onClick={(e: React.MouseEvent) => {
-          if (e.shiftKey) {
-            onPriceChange(price * 1.01)
-          } else {
-            onPriceChange(price * 1.001)
-          }
-        }}
-      >
-        <Plus />
-      </IconButton>
+      {/* StepperInput pour le prix */}
+      <StepperInput
+        value={`${price.toFixed(3)}€/kg`}
+        onChange={(newPrice) => onPriceChange(Math.max(0, newPrice))}
+        onIncrement={(shift) => onPriceChange(price + (shift ? 0.1 : 0.01))}
+        onDecrement={(shift) => onPriceChange(Math.max(0, price - (shift ? 0.1 : 0.01)))}
+        className="w-40"
+        min={0}
+      />
 
       {/* Évolution (seulement si pas la première ligne) */}
       {!isFirst && previousPrice !== undefined && (
-        <div className="flex items-center gap-1 ml-4">
-          <IconButton
-            variant="outline"
-            size="xs"
-            aria-label="Diminuer évolution (Shift pour -1%)"
-            onClick={(e: React.MouseEvent) => {
-              handleEvolutionChange(e.shiftKey ? -1 : -0.1)
-            }}
-          >
-            <Minus />
-          </IconButton>
-
-          {isEditingEvolution ? (
-            <input
-              ref={evolutionInputRef}
-              type="text"
-              value={editEvolution}
-              onChange={(e) => setEditEvolution(e.target.value)}
-              onBlur={handleEvolutionBlur}
-              onKeyDown={handleEvolutionKeyDown}
-              className="h-8 w-20 px-2 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
-            />
-          ) : (
-            <div
-              className={`h-8 w-20 px-2 text-sm font-semibold text-center rounded border border-gray-300 flex items-center justify-center cursor-text hover:bg-gray-100 ${
-                evolution === 0
-                  ? 'text-gray-500'
-                  : evolution > 0
-                    ? 'text-red-600'
-                    : 'text-green-600'
-              }`}
-              onClick={handleEvolutionClick}
-            >
-              {formatEvolution(evolution)}
-            </div>
-          )}
-
-          <IconButton
-            variant="outline"
-            size="xs"
-            aria-label="Augmenter évolution (Shift pour +1%)"
-            onClick={(e: React.MouseEvent) => {
-              handleEvolutionChange(e.shiftKey ? 1 : 0.1)
-            }}
-          >
-            <Plus />
-          </IconButton>
-        </div>
+        <StepperInput
+          value={formatEvolution(evolution)}
+          onChange={(newVal) => handleEvolutionChange(newVal)}
+          onIncrement={(shift) => handleEvolutionChange(evolution + (shift ? 1 : 0.1))}
+          onDecrement={(shift) => handleEvolutionChange(evolution - (shift ? 1 : 0.1))}
+          className="w-40 ml-2"
+          inputClassName={
+            evolution === 0
+              ? 'text-gray-500'
+              : evolution > 0
+                ? 'text-red-600'
+                : 'text-green-600'
+          }
+        />
       )}
     </div>
   )
@@ -343,7 +201,7 @@ export function MPValueItemCard({
 
   return (
     <div className="pt-2 pb-2 border-b border-gray-200 last:border-b-0 first:pt-0">
-      {/* Header: Label, Code, Découpage Select, et bouton X */}
+      {/* Header: Label, Code, Découpage Select */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex flex-col items-start flex-1">
           <span className="body-m-bold text-foreground">{label}</span>
@@ -358,7 +216,7 @@ export function MPValueItemCard({
           )}
         </div>
 
-        {/* Select découpage + bouton X */}
+        {/* Select découpage */}
         <div className="flex items-center gap-2">
           <Select
             value={decoupage}
@@ -393,8 +251,8 @@ export function MPValueItemCard({
 
         {/* Ligne évolution totale (seulement avec découpage) */}
         {hasDecoupage && (
-          <div className="flex items-center gap-1 mt-2">
-            <span className="text-gray-500 w-[110px] mr-4" style={{ fontSize: '14px' }}>Évolution totale</span>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-gray-500 w-[110px]" style={{ fontSize: '14px' }}>Évolution totale</span>
             <div
               className={`h-8 px-3 text-sm text-center rounded flex items-center justify-center font-bold ${
                 totalEvolution === 0
