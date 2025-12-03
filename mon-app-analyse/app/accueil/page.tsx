@@ -58,6 +58,7 @@ import {
   SelectValue as SelectValueV2,
 } from "@/componentsv2/ui/select"
 import { useEffect, useMemo, useState } from "react"
+import { useSimulationStore } from "@/stores/simulationStore"
 import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 import { useRestoredPageState } from "@/hooks/usePageState"
@@ -297,6 +298,7 @@ function OpportunityTable({ title, perimetre, items, activeFilters = {} }: Oppor
 
 export default function AccueilPage() {
   const router = useRouter()
+  const isSimulationMode = useSimulationStore((state) => state.isSimulationMode)
 
   // Restaurer l'état sauvegardé
   const restoredState = useRestoredPageState<AccueilPageState>('accueil');
@@ -647,17 +649,19 @@ export default function AccueilPage() {
             </SelectV2>
           </InlineField>
 
-          <InlineField label="Période">
-            <DatePickerV2
-              mode="period"
-              size="sm"
-              value={period}
-              onValueChange={setPeriod}
-              minDate={{ month: 0, year: 2018 }}
-              maxDate={{ month: 11, year: 2025 }}
-              showValidateButton
-            />
-          </InlineField>
+          {!isSimulationMode && (
+            <InlineField label="Période">
+              <DatePickerV2
+                mode="period"
+                size="sm"
+                value={period}
+                onValueChange={setPeriod}
+                minDate={{ month: 0, year: 2018 }}
+                maxDate={{ month: 11, year: 2025 }}
+                showValidateButton
+              />
+            </InlineField>
+          )}
         </div>
       </div>
 
@@ -1368,17 +1372,19 @@ export default function AccueilPage() {
               </div>
             </Card>
 
-            <InlineField label="Période">
-              <DatePickerV2
-                mode="period"
-                size="sm"
-                value={period}
-                onValueChange={setPeriod}
-                minDate={{ month: 0, year: 2018 }}
-                maxDate={{ month: 11, year: 2025 }}
-                showValidateButton
-              />
-            </InlineField>
+            {!isSimulationMode && (
+              <InlineField label="Période">
+                <DatePickerV2
+                  mode="period"
+                  size="sm"
+                  value={period}
+                  onValueChange={setPeriod}
+                  minDate={{ month: 0, year: 2018 }}
+                  maxDate={{ month: 11, year: 2025 }}
+                  showValidateButton
+                />
+              </InlineField>
+            )}
           </div>
         </div>
 

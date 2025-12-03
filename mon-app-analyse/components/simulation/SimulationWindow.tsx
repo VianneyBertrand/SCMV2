@@ -145,8 +145,8 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
       setShowPercentageDialog(true)
       return
     }
-    // Lancer la simulation avec le contexte (périmètre et label)
-    startSimulation(perimetre, label)
+    // Lancer la simulation avec le contexte (périmètre, label et périodes)
+    startSimulation(perimetre, label, period, globalPeriod)
   }
 
   const handleQuit = () => {

@@ -115,12 +115,43 @@ const EMBALLAGE_COLORS: Record<string, string> = {
   'Acier': '#00D2D3',
 }
 
+// Palette de couleurs pour les MP (couleurs chaudes/vives)
+const MP_COLOR_PALETTE = [
+  '#E91E63', '#F44336', '#FF5722', '#FF9800', '#FFC107',
+  '#FFEB3B', '#CDDC39', '#8BC34A', '#4CAF50', '#009688',
+  '#00BCD4', '#03A9F4', '#2196F3', '#3F51B5', '#673AB7',
+  '#9C27B0', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF',
+]
+
+// Palette de couleurs pour les emballages (couleurs froides/pastels)
+const EMBALLAGE_COLOR_PALETTE = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#F7B731', '#5F27CD',
+  '#00D2D3', '#FD79A8', '#A29BFE', '#6C5CE7', '#74B9FF',
+  '#81ECEC', '#55EFC4', '#FFEAA7', '#DFE6E9', '#B2BEC3',
+  '#636E72', '#2D3436', '#FF7675', '#FDCB6E', '#E17055',
+]
+
 // Fonction pour obtenir une couleur pour une clé donnée
 const getBarColor = (key: string, isEmballage: boolean = false): string => {
-  if (isEmballage) {
-    return EMBALLAGE_COLORS[key] || '#00BCD4'
+  // Vérifier d'abord les couleurs prédéfinies
+  if (isEmballage && EMBALLAGE_COLORS[key]) {
+    return EMBALLAGE_COLORS[key]
   }
-  return MP_COLORS[key] || '#E91E63'
+  if (!isEmballage && MP_COLORS[key]) {
+    return MP_COLORS[key]
+  }
+
+  // Générer un index basé sur le hash de la clé pour une couleur cohérente
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    const char = key.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+
+  const palette = isEmballage ? EMBALLAGE_COLOR_PALETTE : MP_COLOR_PALETTE
+  const index = Math.abs(hash) % palette.length
+  return palette[index]
 }
 
 // Composant HeatmapRect (copié depuis app/accueil/page.tsx)
@@ -712,29 +743,15 @@ function DetailContent() {
       return `01/${monthStr}/${date.year}`
     }
 
-    // Fonction pour détecter si un item a été modifié
-    const isModified = (simItem: any, origItem: any) => {
-      if (!origItem) return true
-      return simItem.priceFirst !== origItem.priceFirst ||
-             simItem.priceLast !== origItem.priceLast ||
-             (simItem.intermediatePrices && simItem.intermediatePrices.length > 0)
-    }
+    // Utiliser TOUS les MP (pas seulement les modifiés)
+    const allMPs = simulatedData.mpValues
 
-    // Filtrer les MP modifiées
-    const modifiedMPs = simulatedData.mpValues.filter(mp => {
-      const orig = originalData.mpValues.find(o => o.id === mp.id)
-      return isModified(mp, orig)
-    })
-
-    // Filtrer les Emballages modifiés
-    const modifiedEmballages = simulatedData.emballageValues.filter(emb => {
-      const orig = originalData.emballageValues.find(o => o.id === emb.id)
-      return isModified(emb, orig)
-    })
+    // Utiliser TOUS les Emballages (pas seulement les modifiés)
+    const allEmballages = simulatedData.emballageValues
 
     // Déterminer le nombre de périodes (basé sur le découpage le plus détaillé)
     let maxPeriods = 2 // Par défaut: première et dernière période
-    const allItems = [...modifiedMPs, ...modifiedEmballages]
+    const allItems = [...allMPs, ...allEmballages]
 
     // Trouver l'item avec le plus de périodes intermédiaires pour obtenir les dates
     let itemWithDates: any = null
@@ -775,8 +792,8 @@ function DetailContent() {
       let mpTotal = 0
       let emballageTotal = 0
 
-      // Ajouter les MP modifiées
-      modifiedMPs.forEach(mp => {
+      // Ajouter toutes les MP
+      allMPs.forEach(mp => {
         let price = 0
         if (mp.intermediatePrices && mp.intermediatePrices.length > 0) {
           const priceData = mp.intermediatePrices[i]
@@ -788,8 +805,8 @@ function DetailContent() {
         mpTotal += price || 0
       })
 
-      // Ajouter les Emballages modifiés
-      modifiedEmballages.forEach(emb => {
+      // Ajouter tous les Emballages
+      allEmballages.forEach(emb => {
         let price = 0
         if (emb.intermediatePrices && emb.intermediatePrices.length > 0) {
           const priceData = emb.intermediatePrices[i]
@@ -812,9 +829,9 @@ function DetailContent() {
     return {
       data: chartData,
       totalData: totalChartData,
-      mpKeys: modifiedMPs.map(mp => mp.label),
-      emballageKeys: modifiedEmballages.map(emb => emb.label),
-      hasData: modifiedMPs.length > 0 || modifiedEmballages.length > 0
+      mpKeys: allMPs.map(mp => mp.label),
+      emballageKeys: allEmballages.map(emb => emb.label),
+      hasData: allMPs.length > 0 || allEmballages.length > 0
     }
   }, [isSimulationMode, simulatedData, originalData, period])
 
@@ -1348,17 +1365,19 @@ function DetailContent() {
           )}
         </div>
 
-        <InlineField label="Période">
-          <DatePickerV2
-            mode="period"
-            size="sm"
-            value={period}
-            onValueChange={setPeriod}
-            minDate={{ month: 0, year: 2018 }}
-            maxDate={{ month: 11, year: 2025 }}
-            showValidateButton
-          />
-        </InlineField>
+        {!isSimulationMode && (
+          <InlineField label="Période">
+            <DatePickerV2
+              mode="period"
+              size="sm"
+              value={period}
+              onValueChange={setPeriod}
+              minDate={{ month: 0, year: 2018 }}
+              maxDate={{ month: 11, year: 2025 }}
+              showValidateButton
+            />
+          </InlineField>
+        )}
       </div>
 
       {/* Tabs */}

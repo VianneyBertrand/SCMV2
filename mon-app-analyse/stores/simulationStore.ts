@@ -66,6 +66,10 @@ interface SimulationState {
   currentPerimetre: string
   currentLabel: string
 
+  // Périodes de la simulation
+  simulationPeriod: { from?: { month: number; year: number }; to?: { month: number; year: number } } | null
+  referencePeriod: { from?: { month: number; year: number }; to?: { month: number; year: number } } | null
+
   // Données originales (copiées à l'ouverture, pour reset)
   originalData: {
     mpValues: MPValueItem[]
@@ -85,7 +89,7 @@ interface SimulationState {
   // Actions - Gestion de la fenêtre
   openWindow: (buttonPosition?: { top: number; left: number }) => void
   closeWindow: () => void
-  startSimulation: (perimetre?: string, label?: string) => void
+  startSimulation: (perimetre?: string, label?: string, simulationPeriod?: { from?: { month: number; year: number }; to?: { month: number; year: number } }, referencePeriod?: { from?: { month: number; year: number }; to?: { month: number; year: number } }) => void
   exitSimulation: () => void
   resetToOriginal: () => void
   setSimulationContext: (perimetre: string, label: string) => void
@@ -147,6 +151,8 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   buttonPosition: null,
   currentPerimetre: '',
   currentLabel: '',
+  simulationPeriod: null,
+  referencePeriod: null,
 
   originalData: {
     mpValues: [],
@@ -171,13 +177,15 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ isWindowOpen: false })
   },
 
-  startSimulation: (perimetre?: string, label?: string) => {
+  startSimulation: (perimetre?: string, label?: string, simulationPeriod?: { from?: { month: number; year: number }; to?: { month: number; year: number } }, referencePeriod?: { from?: { month: number; year: number }; to?: { month: number; year: number } }) => {
     const updates: Partial<SimulationState> = {
       isSimulationMode: true,
       isWindowOpen: false
     }
     if (perimetre) updates.currentPerimetre = perimetre
     if (label) updates.currentLabel = label
+    if (simulationPeriod) updates.simulationPeriod = simulationPeriod
+    if (referencePeriod) updates.referencePeriod = referencePeriod
     set(updates)
   },
 

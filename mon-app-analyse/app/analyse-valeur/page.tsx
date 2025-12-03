@@ -77,6 +77,7 @@ import {
 import { Autocomplete } from "@/componentsv2/ui/autocomplete";
 import { DatePicker as DatePickerV2 } from "@/componentsv2/ui/date-picker";
 import { usePeriodStore } from "@/stores/periodStore";
+import { useSimulationStore } from "@/stores/simulationStore";
 import {
   Pagination,
   PaginationContent,
@@ -183,6 +184,7 @@ const hasNonDisplayableFilters = (filters: Record<string, string>): boolean => {
 function AnalyseValeurContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isSimulationMode = useSimulationStore((state) => state.isSimulationMode);
 
   // Ref pour tracker les searchParams précédents et éviter les restaurations multiples
   const previousSearchParamsRef = useRef<string | null>(null);
@@ -1148,17 +1150,19 @@ function AnalyseValeurContent() {
         )}
 
         {/* Période */}
-        <InlineField label="Période">
-          <DatePickerV2
-            mode="period"
-            size="sm"
-            value={period}
-            onValueChange={setPeriod}
-            minDate={{ month: 0, year: 2018 }}
-            maxDate={{ month: 11, year: 2025 }}
-            showValidateButton
-          />
-        </InlineField>
+        {!isSimulationMode && (
+          <InlineField label="Période">
+            <DatePickerV2
+              mode="period"
+              size="sm"
+              value={period}
+              onValueChange={setPeriod}
+              minDate={{ month: 0, year: 2018 }}
+              maxDate={{ month: 11, year: 2025 }}
+              showValidateButton
+            />
+          </InlineField>
+        )}
 
         {/* Prix */}
         <InlineField label="Prix">

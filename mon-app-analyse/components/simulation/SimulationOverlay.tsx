@@ -18,6 +18,22 @@ export function SimulationOverlay() {
   const openWindow = useSimulationStore((state) => state.openWindow)
   const currentPerimetre = useSimulationStore((state) => state.currentPerimetre)
   const currentLabel = useSimulationStore((state) => state.currentLabel)
+  const simulationPeriod = useSimulationStore((state) => state.simulationPeriod)
+  const referencePeriod = useSimulationStore((state) => state.referencePeriod)
+
+  // Formater une période en texte lisible (format DD/MM/YYYY)
+  const formatPeriod = (period: { from?: { month: number; year: number }; to?: { month: number; year: number } } | null): string => {
+    if (!period) return ''
+    const formatDate = (date: { month: number; year: number }) => {
+      const day = '01'
+      const month = String(date.month + 1).padStart(2, '0')
+      return `${day}/${month}/${date.year}`
+    }
+    const fromStr = period.from ? formatDate(period.from) : ''
+    const toStr = period.to ? formatDate(period.to) : ''
+    if (fromStr && toStr) return `${fromStr} - ${toStr}`
+    return fromStr || toStr
+  }
 
   // État de la modale de confirmation
   const [showConfirmQuit, setShowConfirmQuit] = useState(false)
@@ -57,6 +73,16 @@ export function SimulationOverlay() {
             <span className="font-semibold tracking-wide">SIMULATION EN COURS</span>
             <span className="text-white/60">•</span>
             <span className="text-white/80">{currentLabel}</span>
+            {(simulationPeriod || referencePeriod) && (
+              <>
+                <span className="text-white/60">•</span>
+                <span className="text-white text-sm">
+                  {referencePeriod && <span>Période de référence : {formatPeriod(referencePeriod)}</span>}
+                  {referencePeriod && simulationPeriod && <span className="mx-3">|</span>}
+                  {simulationPeriod && <span>Période de simulation : {formatPeriod(simulationPeriod)}</span>}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Droite - Boutons */}
