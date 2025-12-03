@@ -58,25 +58,26 @@ export function MPAddDropdown({ options, onAdd, placeholder = "Rechercher une MP
           {buttonLabel}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-[70]" align="start" side="top">
+      <PopoverContent className="w-[350px] p-0 z-[70]" align="start" side="top">
         <Command>
-          <CommandInput placeholder={placeholder} />
-          <CommandList>
-            <CommandEmpty>Aucune matière première trouvée.</CommandEmpty>
+          <CommandInput placeholder={placeholder} className="!text-base" />
+          <CommandList className="max-h-[250px]">
+            <CommandEmpty>Aucun élément trouvé.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.id}
-                  value={option.id}
-                  onSelect={handleSelect}
+                  value={`${option.id} ${option.label}`}
+                  onSelect={() => handleSelect(option.id)}
+                  className="flex items-center py-2 hover:bg-muted hover:text-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "mr-2 h-4 w-4 flex-shrink-0 text-[#0970E6]",
                       value === option.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {option.label}
+                  <span className="!text-base">{option.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

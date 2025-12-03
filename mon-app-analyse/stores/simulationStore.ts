@@ -271,7 +271,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({
       simulatedData: {
         ...simulatedData,
-        mpValues: [...simulatedData.mpValues, mp],
+        mpValues: [mp, ...simulatedData.mpValues],
       }
     })
   },
@@ -305,7 +305,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({
       simulatedData: {
         ...simulatedData,
-        mpVolumes: [...simulatedData.mpVolumes, mp],
+        mpVolumes: [mp, ...simulatedData.mpVolumes],
       }
     })
   },
@@ -522,7 +522,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({
       simulatedData: {
         ...simulatedData,
-        emballageValues: [...simulatedData.emballageValues, emballage],
+        emballageValues: [emballage, ...simulatedData.emballageValues],
       }
     })
   },
@@ -556,7 +556,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({
       simulatedData: {
         ...simulatedData,
-        emballageVolumes: [...simulatedData.emballageVolumes, emballage],
+        emballageVolumes: [emballage, ...simulatedData.emballageVolumes],
       }
     })
   },

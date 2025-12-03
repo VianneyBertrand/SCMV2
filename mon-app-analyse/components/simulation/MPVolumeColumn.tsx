@@ -13,6 +13,39 @@ interface MPVolumeColumnProps {
   columnType?: 'mp' | 'emballage'
 }
 
+// Liste par défaut de MP disponibles à ajouter
+const DEFAULT_MP_LIST = [
+  { id: 'mp-saumon', label: 'Saumon' },
+  { id: 'mp-cabillaud', label: 'Cabillaud' },
+  { id: 'mp-thon', label: 'Thon' },
+  { id: 'mp-crevette', label: 'Crevette' },
+  { id: 'mp-lieu-noir', label: 'Lieu noir' },
+  { id: 'mp-colin', label: 'Colin' },
+  { id: 'mp-merlu', label: 'Merlu' },
+  { id: 'mp-sole', label: 'Sole' },
+  { id: 'mp-bar', label: 'Bar' },
+  { id: 'mp-dorade', label: 'Dorade' },
+  { id: 'mp-pomme-de-terre', label: 'Pomme de terre' },
+  { id: 'mp-carotte', label: 'Carotte' },
+  { id: 'mp-oignon', label: 'Oignon' },
+  { id: 'mp-tomate', label: 'Tomate' },
+  { id: 'mp-huile-olive', label: 'Huile d\'olive' },
+]
+
+// Liste par défaut d'emballages disponibles à ajouter
+const DEFAULT_EMBALLAGE_LIST = [
+  { id: 'emb-barquette-plastique', label: 'Barquette plastique' },
+  { id: 'emb-barquette-carton', label: 'Barquette carton' },
+  { id: 'emb-film-plastique', label: 'Film plastique' },
+  { id: 'emb-sachet-sous-vide', label: 'Sachet sous vide' },
+  { id: 'emb-boite-conserve', label: 'Boîte de conserve' },
+  { id: 'emb-bocal-verre', label: 'Bocal verre' },
+  { id: 'emb-etiquette', label: 'Étiquette' },
+  { id: 'emb-couvercle', label: 'Couvercle' },
+  { id: 'emb-carton-transport', label: 'Carton de transport' },
+  { id: 'emb-palette', label: 'Palette' },
+]
+
 /**
  * Colonne droite: MP/Emballage en Volume (%)
  * Reste identique quel que soit le type de période (defined ou future)
@@ -72,33 +105,49 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
     }
   }
 
+  // Générer des valeurs inventées pour un nouvel item
+  const generateInventedValues = () => {
+    const percentage = Math.round((Math.random() * 8 + 2) * 100) / 100 // Entre 2% et 10%
+    const priceFirst = Math.round((Math.random() * 4 + 1) * 1000) / 1000 // Entre 1 et 5 €/kg
+    const evolutionPercent = Math.round((Math.random() * 10 - 5) * 100) / 100 // Entre -5% et +5%
+    const priceLast = Math.round(priceFirst * (1 + evolutionPercent / 100) * 1000) / 1000
+    return { percentage, priceFirst, priceLast, evolution: evolutionPercent }
+  }
+
   // Ajouter un item dans les deux colonnes (gauche et droite)
   const handleAdd = (option: { id: string; label: string }) => {
+    const invented = generateInventedValues()
+
     // Ajouter dans la colonne droite (Volume)
     const volumeToAdd = availableOptions.find(item => item.id === option.id)
     if (volumeToAdd) {
-      addVolume(volumeToAdd)
+      // Utiliser les vraies données si disponibles, sinon valeurs inventées
+      addVolume({
+        ...volumeToAdd,
+        percentage: volumeToAdd.percentage || invented.percentage
+      })
     } else {
       addVolume({
         id: option.id,
         label: option.label,
         code: option.id,
-        percentage: 0
+        percentage: invented.percentage
       })
     }
 
     // Ajouter dans la colonne gauche (Valeur)
     const valueToAdd = availableMPValues.find(item => item.id === option.id)
     if (valueToAdd) {
+      // Utiliser les vraies données si disponibles
       addValue(valueToAdd)
     } else {
       addValue({
         id: option.id,
         label: option.label,
         code: option.id,
-        priceFirst: 0,
-        priceLast: 0,
-        evolution: 0
+        priceFirst: invented.priceFirst,
+        priceLast: invented.priceLast,
+        evolution: invented.evolution
       })
     }
   }
@@ -106,12 +155,19 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
   // Calculer le total des pourcentages
   const total = items.reduce((sum, item) => sum + item.percentage, 0)
 
-  // Combiner les deux listes pour le dropdown (union des items disponibles)
+  // Liste par défaut selon le type de colonne
+  const defaultList = isEmballage ? DEFAULT_EMBALLAGE_LIST : DEFAULT_MP_LIST
+
+  // Combiner les deux listes pour le dropdown (union des items disponibles + liste par défaut)
   const allAvailableItems = [
     ...availableOptions.map(opt => ({ id: opt.id, label: opt.label })),
     ...availableMPValues
       .filter(item => !availableOptions.some(opt => opt.id === item.id))
-      .map(item => ({ id: item.id, label: item.label }))
+      .map(item => ({ id: item.id, label: item.label })),
+    ...defaultList.filter(item =>
+      !availableOptions.some(opt => opt.id === item.id) &&
+      !availableMPValues.some(opt => opt.id === item.id)
+    )
   ]
 
   // Filtrer les options pour ne pas afficher celles déjà ajoutées

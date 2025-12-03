@@ -46,15 +46,18 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   // Récupérer la période globale du store (pour initialiser)
   const globalPeriod = usePeriodStore((state) => state.period)
 
+  // Récupérer isWindowOpen en premier pour l'utiliser dans le useEffect
+  const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
+
   // État local pour la période effective (utilisée par les colonnes)
   const [period, setPeriod] = useState<{ from?: MonthYear; to?: MonthYear } | undefined>(undefined)
 
   // État temporaire pour la période en cours de sélection dans le DatePicker
   const [pendingPeriod, setPendingPeriod] = useState<{ from?: MonthYear; to?: MonthYear } | undefined>(undefined)
 
-  // Initialiser les périodes avec la période globale au premier rendu
+  // Réinitialiser les périodes avec la période globale à chaque ouverture de la fenêtre
   useEffect(() => {
-    if (period === undefined) {
+    if (isWindowOpen) {
       const initialPeriod = {
         from: globalPeriod.from,
         to: globalPeriod.to
@@ -62,7 +65,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
       setPeriod(initialPeriod)
       setPendingPeriod(initialPeriod)
     }
-  }, [globalPeriod, period])
+  }, [isWindowOpen, globalPeriod])
 
   // Limite pour la période 1 (from) : pas après novembre 2025
   const maxFromDate: MonthYear = { month: 10, year: 2025 } // November 2025 (month is 0-indexed)
@@ -101,7 +104,6 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
   const [leftColumnType, setLeftColumnType] = useState<'mp' | 'emballage'>('mp')
   const [rightColumnType, setRightColumnType] = useState<'mp' | 'emballage'>('mp')
 
-  const isWindowOpen = useSimulationStore((state) => state.isWindowOpen)
   const isSimulationMode = useSimulationStore((state) => state.isSimulationMode)
   const closeWindow = useSimulationStore((state) => state.closeWindow)
   const startSimulation = useSimulationStore((state) => state.startSimulation)
@@ -186,12 +188,12 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
             <X />
           </IconButton>
           {/* Header */}
-          <div className="px-8 pt-8 pb-6 text-center">
+          <div className="px-8 pt-8 pb-8 text-center">
             <h2 className="title-xs text-foreground">{getSimulationTitle(perimetre, label)}</h2>
           </div>
-          <div className="px-8 pb-3">
-            <div className="inline-flex flex-col gap-1">
-              <FieldLabel>Période de simulation</FieldLabel>
+          <div className="px-8 pb-3 flex flex-row gap-4 items-end">
+            <Field className="w-auto">
+              <FieldLabel className="!body-s !text-accent-hover">Période de simulation</FieldLabel>
               <DatePicker
                 mode="period"
                 size="sm"
@@ -203,7 +205,17 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
                 showValidateButton
                 quickFromDates={[{ label: "Décembre 2025", date: { month: 11, year: 2025 } }]}
               />
-            </div>
+            </Field>
+            <Field className="w-auto">
+              <FieldLabel className="!body-s !text-accent-pressed">Période de référence</FieldLabel>
+              <DatePicker
+                mode="period"
+                size="sm"
+                value={globalPeriod}
+                disabled
+                className="bg-surface-secondary border-border pointer-events-none"
+              />
+            </Field>
           </div>
 
           {/* Colonnes */}
