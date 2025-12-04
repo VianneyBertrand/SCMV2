@@ -81,9 +81,10 @@ interface HeatmapRectProps {
   href?: string // Rendre href optionnel pour désactiver le clic
   totalPA?: string // PA total pour calculer la valorisation
   lastUpdate?: string // Date de dernière mise à jour
+  onClick?: () => void // Callback optionnel au clic
 }
 
-function HeatmapRect({ label, percentage, evolution, color, className, href, totalPA, lastUpdate }: HeatmapRectProps) {
+function HeatmapRect({ label, percentage, evolution, color, className, href, totalPA, lastUpdate, onClick }: HeatmapRectProps) {
   // Calculer la valorisation en euros
   const valorisation = useMemo(() => {
     if (!totalPA) return null
@@ -111,6 +112,13 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, tot
     </>
   )
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      e.preventDefault()
+      onClick()
+    }
+  }
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -118,10 +126,18 @@ function HeatmapRect({ label, percentage, evolution, color, className, href, tot
           {href ? (
             <Link
               href={href}
+              onClick={handleClick}
               className={`${color} ${className} p-2 flex flex-col items-center justify-center hover:opacity-90 transition-opacity cursor-pointer overflow-hidden`}
             >
               {content}
             </Link>
+          ) : onClick ? (
+            <div
+              onClick={handleClick}
+              className={`${color} ${className} p-2 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
+            >
+              {content}
+            </div>
           ) : (
             <div
               className={`${color} ${className} p-2 flex flex-col items-center justify-center overflow-hidden`}
@@ -615,9 +631,9 @@ export default function AccueilPage() {
   }, [])
 
   return (
-    <main className="w-full px-[60px] py-4 space-y-6">
+    <main className="w-full px-6 py-4 space-y-6">
       {/* Titre + Contrôles */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-3">
         <h1 className="text-[40px] font-bold">Accueil</h1>
 
         <div className="flex items-center gap-2">
@@ -627,7 +643,7 @@ export default function AccueilPage() {
                 <SelectValueV2 />
               </SelectTriggerV2>
               <SelectContentV2>
-                <SelectItemV2 value="tous">Tous</SelectItemV2>
+                <SelectItemV2 value="tous">Mon périmètre</SelectItemV2>
                 {portefeuilleOptions.map(portef => (
                   <SelectItemV2 key={portef} value={portef}>{portef}</SelectItemV2>
                 ))}
@@ -709,58 +725,42 @@ export default function AccueilPage() {
 
           return (
             <Card key={card.label} className="p-4 rounded shadow-none">
-              <div className="flex items-center gap-2 mb-3">
-                {hasMode || hasUnit ? (
-                  <div className="inline-flex items-center gap-2">
-                    <span className="text-sm font-medium">{card.label}</span>
-                    {hasUnit && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          card.onToggleUnit?.()
-                        }}
-                        className="px-1.5 py-0.5 text-[12px] font-bold bg-white text-foreground rounded border border-black hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
-                      >
-                        {card.unit} <SwitchIcon className="w-4 h-3.5 text-foreground" />
-                      </button>
-                    )}
-                    {hasMode && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          card.onToggleMode?.()
-                        }}
-                        className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
-                      >
-                        {card.mode} <SwitchIcon className="w-4 h-3.5" />
-                      </button>
-                    )}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="w-4 h-4 text-[#121212]" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{card.tooltip}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                ) : (
-                  <>
-                    <span className="text-sm font-medium">{card.label}</span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="w-4 h-4 text-[#121212]" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{card.tooltip}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </>
-                )}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">{card.label}</span>
+                <div className="flex items-center gap-2">
+                  {hasUnit && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        card.onToggleUnit?.()
+                      }}
+                      className="px-1.5 py-0.5 text-[12px] font-bold bg-white text-foreground rounded border border-black hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
+                    >
+                      {card.unit} <SwitchIcon className="w-4 h-3.5 text-foreground" />
+                    </button>
+                  )}
+                  {hasMode && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        card.onToggleMode?.()
+                      }}
+                      className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                    >
+                      {card.mode} <SwitchIcon className="w-4 h-3.5" />
+                    </button>
+                  )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-4 h-4 text-[#121212]" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{card.tooltip}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
               <div className="text-2xl font-bold mb-1 flex items-center">
                 {card.value}

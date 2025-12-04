@@ -65,7 +65,7 @@ export function SimulationOverlay() {
   return (
     <>
       {/* Banner de simulation */}
-      <div className="w-full px-[50px] py-3 bg-[#0970E6] text-white">
+      <div className="w-full px-6 py-3 bg-[#CC4010] text-white">
         <div className="flex items-center justify-between">
           {/* Gauche - Titre */}
           <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ export function SimulationOverlay() {
 
             <Button
               variant="outline"
-              className="px-4 py-2 text-sm bg-white text-[#0970E6] border-[#0970E6] hover:bg-blue-50 gap-1"
+              className="px-4 py-2 text-sm bg-white text-[#CC4010] border-[#CC4010] hover:bg-orange-50 gap-1"
               onClick={handleQuit}
             >
               <X className="h-4 w-4" />

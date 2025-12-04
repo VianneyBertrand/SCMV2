@@ -689,7 +689,7 @@ export default function CoursMatieresPremieres() {
   const fournisseurs = ["Labeyrie Fine Foods", "Picard Surgelés", "Lactalis Foodservice", "Fleury Michon", "Danone Professionnel", "Nestlé Professional", "Sysco France", "Transgourmet", "Metro Cash & Carry", "Brake France"];
 
   return (
-    <main className="w-full px-[50px] py-4">
+    <main className="w-full px-6 py-4">
       {/* Titre */}
       <div className="mb-8">
         <h1 className="text-[40px] font-bold">Cours des matières premières</h1>

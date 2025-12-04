@@ -1,5 +1,4 @@
-import { AppHeader } from "@/components/layout/app-header";
-import { SimulationOverlay } from "@/components/simulation/SimulationOverlay";
+import { LayoutWrapper } from "@/components/layout/layout-wrapper";
 import type { Metadata } from "next";
 import { Ubuntu } from "next/font/google";
 import "./globals.css";
@@ -19,9 +18,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={ubuntu.className}>
-        <AppHeader />
-        <SimulationOverlay />
-        {children}
+        <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
   );

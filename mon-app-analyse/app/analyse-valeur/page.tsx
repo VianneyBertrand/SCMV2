@@ -1040,11 +1040,11 @@ function AnalyseValeurContent() {
   }, [dataWithSubLevelCounts, perimetre, volumeUnit]);
 
   return (
-    <main className="w-full px-[50px] py-4">
+    <main className="w-full px-6 py-4">
       {/* Bouton retour */}
       <Button
         variant="ghost"
-        className="-ml-2 mb-2 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-current"
+        className="-ml-2 mb-0 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-current"
         onClick={handleBackNavigation}
         disabled={!canGoBack}
       >

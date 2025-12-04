@@ -1062,6 +1062,27 @@ function DetailContent() {
     })
   }, [])
 
+  // Données heatmap catégorie (pour page Pays)
+  const categorieHeatmapData = useMemo(() => {
+    const data = getPerimetreData("Catégorie")
+    const totalCA = data.reduce((sum, item) => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      return sum + caValue
+    }, 0)
+
+    return data.slice(0, 5).map(item => {
+      const caValue = parseFloat(item.ca.valeur.replace(/[^\d.,-]/g, "").replace(",", "."))
+      const percentage = ((caValue / totalCA) * 100).toFixed(2)
+
+      return {
+        label: item.label,
+        percentage: `${percentage}%`,
+        evolution: item.evoPa.evolution,
+        href: `/detail?perimetre=Catégorie&label=${encodeURIComponent(item.label)}`
+      }
+    })
+  }, [])
+
   // ============================================
   // FONCTIONS - Structure de coût
   // ============================================
@@ -1341,11 +1362,11 @@ function DetailContent() {
   }
 
   return (
-    <main className="w-full px-[50px] py-4 relative">
+    <main className="w-full px-6 py-4 relative">
       {/* Bouton Fermer */}
       <Button
         variant="ghost"
-        className="-ml-2 mb-2 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed"
+        className="-ml-2 mb-0 gap-2 text-sm hover:bg-transparent hover:text-accent-hover active:text-accent-pressed"
         onClick={() => router.back()}
       >
         <X className="h-4 w-4" />
@@ -1433,58 +1454,42 @@ function DetailContent() {
 
               return (
                 <Card key={card.label} className="p-4 rounded shadow-none">
-                  <div className="flex items-center gap-2 mb-3">
-                    {hasMode || hasUnit ? (
-                      <div className="inline-flex items-center gap-2">
-                        <span className="text-sm font-medium">{displayLabel}</span>
-                        {hasUnit && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              card.onToggleUnit?.()
-                            }}
-                            className="px-1.5 py-0.5 text-[12px] font-bold bg-white text-foreground rounded border border-foreground hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
-                          >
-                            {card.unit} <SwitchIcon className="w-4 h-3.5 text-foreground" />
-                          </button>
-                        )}
-                        {hasMode && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              card.onToggleMode?.()
-                            }}
-                            className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
-                          >
-                            {card.mode} <SwitchIcon className="w-4 h-3.5" />
-                          </button>
-                        )}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="w-4 h-4 text-[#121212]" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{card.tooltip}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">{displayLabel}</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="w-4 h-4 text-[#121212]" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{card.tooltip}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </>
-                    )}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">{displayLabel}</span>
+                    <div className="flex items-center gap-2">
+                      {hasUnit && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            card.onToggleUnit?.()
+                          }}
+                          className="px-1.5 py-0.5 text-[12px] font-bold bg-white text-foreground rounded border border-foreground hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
+                        >
+                          {card.unit} <SwitchIcon className="w-4 h-3.5 text-foreground" />
+                        </button>
+                      )}
+                      {hasMode && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            card.onToggleMode?.()
+                          }}
+                          className="px-1.5 py-0.5 text-[12px] font-bold bg-blue-50 text-blue-600 rounded border border-black hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                        >
+                          {card.mode} <SwitchIcon className="w-4 h-3.5" />
+                        </button>
+                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-4 h-4 text-[#121212]" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{card.tooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
                   <div className="text-2xl font-bold mb-1 flex items-center">
                     {card.value}
@@ -1521,7 +1526,7 @@ function DetailContent() {
 
                 return (
                   <Card key={card.label} className="p-4 rounded shadow-none">
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center justify-between mb-3">
                       <span className="text-sm font-medium">{card.label}</span>
                       <TooltipProvider>
                         <Tooltip>
@@ -1702,6 +1707,47 @@ function DetailContent() {
                       totalPA={currentItem.evoPa.valeur}
                       lastUpdate="12/11/25"
                     />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bloc - Répartition CA par catégorie (uniquement pour périmètre Pays) */}
+            {perimetre === "Pays" && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-[16px] font-medium">Répartition CA par catégorie</h2>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-4 h-4 text-[#121212]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Répartition du CA par catégorie</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+                    <Download className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
+                <div className="rounded overflow-hidden">
+                  <div className="flex gap-1 h-[300px]">
+                    {categorieHeatmapData.map((item, index) => (
+                      <HeatmapRect
+                        key={item.label}
+                        label={item.label}
+                        percentage={item.percentage}
+                        evolution={item.evolution}
+                        color={getColorFromEvolution(item.evolution)}
+                        className="flex-1 h-full"
+                        type="total"
+                        totalPA={currentItem.evoPa.valeur}
+                        lastUpdate="12/11/25"
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -3455,7 +3501,7 @@ function DetailContent() {
 
                   return (
                     <Card key={card.label} className="p-4 rounded shadow-none">
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-medium">{card.label}</span>
                         <TooltipProvider>
                           <Tooltip>
