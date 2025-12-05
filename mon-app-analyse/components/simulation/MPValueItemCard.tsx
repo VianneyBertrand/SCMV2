@@ -1,6 +1,8 @@
 // @ts-nocheck
 'use client'
 
+import { useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -151,6 +153,7 @@ export function MPValueItemCard({
   onIntermediatePriceChange,
   onRemove,
 }: MPValueItemCardProps) {
+  const [isExpanded, setIsExpanded] = useState(true)
   const availableOptions = getAvailableDecoupageOptions(period)
 
   // Déterminer les lignes de prix à afficher
@@ -201,8 +204,8 @@ export function MPValueItemCard({
 
   return (
     <div className="pt-2 pb-2 border-b border-gray-200 last:border-b-0 first:pt-0">
-      {/* Header: Label, Code, Découpage Select */}
-      <div className="flex items-start justify-between mb-6">
+      {/* Header: Label, Code, Découpage Select, Chevron */}
+      <div className={`flex items-start justify-between ${isExpanded ? 'mb-6' : ''}`}>
         <div className="flex flex-col items-start flex-1">
           <span className="body-m-bold text-foreground">{label}</span>
           {id && onReferenceChange ? (
@@ -216,7 +219,7 @@ export function MPValueItemCard({
           )}
         </div>
 
-        {/* Select découpage */}
+        {/* Select découpage + Chevron */}
         <div className="flex items-center gap-2">
           <Select
             value={decoupage}
@@ -233,40 +236,52 @@ export function MPValueItemCard({
               ))}
             </SelectContent>
           </Select>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Lignes de prix */}
-      <div className="space-y-1">
-        {priceLines.map((line, index) => (
-          <PriceLine
-            key={`${id}-${line.periodIndex}`}
-            label={`Prix ${formatPeriodDate(line.date)}`}
-            price={line.price}
-            previousPrice={line.previousPrice}
-            onPriceChange={(newPrice) => handlePriceChange(line.periodIndex, newPrice, decoupage === 'none' || intermediatePrices.length === 0)}
-            isFirst={line.isFirst}
-          />
-        ))}
+      {/* Lignes de prix (seulement si expanded) */}
+      {isExpanded && (
+        <div className="space-y-1">
+          {priceLines.map((line, index) => (
+            <PriceLine
+              key={`${id}-${line.periodIndex}`}
+              label={`Prix ${formatPeriodDate(line.date)}`}
+              price={line.price}
+              previousPrice={line.previousPrice}
+              onPriceChange={(newPrice) => handlePriceChange(line.periodIndex, newPrice, decoupage === 'none' || intermediatePrices.length === 0)}
+              isFirst={line.isFirst}
+            />
+          ))}
 
-        {/* Ligne évolution totale (seulement avec découpage) */}
-        {hasDecoupage && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-gray-500 w-[110px]" style={{ fontSize: '14px' }}>Évolution totale</span>
-            <div
-              className={`h-8 px-3 text-sm text-center rounded flex items-center justify-center font-bold ${
-                totalEvolution === 0
-                  ? 'text-gray-900'
-                  : totalEvolution > 0
-                    ? 'text-red-600'
-                    : 'text-green-600'
-              }`}
-            >
-              {totalEvolution >= 0 ? '+' : ''}{totalEvolution.toFixed(2)}%
+          {/* Ligne évolution totale (seulement avec découpage) */}
+          {hasDecoupage && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-gray-500 w-[110px]" style={{ fontSize: '14px' }}>Évolution totale</span>
+              <div
+                className={`h-8 px-3 text-sm text-center rounded flex items-center justify-center font-bold ${
+                  totalEvolution === 0
+                    ? 'text-gray-900'
+                    : totalEvolution > 0
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                }`}
+              >
+                {totalEvolution >= 0 ? '+' : ''}{totalEvolution.toFixed(2)}%
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

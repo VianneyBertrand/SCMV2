@@ -158,17 +158,20 @@ export function MPVolumeColumn({ availableOptions, availableMPValues, columnType
   // Liste par défaut selon le type de colonne
   const defaultList = isEmballage ? DEFAULT_EMBALLAGE_LIST : DEFAULT_MP_LIST
 
-  // Combiner les deux listes pour le dropdown (union des items disponibles + liste par défaut)
-  const allAvailableItems = [
-    ...availableOptions.map(opt => ({ id: opt.id, label: opt.label })),
-    ...availableMPValues
-      .filter(item => !availableOptions.some(opt => opt.id === item.id))
-      .map(item => ({ id: item.id, label: item.label })),
-    ...defaultList.filter(item =>
-      !availableOptions.some(opt => opt.id === item.id) &&
-      !availableMPValues.some(opt => opt.id === item.id)
-    )
-  ]
+  // Combiner les listes pour le dropdown selon le type de colonne
+  // En mode emballage, on ignore availableOptions car ce sont des MP
+  const allAvailableItems = isEmballage
+    ? [...defaultList]
+    : [
+        ...availableOptions.map(opt => ({ id: opt.id, label: opt.label })),
+        ...availableMPValues
+          .filter(item => !availableOptions.some(opt => opt.id === item.id))
+          .map(item => ({ id: item.id, label: item.label })),
+        ...defaultList.filter(item =>
+          !availableOptions.some(opt => opt.id === item.id) &&
+          !availableMPValues.some(opt => opt.id === item.id)
+        )
+      ]
 
   // Filtrer les options pour ne pas afficher celles déjà ajoutées
   const filteredOptions = allAvailableItems

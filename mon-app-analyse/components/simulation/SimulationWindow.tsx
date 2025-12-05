@@ -8,6 +8,7 @@ import { IconButton } from '@/componentsv2/ui/icon-button'
 import { Field, FieldLabel } from '@/componentsv2/ui/field'
 import { DatePicker, type MonthYear } from '@/componentsv2/ui/date-picker'
 import { SegmentedControl, SegmentedControlItem } from '@/componentsv2/ui/segmented-control'
+import { Tabs, TabsList, TabsTrigger } from '@/componentsv2/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/componentsv2/ui/tooltip'
 import { useSimulationStore, MPValueItem, MPVolumeItem } from '@/stores/simulationStore'
 import { usePeriodStore } from '@/stores/periodStore'
@@ -100,6 +101,9 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
     }
   }
 
+  // État pour le radio button (simulation des cours ou simulation de la recette)
+  const [activeColumn, setActiveColumn] = useState<'cours' | 'recette'>('cours')
+
   // États pour les SegmentedControls (MP ou Emballage) - un pour chaque colonne
   const [leftColumnType, setLeftColumnType] = useState<'mp' | 'emballage'>('mp')
   const [rightColumnType, setRightColumnType] = useState<'mp' | 'emballage'>('mp')
@@ -176,7 +180,7 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
 
       {/* Dialog centrée */}
       <div className="fixed inset-0 z-[65] flex items-center justify-center pointer-events-none">
-        <div className="relative w-[1300px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[85vh] pointer-events-auto">
+        <div className="relative w-[800px] bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col max-h-[90vh] pointer-events-auto">
           {/* Close button */}
           <IconButton
             variant="ghost-accent"
@@ -191,101 +195,84 @@ export function SimulationWindow({ availableMPValues, availableMPVolumes, perime
           <div className="px-8 pt-8 pb-8 text-center">
             <h2 className="title-xs text-foreground">{getSimulationTitle(perimetre, label)}</h2>
           </div>
-          <div className="px-8 pb-3 flex flex-row gap-4 items-end">
-            <Field className="w-auto">
-              <FieldLabel className="!body-s !text-accent-hover">Période de simulation</FieldLabel>
-              <DatePicker
-                mode="period"
-                size="sm"
-                value={pendingPeriod}
-                onValueChange={handlePeriodChange}
-                onValidate={handlePeriodValidate}
-                minDate={{ month: 0, year: 2020 }}
-                maxDate={{ month: 0, year: 2028 }}
-                showValidateButton
-                quickFromDates={[{ label: "Décembre 2025", date: { month: 11, year: 2025 } }]}
-              />
-            </Field>
-            <Field className="w-auto">
-              <FieldLabel className="!body-s !text-accent-pressed">Période de référence</FieldLabel>
-              <DatePicker
-                mode="period"
-                size="sm"
-                value={globalPeriod}
-                disabled
-                className="bg-surface-secondary border-border pointer-events-none"
-              />
-            </Field>
+          <div className="px-8 pb-3 flex flex-col gap-4">
+            <div className="flex flex-row gap-4 items-end">
+              <Field className="w-auto">
+                <FieldLabel className="!body-s !text-accent-hover">Période de simulation</FieldLabel>
+                <DatePicker
+                  mode="period"
+                  size="sm"
+                  value={pendingPeriod}
+                  onValueChange={handlePeriodChange}
+                  onValidate={handlePeriodValidate}
+                  minDate={{ month: 0, year: 2020 }}
+                  maxDate={{ month: 0, year: 2028 }}
+                  showValidateButton
+                  quickFromDates={[{ label: "Décembre 2025", date: { month: 11, year: 2025 } }]}
+                />
+              </Field>
+              <Field className="w-auto">
+                <FieldLabel className="!body-s !text-accent-pressed">Période de référence</FieldLabel>
+                <DatePicker
+                  mode="period"
+                  size="sm"
+                  value={globalPeriod}
+                  disabled
+                  className="bg-surface-secondary border-border pointer-events-none"
+                />
+              </Field>
+            </div>
+            {/* Tabs pour basculer entre les colonnes */}
+            <Tabs value={activeColumn} onValueChange={(v) => setActiveColumn(v as 'cours' | 'recette')}>
+              <TabsList className="border-b-0">
+                <TabsTrigger value="cours">Simulation des cours</TabsTrigger>
+                <TabsTrigger value="recette">Simulation de la recette</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {/* Colonnes */}
           <div className="flex gap-8 p-4 flex-1 overflow-hidden min-h-0">
-            {/* Colonne gauche */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="px-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <h4 className="title-xs-regular text-foreground">
-                    Simulation des cours
-                  </h4>
-                  <Tooltip delayDuration={700}>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent className="z-[70]">
-                      <p>{leftColumnType === 'emballage' ? 'Modifier les prix des emballages pour simuler leur impact sur les coûts' : 'Modifier les prix des matières premières pour simuler leur impact sur les coûts'}</p>
-                    </TooltipContent>
-                  </Tooltip>
+            {/* Colonne Simulation des cours */}
+            {activeColumn === 'cours' && (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="px-4 mb-4">
+                  <SegmentedControl
+                    value={leftColumnType}
+                    onValueChange={(v) => setLeftColumnType(v as 'mp' | 'emballage')}
+                  >
+                    <SegmentedControlItem value="mp">MP</SegmentedControlItem>
+                    <SegmentedControlItem value="emballage">Emballage</SegmentedControlItem>
+                  </SegmentedControl>
                 </div>
+                <MPValueColumn
+                  availableOptions={availableMPValues}
+                  period={period}
+                  resetKey={resetKey}
+                  columnType={leftColumnType}
+                />
               </div>
-              <div className="px-4 mb-4">
-                <SegmentedControl
-                  value={leftColumnType}
-                  onValueChange={(v) => setLeftColumnType(v as 'mp' | 'emballage')}
-                >
-                  <SegmentedControlItem value="mp">MP</SegmentedControlItem>
-                  <SegmentedControlItem value="emballage">Emballage</SegmentedControlItem>
-                </SegmentedControl>
-              </div>
-              <MPValueColumn
-                availableOptions={availableMPValues}
-                period={period}
-                resetKey={resetKey}
-                columnType={leftColumnType}
-              />
-            </div>
+            )}
 
-            {/* Colonne droite */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="px-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <h4 className="title-xs-regular text-foreground">
-                    Simulation de la recette
-                  </h4>
-                  <Tooltip delayDuration={700}>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent className="z-[70]">
-                      <p>{rightColumnType === 'emballage' ? 'Ajuster la répartition des emballages dans la recette' : 'Ajuster la répartition des matières premières dans la recette'}</p>
-                    </TooltipContent>
-                  </Tooltip>
+            {/* Colonne Simulation de la recette */}
+            {activeColumn === 'recette' && (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="px-4 mb-4">
+                  <SegmentedControl
+                    value={rightColumnType}
+                    onValueChange={(v) => setRightColumnType(v as 'mp' | 'emballage')}
+                  >
+                    <SegmentedControlItem value="mp">MP</SegmentedControlItem>
+                    <SegmentedControlItem value="emballage">Emballage</SegmentedControlItem>
+                  </SegmentedControl>
                 </div>
+                <MPVolumeColumn
+                  availableOptions={availableMPVolumes}
+                  availableMPValues={availableMPValues}
+                  columnType={rightColumnType}
+                />
               </div>
-              <div className="px-4 mb-4">
-                <SegmentedControl
-                  value={rightColumnType}
-                  onValueChange={(v) => setRightColumnType(v as 'mp' | 'emballage')}
-                >
-                  <SegmentedControlItem value="mp">MP</SegmentedControlItem>
-                  <SegmentedControlItem value="emballage">Emballage</SegmentedControlItem>
-                </SegmentedControl>
-              </div>
-              <MPVolumeColumn
-                availableOptions={availableMPVolumes}
-                availableMPValues={availableMPValues}
-                columnType={rightColumnType}
-              />
-            </div>
+            )}
           </div>
 
           {/* Footer */}
