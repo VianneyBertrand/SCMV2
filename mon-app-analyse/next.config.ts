@@ -2,12 +2,13 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.join(__dirname, '..'),
-
-  // Fix Turbopack workspace root detection
-  turbopack: {
-    root: path.join(__dirname, '..'),
-  },
+  // Only set workspace root paths when NOT on Vercel (avoids path duplication issue)
+  ...(process.env.VERCEL ? {} : {
+    outputFileTracingRoot: path.join(__dirname, '..'),
+    turbopack: {
+      root: path.join(__dirname, '..'),
+    },
+  }),
 
   // Transpile recharts packages for Next.js 15+ compatibility
   transpilePackages: ['recharts', 'recharts-scale', 'd3-scale', 'd3-shape'],
