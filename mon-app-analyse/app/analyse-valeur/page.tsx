@@ -78,6 +78,7 @@ import { Autocomplete } from "@/componentsv2/ui/autocomplete";
 import { DatePicker as DatePickerV2 } from "@/componentsv2/ui/date-picker";
 import { usePeriodStore } from "@/stores/periodStore";
 import { useSimulationStore } from "@/stores/simulationStore";
+import { usePvConcurrentStore, applyPvVariation } from "@/stores/pvConcurrentStore";
 import {
   Pagination,
   PaginationContent,
@@ -194,7 +195,7 @@ function AnalyseValeurContent() {
   const [perimetre, setPerimetre] = useState<PerimetreType>("Marché");
   const { period, setPeriod } = usePeriodStore();
   const [typePrix, setTypePrix] = useState<"Prix départ" | "Prix franco">("Prix départ");
-  const [pvConcurrent, setPvConcurrent] = useState<"PV Leclerc" | "PV Super U" | "PV Intermarché">("PV Leclerc");
+  const { pvConcurrent, setPvConcurrent } = usePvConcurrentStore();
 
   // States pour le combobox
   const [openRecherche, setOpenRecherche] = useState(false);
@@ -267,28 +268,6 @@ function AnalyseValeurContent() {
 
   // Hook pour gérer le toggle UVC/Tonne
   const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-analyse-valeur');
-
-  // Fonction pour appliquer une variation de +/-10% selon le concurrent sélectionné
-  const applyPvVariation = (value: string, concurrent: string): string => {
-    // Extraire le nombre de la chaîne (ex: "8.63€" -> 8.63)
-    const numMatch = value.match(/[\d.,]+/);
-    if (!numMatch) return value;
-
-    const num = parseFloat(numMatch[0].replace(',', '.'));
-    if (isNaN(num)) return value;
-
-    // Appliquer un facteur selon le concurrent (déterministe basé sur le concurrent)
-    let factor = 1;
-    if (concurrent === "PV Super U") {
-      factor = 1.05; // +5%
-    } else if (concurrent === "PV Intermarché") {
-      factor = 0.95; // -5%
-    }
-
-    const newNum = (num * factor).toFixed(2);
-    // Remplacer le nombre dans la chaîne originale
-    return value.replace(/[\d.,]+/, newNum);
-  };
 
   // Fonctions mode comparaison
   const generateElementId = (name: string, filters: Record<string, string>) => {

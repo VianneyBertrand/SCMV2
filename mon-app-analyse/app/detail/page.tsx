@@ -45,7 +45,15 @@ import { usePeriodMode } from "@/hooks/usePeriodMode"
 import { useVolumeUnit } from "@/hooks/useVolumeUnit"
 import { InlineField } from "@/componentsv2/ui/inline-field"
 import { DatePicker as DatePickerV2 } from "@/componentsv2/ui/date-picker"
+import {
+  Select as SelectV2,
+  SelectContent as SelectContentV2,
+  SelectItem as SelectItemV2,
+  SelectTrigger as SelectTriggerV2,
+  SelectValue as SelectValueV2,
+} from "@/componentsv2/ui/select"
 import { usePeriodStore } from "@/stores/periodStore"
+import { usePvConcurrentStore, applyPvVariation, getPvConcurrentAbbrev, getPvConcurrentFullName } from "@/stores/pvConcurrentStore"
 
 // Imports pour la simulation
 import { SimulationButton } from "@/components/simulation/SimulationButton"
@@ -287,6 +295,9 @@ function DetailContent() {
 
   // Mode période CAD/CAM pour les tableaux de structure de coût (colonne Volume)
   const { mode: volumeTableMode, toggleMode: toggleVolumeTableMode } = usePeriodMode('period-mode-volume-table-detail')
+
+  // Store PV concurrent (partagé avec analyse-valeur)
+  const { pvConcurrent, setPvConcurrent } = usePvConcurrentStore()
 
   // États pour Structure de coût
   const [costSubTab, setCostSubTab] = useState<'total' | 'mpa' | 'mpi'>('total')
@@ -970,21 +981,25 @@ function DetailContent() {
       })
     }
 
-    // PV LCL et Marge PV LCL
+    // PV Concurrent et Marge PV Concurrent (dynamique selon pvConcurrent)
     if (currentItem.pvLeclerc) {
+      const abbrev = getPvConcurrentAbbrev(pvConcurrent)
+      const fullName = getPvConcurrentFullName(pvConcurrent)
       cards.push({
-        label: "PV LCL",
-        value: currentItem.pvLeclerc.valeur,
-        evolution: currentItem.pvLeclerc.evolution,
-        tooltip: "Prix de vente Leclerc"
+        label: `PV ${abbrev}`,
+        value: applyPvVariation(currentItem.pvLeclerc.valeur, pvConcurrent),
+        evolution: applyPvVariation(currentItem.pvLeclerc.evolution, pvConcurrent),
+        tooltip: `Prix de vente ${fullName}`
       })
     }
     if (currentItem.margePvLcl) {
+      const abbrev = getPvConcurrentAbbrev(pvConcurrent)
+      const fullName = getPvConcurrentFullName(pvConcurrent)
       cards.push({
-        label: "Marge PV LCL",
-        value: currentItem.margePvLcl.valeur,
-        evolution: currentItem.margePvLcl.evolution,
-        tooltip: "Marge entre PV Leclerc et PA unitaire"
+        label: `Marge PV ${abbrev}`,
+        value: applyPvVariation(currentItem.margePvLcl.valeur, pvConcurrent),
+        evolution: applyPvVariation(currentItem.margePvLcl.evolution, pvConcurrent),
+        tooltip: `Marge entre PV ${fullName} et PA unitaire`
       })
     }
     if (currentItem.margeMoyenneCategorielle) {
@@ -997,7 +1012,7 @@ function DetailContent() {
     }
 
     return cards
-  }, [currentItem, perimetre])
+  }, [currentItem, perimetre, pvConcurrent])
 
   // Titre dynamique
   const pageTitle = useMemo(() => {
@@ -1260,14 +1275,15 @@ function DetailContent() {
     }
 
     if (perimetre === "Produit") {
+      const abbrev = getPvConcurrentAbbrev(pvConcurrent)
       result['PV'] = calculateEvolution(startData.PV, endData.PV)
-      result['PV LCL'] = calculateEvolution(startData['PV-LCL'], endData['PV-LCL'])
+      result[`PV ${abbrev}`] = calculateEvolution(startData['PV-LCL'], endData['PV-LCL'])
       result['Marge PV'] = calculateEvolution(startData['Marge-PV'], endData['Marge-PV'])
-      result['Marge PV LCL'] = calculateEvolution(startData['Marge-PV-LCL'], endData['Marge-PV-LCL'])
+      result[`Marge PV ${abbrev}`] = calculateEvolution(startData['Marge-PV-LCL'], endData['Marge-PV-LCL'])
     }
 
     return result
-  }, [evolutionDateRange, perimetre, evolutionBase100])
+  }, [evolutionDateRange, perimetre, evolutionBase100, pvConcurrent])
 
   // Données Evolution Prix - Tableau
   const getEvolutionTableData = () => {
@@ -1298,7 +1314,7 @@ function DetailContent() {
             values: baseData.map(d => evolutionBase100 ? d.PV.toFixed(1) : d.PV.toString())
           },
           {
-            label: 'PV LCL',
+            label: `PV ${getPvConcurrentAbbrev(pvConcurrent)}`,
             values: baseData.map(d => evolutionBase100 ? d['PV-LCL'].toFixed(1) : d['PV-LCL'].toString())
           },
           {
@@ -1306,7 +1322,7 @@ function DetailContent() {
             values: baseData.map(d => evolutionBase100 ? d['Marge-PV'].toFixed(1) : d['Marge-PV'].toString())
           },
           {
-            label: 'Marge PV LCL',
+            label: `Marge PV ${getPvConcurrentAbbrev(pvConcurrent)}`,
             values: baseData.map(d => evolutionBase100 ? d['Marge-PV-LCL'].toFixed(1) : d['Marge-PV-LCL'].toString())
           }
         ]
@@ -1386,19 +1402,40 @@ function DetailContent() {
           )}
         </div>
 
-        {!isSimulationMode && (
-          <InlineField label="Période">
-            <DatePickerV2
-              mode="period"
-              size="sm"
-              value={period}
-              onValueChange={setPeriod}
-              minDate={{ month: 0, year: 2018 }}
-              maxDate={{ month: 11, year: 2025 }}
-              showValidateButton
-            />
-          </InlineField>
-        )}
+        <div className="flex items-center gap-[8px]">
+          {/* PV Concurrent - uniquement pour périmètre Produit */}
+          {perimetre === "Produit" && (
+            <InlineField label="PV concurrent">
+              <SelectV2
+                value={pvConcurrent}
+                onValueChange={(value) => setPvConcurrent(value as "PV Leclerc" | "PV Super U" | "PV Intermarché")}
+              >
+                <SelectTriggerV2 size="sm" width="auto">
+                  <SelectValueV2 />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="PV Leclerc">PV Leclerc</SelectItemV2>
+                  <SelectItemV2 value="PV Super U">PV Super U</SelectItemV2>
+                  <SelectItemV2 value="PV Intermarché">PV Intermarché</SelectItemV2>
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
+          )}
+
+          {!isSimulationMode && (
+            <InlineField label="Période">
+              <DatePickerV2
+                mode="period"
+                size="sm"
+                value={period}
+                onValueChange={setPeriod}
+                minDate={{ month: 0, year: 2018 }}
+                maxDate={{ month: 11, year: 2025 }}
+                showValidateButton
+              />
+            </InlineField>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -1518,7 +1555,7 @@ function DetailContent() {
                 // Opportunité toujours en vert
                 const isOpportunity = card.label === "Opportunité"
                 // Logique inversée pour PA, PA théorique et marges
-                const isInversed = ["PA", "PA théorique", "Marge PV", "Marge PV LCL", "Marge moyenne catégorielle"].includes(card.label)
+                const isInversed = ["PA", "PA théorique", "Marge PV", `Marge PV ${getPvConcurrentAbbrev(pvConcurrent)}`, "Marge moyenne catégorielle"].includes(card.label)
 
                 let color = 'text-green-600'
                 if (isOpportunity) {
@@ -3321,7 +3358,7 @@ function DetailContent() {
                         onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'PV-LCL': !evolutionLegendOpacity['PV-LCL'] })}
                       >
                         <CurveIcon color="#FF9800" className="w-[30px] h-[14px]" />
-                        <span className="text-sm select-none">PV LCL</span>
+                        <span className="text-sm select-none">PV {getPvConcurrentAbbrev(pvConcurrent)}</span>
                       </div>
                       <div
                         className="flex items-center gap-2 cursor-pointer"
@@ -3337,7 +3374,7 @@ function DetailContent() {
                         onClick={() => setEvolutionLegendOpacity({ ...evolutionLegendOpacity, 'Marge-PV-LCL': !evolutionLegendOpacity['Marge-PV-LCL'] })}
                       >
                         <CurveIcon color="#00BCD4" className="w-[30px] h-[14px]" />
-                        <span className="text-sm select-none">Marge PV LCL</span>
+                        <span className="text-sm select-none">Marge PV {getPvConcurrentAbbrev(pvConcurrent)}</span>
                       </div>
                     </>
                   )}
@@ -3398,13 +3435,14 @@ function DetailContent() {
                         <YAxis tick={{ fontSize: 12 }} />
                         <RechartsTooltip
                           formatter={(value: number, name: string) => {
+                            const abbrev = getPvConcurrentAbbrev(pvConcurrent)
                             const labels: Record<string, string> = {
                               'PA': 'PA',
                               'cout-theorique': 'PA théorique',
                               'PV': 'PV',
-                              'PV-LCL': 'PV LCL',
+                              'PV-LCL': `PV ${abbrev}`,
                               'Marge-PV': 'Marge PV',
-                              'Marge-PV-LCL': 'Marge PV LCL'
+                              'Marge-PV-LCL': `Marge PV ${abbrev}`
                             }
                             return [value.toFixed(1), labels[name] || name]
                           }}
@@ -3495,11 +3533,11 @@ function DetailContent() {
               <div className={`grid grid-cols-1 gap-4 ${perimetre === "Produit" ? "md:grid-cols-6" : "md:grid-cols-2"}`}>
                 {(perimetre === "Produit" ? productCards : kpiCards).filter(card =>
                   perimetre === "Produit"
-                    ? ['PA', 'PA théorique', 'PV', 'PV LCL', 'Marge PV', 'Marge PV LCL'].includes(card.label)
+                    ? ['PA', 'PA théorique', 'PV', `PV ${getPvConcurrentAbbrev(pvConcurrent)}`, 'Marge PV', `Marge PV ${getPvConcurrentAbbrev(pvConcurrent)}`].includes(card.label)
                     : ['CA', 'CA théorique'].includes(card.label)
                 ).map(card => {
                   const isPositive = card.evolution?.startsWith('+')
-                  const isInversed = ["PA", "PA théorique", "CA", "CA théorique", "Marge PV", "Marge PV LCL"].includes(card.label)
+                  const isInversed = ["PA", "PA théorique", "CA", "CA théorique", "Marge PV", `Marge PV ${getPvConcurrentAbbrev(pvConcurrent)}`].includes(card.label)
                   const color = isInversed
                     ? (isPositive ? 'text-red-600' : 'text-green-600')
                     : (isPositive ? 'text-green-600' : 'text-red-600')
