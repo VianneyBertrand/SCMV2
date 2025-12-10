@@ -488,6 +488,8 @@ export default function CoursMatieresPremieres() {
   const [mpAlerts, setMpAlerts] = useState<Record<string, MPAlert>>({});
   // État pour le popover d'alerte ouvert (mpId ou null)
   const [openAlertPopover, setOpenAlertPopover] = useState<string | null>(null);
+  // État pour désactiver temporairement le tooltip alert après fermeture de la popover
+  const [alertTooltipDisabled, setAlertTooltipDisabled] = useState<string | null>(null);
   // État pour la confirmation de suppression de chip
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     open: boolean;
@@ -499,6 +501,7 @@ export default function CoursMatieresPremieres() {
   const handleAlertCreate = useCallback((mpId: string, config: MPAlertConfig) => {
     const newAlert = createAlert(mpId, config);
     setMpAlerts(prev => ({ ...prev, [mpId]: newAlert }));
+    toast.success("Alerte créée avec succès");
   }, []);
 
   const handleAlertUpdate = useCallback((mpId: string, config: MPAlertConfig) => {
@@ -514,14 +517,25 @@ export default function CoursMatieresPremieres() {
         },
       };
     });
+    toast.success("Alerte modifiée avec succès");
   }, []);
 
   const handleAlertDelete = useCallback((mpId: string) => {
+    const deletedAlert = mpAlerts[mpId];
     setMpAlerts(prev => {
       const { [mpId]: _, ...rest } = prev;
       return rest;
     });
-  }, []);
+    if (deletedAlert) {
+      toast("Alerte supprimée", {
+        action: {
+          label: "Annuler",
+          onClick: () => setMpAlerts(p => ({ ...p, [mpId]: deletedAlert })),
+        },
+        duration: 5000,
+      });
+    }
+  }, [mpAlerts]);
 
   const handleAlertToggle = useCallback((mpId: string, isActive: boolean) => {
     setMpAlerts(prev => {
@@ -1115,51 +1129,61 @@ export default function CoursMatieresPremieres() {
             const alert = mpAlerts[matiere.id] || null;
             const alertTooltip = alert ? formatAlertTooltip(alert) : "Créer une alerte";
             return (
-              <TooltipProvider key={matiere.id}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2 bg-white text-foreground px-3 py-1.5 rounded-full border border-neutral cursor-default">
+              <div key={matiere.id} className="flex items-center gap-2 bg-white text-foreground px-3 py-1.5 rounded-full border border-neutral cursor-default">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                       <span className="text-[14px] font-medium">{matiere.code} - {matiere.nom}</span>
-                      <AlertPopover
-                        mpId={matiere.id}
-                        mpLabel={`${matiere.code} - ${matiere.nom}`}
-                        alert={alert}
-                        open={openAlertPopover === matiere.id}
-                        onOpenChange={(open) => setOpenAlertPopover(open ? matiere.id : null)}
-                        onSave={(config) => {
-                          if (alert) {
-                            handleAlertUpdate(matiere.id, config);
-                          } else {
-                            handleAlertCreate(matiere.id, config);
-                          }
-                        }}
-                        onDelete={() => handleAlertDelete(matiere.id)}
-                        onToggleActive={(active) => handleAlertToggle(matiere.id, active)}
-                        defaultUnit={matiere.unite ? `€/${matiere.unite}` : "€/t"}
-                      >
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div>Unité: {matiere.unite}</div>
+                      <div>Pays destination: {matiere.paysDestination}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip open={openAlertPopover === matiere.id || alertTooltipDisabled === matiere.id ? false : undefined}>
+                    <AlertPopover
+                      mpId={matiere.id}
+                      mpLabel={`${matiere.code} - ${matiere.nom}`}
+                      alert={alert}
+                      open={openAlertPopover === matiere.id}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          setAlertTooltipDisabled(matiere.id);
+                        }
+                        setOpenAlertPopover(open ? matiere.id : null);
+                      }}
+                      onSave={(config) => {
+                        if (alert) {
+                          handleAlertUpdate(matiere.id, config);
+                        } else {
+                          handleAlertCreate(matiere.id, config);
+                        }
+                      }}
+                      onDelete={() => handleAlertDelete(matiere.id)}
+                      onToggleActive={(active) => handleAlertToggle(matiere.id, active)}
+                      defaultUnit={matiere.unite ? `€/${matiere.unite}` : "€/t"}
+                    >
+                      <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className={cn(
-                            "p-0.5 rounded-full transition-all duration-150",
-                            "hover:scale-110 hover:bg-gray-100",
-                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-                          )}
-                          title={alertTooltip}
+                          className="p-0.5 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 [&>svg]:transition-colors [&>svg]:duration-150 [&:hover>svg]:text-gray-600"
+                          onMouseLeave={() => setAlertTooltipDisabled(null)}
                         >
                           <AlertIcon alert={alert} />
                         </button>
-                      </AlertPopover>
-                      <button onClick={() => handleRequestRemoveMatiere(matiere)} className="text-primary hover:text-primary/80">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div>Unité: {matiere.unite}</div>
-                    <div>Pays destination: {matiere.paysDestination}</div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                      </TooltipTrigger>
+                    </AlertPopover>
+                    <TooltipContent>
+                      {alertTooltip}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <button onClick={() => handleRequestRemoveMatiere(matiere)} className="text-primary hover:text-primary/80">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             );
           })}
         </div>

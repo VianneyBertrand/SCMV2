@@ -111,7 +111,7 @@ export function AlertPopover({
             initialValues={alert.config}
             onSubmit={handleSave}
             onCancel={handleCancelEdit}
-            submitLabel="Enregistrer"
+            submitLabel="Modifier"
             defaultUnit={defaultUnit}
           />
         )}

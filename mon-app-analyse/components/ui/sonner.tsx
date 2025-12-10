@@ -18,6 +18,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           description: "group-[.toast]:text-muted-foreground",
           actionButton: cn(buttonVariants({ size: "sm" })),
           cancelButton: cn(buttonVariants({ variant: "outline", size: "sm" })),
+          success: "group-[.toaster]:[&>svg]:text-green-500",
         },
       }}
       {...props}
