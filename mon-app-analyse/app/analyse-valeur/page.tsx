@@ -194,6 +194,7 @@ function AnalyseValeurContent() {
   const [perimetre, setPerimetre] = useState<PerimetreType>("Marché");
   const { period, setPeriod } = usePeriodStore();
   const [typePrix, setTypePrix] = useState<"Prix départ" | "Prix franco">("Prix départ");
+  const [pvConcurrent, setPvConcurrent] = useState<"PV Leclerc" | "PV Super U" | "PV Intermarché">("PV Leclerc");
 
   // States pour le combobox
   const [openRecherche, setOpenRecherche] = useState(false);
@@ -266,6 +267,28 @@ function AnalyseValeurContent() {
 
   // Hook pour gérer le toggle UVC/Tonne
   const { unit: volumeUnit, toggleUnit: toggleVolumeUnit } = useVolumeUnit('volume-unit-analyse-valeur');
+
+  // Fonction pour appliquer une variation de +/-10% selon le concurrent sélectionné
+  const applyPvVariation = (value: string, concurrent: string): string => {
+    // Extraire le nombre de la chaîne (ex: "8.63€" -> 8.63)
+    const numMatch = value.match(/[\d.,]+/);
+    if (!numMatch) return value;
+
+    const num = parseFloat(numMatch[0].replace(',', '.'));
+    if (isNaN(num)) return value;
+
+    // Appliquer un facteur selon le concurrent (déterministe basé sur le concurrent)
+    let factor = 1;
+    if (concurrent === "PV Super U") {
+      factor = 1.05; // +5%
+    } else if (concurrent === "PV Intermarché") {
+      factor = 0.95; // -5%
+    }
+
+    const newNum = (num * factor).toFixed(2);
+    // Remplacer le nombre dans la chaîne originale
+    return value.replace(/[\d.,]+/, newNum);
+  };
 
   // Fonctions mode comparaison
   const generateElementId = (name: string, filters: Record<string, string>) => {
@@ -991,7 +1014,9 @@ function AnalyseValeurContent() {
     ];
 
     if (perimetre === "Produit") {
-      headers.push("PV", "PV LCL", "Marge PV LCL");
+      const pvLabel = pvConcurrent === "PV Leclerc" ? "PV LCL" : pvConcurrent === "PV Super U" ? "PV SU" : "PV ITM";
+      const margeLabel = pvConcurrent === "PV Leclerc" ? "Marge PV LCL" : pvConcurrent === "PV Super U" ? "Marge PV SU" : "Marge PV ITM";
+      headers.push("PV", pvLabel, margeLabel);
     }
 
     headers.push("Opportunité");
@@ -1010,8 +1035,8 @@ function AnalyseValeurContent() {
       if (perimetre === "Produit") {
         line.push(
           row.pv?.valeur || '',
-          row.pvLeclerc?.valeur || '',
-          row.margePvLcl?.valeur || ''
+          row.pvLeclerc?.valeur ? applyPvVariation(row.pvLeclerc.valeur, pvConcurrent) : '',
+          row.margePvLcl?.valeur ? applyPvVariation(row.margePvLcl.valeur, pvConcurrent) : ''
         );
       }
 
@@ -1176,6 +1201,23 @@ function AnalyseValeurContent() {
             <SelectContentV2>
               <SelectItemV2 value="Prix départ">Prix départ</SelectItemV2>
               <SelectItemV2 value="Prix franco">Prix franco</SelectItemV2>
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
+
+        {/* PV Concurrent */}
+        <InlineField label="PV concurrent">
+          <SelectV2
+            value={pvConcurrent}
+            onValueChange={(value) => setPvConcurrent(value as "PV Leclerc" | "PV Super U" | "PV Intermarché")}
+          >
+            <SelectTriggerV2 size="sm" width="auto">
+              <SelectValueV2 />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="PV Leclerc">PV Leclerc</SelectItemV2>
+              <SelectItemV2 value="PV Super U">PV Super U</SelectItemV2>
+              <SelectItemV2 value="PV Intermarché">PV Intermarché</SelectItemV2>
             </SelectContentV2>
           </SelectV2>
         </InlineField>
@@ -1889,12 +1931,14 @@ function AnalyseValeurContent() {
                     </TableHead>
                     <TableHead className="w-[180px]">
                       <div className="flex items-center gap-2">
-                        PV LCL
+                        {pvConcurrent === "PV Leclerc" ? "PV LCL" : pvConcurrent === "PV Super U" ? "PV SU" : "PV ITM"}
                         <Tooltip>
                           <TooltipTrigger>
                             <Info className="h-4 w-4 text-[#121212]" />
                           </TooltipTrigger>
-                          <TooltipContent>Prix de vente Leclerc</TooltipContent>
+                          <TooltipContent>
+                            {pvConcurrent === "PV Leclerc" ? "Prix de vente Leclerc" : pvConcurrent === "PV Super U" ? "Prix de vente Super U" : "Prix de vente Intermarché"}
+                          </TooltipContent>
                         </Tooltip>
                         <ChevronsUpDown
                           className="h-4 w-4 cursor-pointer text-[#121212]"
@@ -1904,13 +1948,13 @@ function AnalyseValeurContent() {
                     </TableHead>
                     <TableHead className="w-[180px]">
                       <div className="flex items-center gap-2">
-                        Marge PV LCL
+                        {pvConcurrent === "PV Leclerc" ? "Marge PV LCL" : pvConcurrent === "PV Super U" ? "Marge PV SU" : "Marge PV ITM"}
                         <Tooltip>
                           <TooltipTrigger>
                             <Info className="h-4 w-4 text-[#121212]" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            Marge entre PA et PV LCL
+                            {pvConcurrent === "PV Leclerc" ? "Marge entre PA et PV LCL" : pvConcurrent === "PV Super U" ? "Marge entre PA et PV SU" : "Marge entre PA et PV ITM"}
                           </TooltipContent>
                         </Tooltip>
                         <ChevronsUpDown
@@ -2154,45 +2198,45 @@ function AnalyseValeurContent() {
                         </TableCell>
                       )}
 
-                      {/* PV LCL */}
+                      {/* PV Concurrent */}
                       {perimetre === "Produit" && row.pvLeclerc && (
                         <TableCell>
                           <div className="flex flex-col">
                             <div className="font-medium flex items-center">
-                              {row.pvLeclerc.valeur}
+                              {applyPvVariation(row.pvLeclerc.valeur, pvConcurrent)}
                               <SimulationTag seed={`av-pvlcl-${row.id}`} />
                             </div>
                             <div
                               className={cn(
                                 "font-medium",
-                                row.pvLeclerc.evolution.startsWith("+")
+                                applyPvVariation(row.pvLeclerc.evolution, pvConcurrent).startsWith("+")
                                   ? "text-green-600"
                                   : "text-red-600"
                               )}
                             >
-                              {row.pvLeclerc.evolution}
+                              {applyPvVariation(row.pvLeclerc.evolution, pvConcurrent)}
                             </div>
                           </div>
                         </TableCell>
                       )}
 
-                      {/* Marge PV LCL */}
+                      {/* Marge PV Concurrent */}
                       {perimetre === "Produit" && row.margePvLcl && (
                         <TableCell>
                           <div className="flex flex-col">
                             <div className="font-medium flex items-center">
-                              {row.margePvLcl.valeur}
+                              {applyPvVariation(row.margePvLcl.valeur, pvConcurrent)}
                               <SimulationTag seed={`av-marge-${row.id}`} />
                             </div>
                             <div
                               className={cn(
                                 "font-medium",
-                                row.margePvLcl.evolution.startsWith("+")
+                                applyPvVariation(row.margePvLcl.evolution, pvConcurrent).startsWith("+")
                                   ? "text-green-600"
                                   : "text-red-600"
                               )}
                             >
-                              {row.margePvLcl.evolution}
+                              {applyPvVariation(row.margePvLcl.evolution, pvConcurrent)}
                             </div>
                           </div>
                         </TableCell>
