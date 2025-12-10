@@ -2,13 +2,20 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.join(__dirname),
+  outputFileTracingRoot: path.join(__dirname, '..'),
+
+  // Fix Turbopack workspace root detection
+  turbopack: {
+    root: path.join(__dirname, '..'),
+  },
+
+  // Transpile recharts packages for Next.js 15+ compatibility
+  transpilePackages: ['recharts', 'recharts-scale', 'd3-scale', 'd3-shape'],
 
   // Performance optimizations
   experimental: {
     // Optimize package imports to reduce bundle size
     optimizePackageImports: [
-      'recharts',
       'lucide-react',
       '@radix-ui/react-icons',
       '@radix-ui/react-popover',
@@ -26,13 +33,6 @@ const nextConfig: NextConfig = {
   compiler: {
     // Remove console.logs in production
     removeConsole: process.env.NODE_ENV === 'production',
-  },
-
-  // Reduce module resolution time
-  modularizeImports: {
-    'recharts': {
-      transform: 'recharts/es6/{{member}}',
-    },
   },
 };
 

@@ -1424,17 +1424,22 @@ function DetailContent() {
             <h2 className="text-[20px] font-medium">
               {getVueEnsembleTitle(perimetre, label)}
             </h2>
-            {navigationLinks.length > 0 && (
-              <div className="flex flex-wrap gap-3 justify-end">
-                {navigationLinks.map((link) => (
-                  <Link key={link.perimetre} href={link.href}>
-                    <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                      {link.count} {perimetreAbbreviations[link.perimetre]}
-                    </button>
-                  </Link>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {navigationLinks.length > 0 && (
+                <div className="flex flex-wrap gap-3 justify-end">
+                  {navigationLinks.map((link) => (
+                    <Link key={link.perimetre} href={link.href}>
+                      <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                        {link.count} {perimetreAbbreviations[link.perimetre]}
+                      </button>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+                <Download className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
           </div>
 
           {/* 6 Cards KPI de base */}

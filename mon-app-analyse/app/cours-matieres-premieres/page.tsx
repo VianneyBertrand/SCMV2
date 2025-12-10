@@ -55,6 +55,7 @@ import {
   SelectTrigger as SelectTriggerV2,
   SelectValue as SelectValueV2,
 } from "@/componentsv2/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/componentsv2/ui/tabs";
 import { usePeriodStore } from "@/stores/periodStore";
 
 // Lazy load Recharts components
@@ -92,6 +93,7 @@ interface MatierePremiere {
 interface CoursMatieresPageState {
   paysDestination: string;
   unite: string;
+  devise: string;
   categorie: string;
   groupeFamille: string;
   famille: string;
@@ -410,12 +412,19 @@ export default function CoursMatieresPremieres() {
   });
   const [paysDestination, setPaysDestination] = useState(restoredState?.paysDestination ?? "tous");
   const [unite, setUnite] = useState(restoredState?.unite ?? "tous");
+  const [devise, setDevise] = useState(restoredState?.devise ?? "Euro");
   const [categorie, setCategorie] = useState(restoredState?.categorie ?? "tous");
   const [groupeFamille, setGroupeFamille] = useState(restoredState?.groupeFamille ?? "tous");
   const [famille, setFamille] = useState(restoredState?.famille ?? "tous");
   const [sousFamille, setSousFamille] = useState(restoredState?.sousFamille ?? "tous");
   const [fournisseur, setFournisseur] = useState(restoredState?.fournisseur ?? "tous");
   const [portefeuille, setPortefeuille] = useState(restoredState?.portefeuille ?? "tous");
+
+  // État pour le tab de filtres (Carrefour / Mintech)
+  const [activeFilterTab, setActiveFilterTab] = useState<"carrefour" | "mintech">("carrefour");
+
+  // État pour les filtres Mintech
+  const [sousCategorie, setSousCategorie] = useState("tous");
 
   // États recherche et sélection
   const [searchTerm, setSearchTerm] = useState("");
@@ -584,6 +593,7 @@ export default function CoursMatieresPremieres() {
     const pageState: CoursMatieresPageState = {
       paysDestination,
       unite,
+      devise,
       categorie,
       groupeFamille,
       famille,
@@ -604,7 +614,7 @@ export default function CoursMatieresPremieres() {
         console.error('Erreur lors de la sauvegarde de l\'état:', error);
       }
     }
-  }, [paysDestination, unite, categorie, groupeFamille, famille, sousFamille, fournisseur, portefeuille, selectedMatieres, periodeGraphique, base100, base100Annuel, matiereSelectionneeAnnuelle]);
+  }, [paysDestination, unite, devise, categorie, groupeFamille, famille, sousFamille, fournisseur, portefeuille, selectedMatieres, periodeGraphique, base100, base100Annuel, matiereSelectionneeAnnuelle]);
 
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = useMemo(() => {
@@ -745,109 +755,176 @@ export default function CoursMatieresPremieres() {
             </SelectContentV2>
           </SelectV2>
         </InlineField>
+
+        {/* Devise */}
+        <InlineField label="Devise">
+          <SelectV2 value={devise} onValueChange={setDevise}>
+            <SelectTriggerV2 size="sm">
+              <SelectValueV2 placeholder="Euro" />
+            </SelectTriggerV2>
+            <SelectContentV2>
+              <SelectItemV2 value="Euro">Euro</SelectItemV2>
+              <SelectItemV2 value="USD">USD</SelectItemV2>
+            </SelectContentV2>
+          </SelectV2>
+        </InlineField>
       </div>
 
-      {/* FILTRES - Ligne 2 : Filtres hiérarchiques */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        {/* Catégorie */}
-        <InlineField label="Catégorie">
-          <SelectV2 value={categorie} onValueChange={(v) => { setCategorie(v); setGroupeFamille("tous"); setFamille("tous"); setSousFamille("tous"); }}>
-            <SelectTriggerV2 size="sm">
-              <SelectValueV2 placeholder="tous" />
-            </SelectTriggerV2>
-            <SelectContentV2>
-              <SelectItemV2 value="tous">tous</SelectItemV2>
-              {getFilteredOptions("categorie").map((option) => (
-                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
-              ))}
-            </SelectContentV2>
-          </SelectV2>
-        </InlineField>
+      {/* Tab Navigation Filtres */}
+      <Tabs value={activeFilterTab} onValueChange={(v) => setActiveFilterTab(v as "carrefour" | "mintech")} className="mb-4 gap-4">
+        <TabsList className="border-b-0">
+          <TabsTrigger value="carrefour">Filtres Carrefour</TabsTrigger>
+          <TabsTrigger value="mintech">Filtres Mintech</TabsTrigger>
+        </TabsList>
 
-        {/* Groupe Famille */}
-        <InlineField label="Groupe Famille">
-          <SelectV2 value={groupeFamille} onValueChange={(v) => { setGroupeFamille(v); setFamille("tous"); setSousFamille("tous"); }}>
-            <SelectTriggerV2 size="sm">
-              <SelectValueV2 placeholder="tous" />
-            </SelectTriggerV2>
-            <SelectContentV2>
-              <SelectItemV2 value="tous">tous</SelectItemV2>
-              {getFilteredOptions("groupeFamille").map((option) => (
-                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
-              ))}
-            </SelectContentV2>
-          </SelectV2>
-        </InlineField>
+        {/* Filtres Carrefour */}
+        <TabsContent value="carrefour">
+          <div className="flex flex-wrap gap-2">
+            {/* Catégorie */}
+            <InlineField label="Catégorie">
+              <SelectV2 value={categorie} onValueChange={(v) => { setCategorie(v); setGroupeFamille("tous"); setFamille("tous"); setSousFamille("tous"); }}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {getFilteredOptions("categorie").map((option) => (
+                    <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
 
-        {/* Famille */}
-        <InlineField label="Famille">
-          <SelectV2 value={famille} onValueChange={(v) => { setFamille(v); setSousFamille("tous"); }}>
-            <SelectTriggerV2 size="sm">
-              <SelectValueV2 placeholder="tous" />
-            </SelectTriggerV2>
-            <SelectContentV2>
-              <SelectItemV2 value="tous">tous</SelectItemV2>
-              {getFilteredOptions("famille").map((option) => (
-                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
-              ))}
-            </SelectContentV2>
-          </SelectV2>
-        </InlineField>
+            {/* Groupe Famille */}
+            <InlineField label="Groupe Famille">
+              <SelectV2 value={groupeFamille} onValueChange={(v) => { setGroupeFamille(v); setFamille("tous"); setSousFamille("tous"); }}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {getFilteredOptions("groupeFamille").map((option) => (
+                    <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
 
-        {/* Sous famille */}
-        <InlineField label="Sous famille">
-          <SelectV2 value={sousFamille} onValueChange={setSousFamille}>
-            <SelectTriggerV2 size="sm">
-              <SelectValueV2 placeholder="tous" />
-            </SelectTriggerV2>
-            <SelectContentV2>
-              <SelectItemV2 value="tous">tous</SelectItemV2>
-              {getFilteredOptions("sousFamille").map((option) => (
-                <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
-              ))}
-            </SelectContentV2>
-          </SelectV2>
-        </InlineField>
+            {/* Famille */}
+            <InlineField label="Famille">
+              <SelectV2 value={famille} onValueChange={(v) => { setFamille(v); setSousFamille("tous"); }}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {getFilteredOptions("famille").map((option) => (
+                    <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
 
-        {/* Fournisseur */}
-        <InlineField label="Fournisseur">
-          <SelectV2 value={fournisseur} onValueChange={setFournisseur}>
-            <SelectTriggerV2 size="sm">
-              <SelectValueV2 placeholder="tous" />
-            </SelectTriggerV2>
-            <SelectContentV2>
-              <SelectItemV2 value="tous">tous</SelectItemV2>
-              {fournisseurs.map((f) => (
-                <SelectItemV2 key={f} value={f}>{f}</SelectItemV2>
-              ))}
-            </SelectContentV2>
-          </SelectV2>
-        </InlineField>
+            {/* Sous famille */}
+            <InlineField label="Sous famille">
+              <SelectV2 value={sousFamille} onValueChange={setSousFamille}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {getFilteredOptions("sousFamille").map((option) => (
+                    <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
 
-        {/* Portefeuille */}
-        <InlineField label="Portefeuille">
-          <SelectV2 value={portefeuille} onValueChange={setPortefeuille}>
-            <SelectTriggerV2 size="sm">
-              <SelectValueV2 placeholder="tous" />
-            </SelectTriggerV2>
-            <SelectContentV2>
-              <SelectItemV2 value="tous">tous</SelectItemV2>
-              {PORTEFEUILLE_NAMES.map((nom) => (
-                <SelectItemV2 key={nom} value={nom}>{nom}</SelectItemV2>
-              ))}
-            </SelectContentV2>
-          </SelectV2>
-        </InlineField>
+            {/* Fournisseur */}
+            <InlineField label="Fournisseur">
+              <SelectV2 value={fournisseur} onValueChange={setFournisseur}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {fournisseurs.map((f) => (
+                    <SelectItemV2 key={f} value={f}>{f}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
 
-        {/* Bouton Réinitialiser */}
-        <ButtonV2
-          variant="outline"
-          onClick={handleResetFilters}
-          className={hasActiveFilters ? "" : "invisible"}
-        >
-          Réinitialiser
-        </ButtonV2>
-      </div>
+            {/* Portefeuille */}
+            <InlineField label="Portefeuille">
+              <SelectV2 value={portefeuille} onValueChange={setPortefeuille}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {PORTEFEUILLE_NAMES.map((nom) => (
+                    <SelectItemV2 key={nom} value={nom}>{nom}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
+
+            {/* Bouton Réinitialiser */}
+            <ButtonV2
+              variant="outline"
+              onClick={handleResetFilters}
+              className={hasActiveFilters ? "" : "invisible"}
+            >
+              Réinitialiser
+            </ButtonV2>
+          </div>
+        </TabsContent>
+
+        {/* Filtres Mintech */}
+        <TabsContent value="mintech">
+          <div className="flex flex-wrap gap-2">
+            {/* Catégorie (même contenu que Carrefour) */}
+            <InlineField label="Catégorie">
+              <SelectV2 value={categorie} onValueChange={(v) => { setCategorie(v); setSousCategorie("tous"); }}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {getFilteredOptions("categorie").map((option) => (
+                    <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
+
+            {/* Sous catégorie (contenu = Groupe Famille) */}
+            <InlineField label="Sous catégorie">
+              <SelectV2 value={sousCategorie} onValueChange={setSousCategorie}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  {getFilteredOptions("groupeFamille").map((option) => (
+                    <SelectItemV2 key={option} value={option}>{option}</SelectItemV2>
+                  ))}
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
+
+            {/* Bouton Réinitialiser */}
+            <ButtonV2
+              variant="outline"
+              onClick={() => { setCategorie("tous"); setSousCategorie("tous"); }}
+              className={(categorie !== "tous" || sousCategorie !== "tous") ? "" : "invisible"}
+            >
+              Réinitialiser
+            </ButtonV2>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Input recherche avec autocomplétion */}
       <div className="mt-4 mb-6">

@@ -682,24 +682,29 @@ export default function AccueilPage() {
       </div>
 
       {/* Titre et liens de navigation */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mt-6 mb-3">
         <h2 className="text-[20px] font-medium">
           {selectedPortefeuille === "tous"
             ? "Vue d'ensemble de votre portefeuille"
             : `Vue d'ensemble du portefeuille de ${selectedPortefeuille}`
           }
         </h2>
-        {navigationLinks.length > 0 && (
-          <div className="flex flex-wrap gap-3 justify-end">
-            {navigationLinks.map((link) => (
-              <Link key={link.perimetre} href={createAnalyseValeurLink(link.perimetre)}>
-                <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                  {link.count} {perimetreAbbreviations[link.perimetre]}
-                </button>
-              </Link>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {navigationLinks.length > 0 && (
+            <div className="flex flex-wrap gap-3 justify-end">
+              {navigationLinks.map((link) => (
+                <Link key={link.perimetre} href={createAnalyseValeurLink(link.perimetre)}>
+                  <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                    {link.count} {perimetreAbbreviations[link.perimetre]}
+                  </button>
+                </Link>
+              ))}
+            </div>
+          )}
+          <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Télécharger">
+            <Download className="w-4 h-4 text-gray-600" />
+          </button>
+        </div>
       </div>
 
       {/* 6 Cards KPI */}
