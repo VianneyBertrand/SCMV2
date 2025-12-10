@@ -1,4 +1,5 @@
 import { LayoutWrapper } from "@/components/layout/layout-wrapper";
+import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { Ubuntu } from "next/font/google";
 import "./globals.css";
@@ -19,6 +20,7 @@ export default function RootLayout({
     <html lang="fr">
       <body className={ubuntu.className}>
         <LayoutWrapper>{children}</LayoutWrapper>
+        <Toaster />
       </body>
     </html>
   );

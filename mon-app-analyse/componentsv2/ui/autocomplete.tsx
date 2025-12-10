@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { SearchIcon } from "lucide-react"
+import { SearchIcon, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"
 import { Input } from "./input"
@@ -84,6 +84,15 @@ export interface AutocompleteProps {
 
   /** Hide the default search icon */
   hideSearchIcon?: boolean
+
+  /** Clear input after selection (useful for multi-select with chips) */
+  clearOnSelect?: boolean
+
+  /** Selected values - used to show check icon for selected items */
+  selectedValues?: string[]
+
+  /** Show check icon for selected items (default: true if selectedValues is provided) */
+  showCheckIcon?: boolean
 }
 
 export function Autocomplete({
@@ -103,6 +112,9 @@ export function Autocomplete({
   startAddon,
   endAddon,
   hideSearchIcon = false,
+  clearOnSelect = false,
+  selectedValues,
+  showCheckIcon,
 }: AutocompleteProps) {
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState(value || "")
@@ -124,6 +136,10 @@ export function Autocomplete({
   // Filter options based on input
   const filteredOptions = React.useMemo(() => {
     if (inputValue.length < minChars) return []
+    // Si pas de texte de recherche, retourner toutes les options non désactivées
+    if (inputValue.length === 0) {
+      return normalizedOptions.filter((opt) => !opt.disabled)
+    }
     const search = inputValue.toLowerCase()
     return normalizedOptions.filter(
       (opt) =>
@@ -140,16 +156,21 @@ export function Autocomplete({
     const newValue = e.target.value
     setInputValue(newValue)
     onValueChange?.(newValue)
-    
+
+    // Ouvrir le popover si minChars est atteint (avec minChars=0, toujours ouvert)
     if (newValue.length >= minChars) {
       setOpen(true)
-    } else {
+    } else if (minChars > 0) {
       setOpen(false)
     }
   }
 
   const handleSelect = (option: AutocompleteOption) => {
-    setInputValue(option.label)
+    if (clearOnSelect) {
+      setInputValue("")
+    } else {
+      setInputValue(option.label)
+    }
     onValueChange?.(option.value)
     setOpen(false)
   }
@@ -207,21 +228,22 @@ export function Autocomplete({
     "aria-autocomplete": "list" as const,
     "aria-expanded": open,
     "aria-haspopup": "listbox" as const,
-    onFocus: () => {
-      if (inputValue.length >= minChars && filteredOptions.length > 0) {
-        setOpen(true)
-      }
-    },
-    onBlur: () => {
-      // Delay to allow click on options
-      setTimeout(() => setOpen(false), 150)
-    },
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(isOpen) => {
+      // Ne fermer que si c'est une demande de fermeture (pas d'ouverture via trigger)
+      if (!isOpen) {
+        setOpen(false)
+      }
+    }}>
       <PopoverTrigger asChild>
-        <div className={cn("relative w-full", className)}>
+        <div className={cn("relative w-full", className)} onClick={() => {
+          // Ouvrir au clic si minChars est atteint
+          if (inputValue.length >= minChars) {
+            setOpen(true)
+          }
+        }}>
           {hasAddons ? (
             <InputGroup size={size}>
               {startAddon && (
@@ -264,7 +286,7 @@ export function Autocomplete({
                   aria-selected={isHighlighted}
                   data-highlighted={isHighlighted || undefined}
                   className={cn(
-                    "flex items-center rounded-sm px-3 cursor-pointer",
+                    "flex items-center justify-between rounded-sm px-3 cursor-pointer",
                     "hover:bg-muted",
                     isHighlighted && "bg-muted",
                     itemSize === "sm" && "min-h-10 py-2",
@@ -274,12 +296,17 @@ export function Autocomplete({
                   onClick={() => handleSelect(option)}
                   onMouseEnter={() => setHighlightedIndex(index)}
                 >
-                  {renderItem ? (
-                    renderItem(option, { highlighted: isHighlighted })
-                  ) : (
-                    <ListItemContent size={itemSize}>
-                      {option.label}
-                    </ListItemContent>
+                  <div className="flex items-center flex-1 text-foreground">
+                    {renderItem ? (
+                      renderItem(option, { highlighted: isHighlighted })
+                    ) : (
+                      <ListItemContent size={itemSize}>
+                        {option.label}
+                      </ListItemContent>
+                    )}
+                  </div>
+                  {(showCheckIcon ?? !!selectedValues) && selectedValues?.includes(option.value) && (
+                    <Check className="h-4 w-4 text-primary ml-2 shrink-0" />
                   )}
                 </div>
               )

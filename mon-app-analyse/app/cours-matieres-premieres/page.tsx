@@ -40,7 +40,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { PORTEFEUILLE_NAMES } from "@/lib/constants/portefeuilles";
-import { Download, Search, X, CalendarIcon, Check, ChevronDown as ChevronDownIcon, Info, ChevronsUpDown, RotateCcw } from "lucide-react";
+import { Download, Search, X, CalendarIcon, ChevronDown as ChevronDownIcon, Info, ChevronsUpDown, RotateCcw } from "lucide-react";
 import { CurveIcon } from "@/components/ui/curve-icon";
 import dynamic from 'next/dynamic';
 import { useRestoredPageState } from "@/hooks/usePageState";
@@ -57,6 +57,20 @@ import {
 } from "@/componentsv2/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/componentsv2/ui/tabs";
 import { usePeriodStore } from "@/stores/periodStore";
+import type { MPAlert, MPAlertConfig } from "@/types/mp-alerts";
+import { AlertIcon, AlertPopover } from "@/components/mp-alerts";
+import { createAlert, formatAlertTooltip } from "@/lib/alert-utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 // Lazy load Recharts components
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false });
@@ -398,27 +412,33 @@ const years = [
 const matiereColors = ["#E91E63", "#607D8B", "#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#00BCD4", "#8BC34A", "#FF5722", "#795548", "#607D8B", "#3F51B5"];
 
 export default function CoursMatieresPremieres() {
-  // Restaurer l'état sauvegardé
+  // État pour gérer l'hydratation côté client
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Restaurer l'état sauvegardé (seulement après le montage côté client)
   const restoredState = useRestoredPageState<CoursMatieresPageState>('cours-matieres');
 
   // Period store (partagé avec les autres pages)
   const period = usePeriodStore((state) => state.period);
   const setPeriod = usePeriodStore((state) => state.setPeriod);
 
+  // Valeurs par défaut (utilisées côté serveur et au premier rendu client)
+  const defaultSelectedMatieres = [matieresPremieres[0], matieresPremieres[4]];
+
   // États filtres
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(2024, 11, 11),
     to: new Date(2024, 11, 14),
   });
-  const [paysDestination, setPaysDestination] = useState(restoredState?.paysDestination ?? "tous");
-  const [unite, setUnite] = useState(restoredState?.unite ?? "tous");
-  const [devise, setDevise] = useState(restoredState?.devise ?? "Euro");
-  const [categorie, setCategorie] = useState(restoredState?.categorie ?? "tous");
-  const [groupeFamille, setGroupeFamille] = useState(restoredState?.groupeFamille ?? "tous");
-  const [famille, setFamille] = useState(restoredState?.famille ?? "tous");
-  const [sousFamille, setSousFamille] = useState(restoredState?.sousFamille ?? "tous");
-  const [fournisseur, setFournisseur] = useState(restoredState?.fournisseur ?? "tous");
-  const [portefeuille, setPortefeuille] = useState(restoredState?.portefeuille ?? "tous");
+  const [paysDestination, setPaysDestination] = useState("tous");
+  const [unite, setUnite] = useState("tous");
+  const [devise, setDevise] = useState("Euro");
+  const [categorie, setCategorie] = useState("tous");
+  const [groupeFamille, setGroupeFamille] = useState("tous");
+  const [famille, setFamille] = useState("tous");
+  const [sousFamille, setSousFamille] = useState("tous");
+  const [fournisseur, setFournisseur] = useState("tous");
+  const [portefeuille, setPortefeuille] = useState("tous");
 
   // État pour le tab de filtres (Carrefour / Mintech)
   const [activeFilterTab, setActiveFilterTab] = useState<"carrefour" | "mintech">("carrefour");
@@ -428,25 +448,95 @@ export default function CoursMatieresPremieres() {
 
   // États recherche et sélection
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMatieres, setSelectedMatieres] = useState<MatierePremiere[]>(
-    restoredState?.selectedMatieres ?? [
-      matieresPremieres[0],
-      matieresPremieres[4],
-    ]
-  );
+  const [selectedMatieres, setSelectedMatieres] = useState<MatierePremiere[]>(defaultSelectedMatieres);
 
   // États graphiques
-  const [periodeGraphique, setPeriodeGraphique] = useState<"mois" | "semaine" | "jour">(restoredState?.periodeGraphique ?? "mois");
-  const [base100, setBase100] = useState(restoredState?.base100 ?? false);
+  const [periodeGraphique, setPeriodeGraphique] = useState<"mois" | "semaine" | "jour">("mois");
+  const [base100, setBase100] = useState(false);
   const [evolutionDateRange, setEvolutionDateRange] = useState([0, 100]);
   const [legendOpacityEvolution, setLegendOpacityEvolution] = useState<Record<string, boolean>>({});
 
   const [periodeAnnuelle, setPeriodeAnnuelle] = useState("mois");
-  const [base100Annuel, setBase100Annuel] = useState(restoredState?.base100Annuel ?? false);
-  const [matiereSelectionneeAnnuelle, setMatiereSelectionneeAnnuelle] = useState(restoredState?.matiereSelectionneeAnnuelle ?? "FAR01");
+  const [base100Annuel, setBase100Annuel] = useState(false);
+  const [matiereSelectionneeAnnuelle, setMatiereSelectionneeAnnuelle] = useState("FAR01");
+
+  // Restaurer l'état après le montage côté client (évite les erreurs d'hydratation)
+  useEffect(() => {
+    setHasMounted(true);
+    if (restoredState) {
+      if (restoredState.paysDestination) setPaysDestination(restoredState.paysDestination);
+      if (restoredState.unite) setUnite(restoredState.unite);
+      if (restoredState.devise) setDevise(restoredState.devise);
+      if (restoredState.categorie) setCategorie(restoredState.categorie);
+      if (restoredState.groupeFamille) setGroupeFamille(restoredState.groupeFamille);
+      if (restoredState.famille) setFamille(restoredState.famille);
+      if (restoredState.sousFamille) setSousFamille(restoredState.sousFamille);
+      if (restoredState.fournisseur) setFournisseur(restoredState.fournisseur);
+      if (restoredState.portefeuille) setPortefeuille(restoredState.portefeuille);
+      if (restoredState.selectedMatieres) setSelectedMatieres(restoredState.selectedMatieres);
+      if (restoredState.periodeGraphique) setPeriodeGraphique(restoredState.periodeGraphique);
+      if (restoredState.base100 !== undefined) setBase100(restoredState.base100);
+      if (restoredState.base100Annuel !== undefined) setBase100Annuel(restoredState.base100Annuel);
+      if (restoredState.matiereSelectionneeAnnuelle) setMatiereSelectionneeAnnuelle(restoredState.matiereSelectionneeAnnuelle);
+    }
+  }, []);
   const [selectedYears, setSelectedYears] = useState(["2019", "2020", "2021", "2022", "2023", "2024", "2025"]);
   const [annuelDateRange, setAnnuelDateRange] = useState([0, 100]);
   const [legendOpacityAnnual, setLegendOpacityAnnual] = useState<Record<string, boolean>>({});
+
+  // État des alertes par matière première (mpId -> MPAlert)
+  const [mpAlerts, setMpAlerts] = useState<Record<string, MPAlert>>({});
+  // État pour le popover d'alerte ouvert (mpId ou null)
+  const [openAlertPopover, setOpenAlertPopover] = useState<string | null>(null);
+  // État pour la confirmation de suppression de chip
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    open: boolean;
+    matiere: MatierePremiere | null;
+    hasAlert: boolean;
+  }>({ open: false, matiere: null, hasAlert: false });
+
+  // Handlers pour les alertes
+  const handleAlertCreate = useCallback((mpId: string, config: MPAlertConfig) => {
+    const newAlert = createAlert(mpId, config);
+    setMpAlerts(prev => ({ ...prev, [mpId]: newAlert }));
+  }, []);
+
+  const handleAlertUpdate = useCallback((mpId: string, config: MPAlertConfig) => {
+    setMpAlerts(prev => {
+      const existing = prev[mpId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [mpId]: {
+          ...existing,
+          config,
+          updatedAt: new Date(),
+        },
+      };
+    });
+  }, []);
+
+  const handleAlertDelete = useCallback((mpId: string) => {
+    setMpAlerts(prev => {
+      const { [mpId]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
+  const handleAlertToggle = useCallback((mpId: string, isActive: boolean) => {
+    setMpAlerts(prev => {
+      const existing = prev[mpId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [mpId]: {
+          ...existing,
+          isActive,
+          updatedAt: new Date(),
+        },
+      };
+    });
+  }, []);
 
   // État de tri du tableau
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
@@ -518,6 +608,7 @@ export default function CoursMatieresPremieres() {
 
   // Options pour l'Autocomplete
   const autocompleteOptions = useMemo(() => {
+    // Utiliser filteredMatieres pour respecter les filtres actifs
     return filteredMatieres.map((m) => ({
       value: m.id,
       label: `${m.code} - ${m.nom}`,
@@ -538,9 +629,47 @@ export default function CoursMatieresPremieres() {
   const handleRemoveMatiere = useCallback(
     (id: string) => {
       setSelectedMatieres(selectedMatieres.filter((m) => m.id !== id));
+      // Supprimer aussi l'alerte associée si elle existe
+      if (mpAlerts[id]) {
+        setMpAlerts(prev => {
+          const { [id]: _, ...rest } = prev;
+          return rest;
+        });
+      }
     },
-    [selectedMatieres]
+    [selectedMatieres, mpAlerts]
   );
+
+  // Gère la suppression d'une MP (avec toast undo ou dialog selon si alerte)
+  const handleRequestRemoveMatiere = useCallback(
+    (matiere: MatierePremiere) => {
+      const hasAlert = !!mpAlerts[matiere.id];
+
+      if (hasAlert) {
+        // Avec alerte : afficher la dialog de confirmation
+        setDeleteConfirmation({ open: true, matiere, hasAlert });
+      } else {
+        // Sans alerte : supprimer directement avec toast undo
+        handleRemoveMatiere(matiere.id);
+        toast(`${matiere.code} - ${matiere.nom} retirée`, {
+          action: {
+            label: "Annuler",
+            onClick: () => setSelectedMatieres(prev => [...prev, matiere])
+          },
+          duration: 5000,
+        });
+      }
+    },
+    [mpAlerts, handleRemoveMatiere]
+  );
+
+  // Confirme la suppression (dialog pour les MP avec alerte)
+  const handleConfirmRemoveMatiere = useCallback(() => {
+    if (deleteConfirmation.matiere) {
+      handleRemoveMatiere(deleteConfirmation.matiere.id);
+    }
+    setDeleteConfirmation({ open: false, matiere: null, hasAlert: false });
+  }, [deleteConfirmation.matiere, handleRemoveMatiere]);
 
   const toggleYear = useCallback(
     (year: string) => {
@@ -706,7 +835,7 @@ export default function CoursMatieresPremieres() {
       </div>
 
       {/* FILTRES - Ligne 1 : Période, Pays */}
-      <div className="mb-6 flex flex-wrap gap-x-2 gap-y-4">
+      <div className="mb-4 flex flex-wrap gap-x-2 gap-y-4">
         {/* Période */}
         <InlineField label="Période">
           <DatePickerV2
@@ -943,16 +1072,17 @@ export default function CoursMatieresPremieres() {
           }}
           placeholder="Rechercher une matière première"
           emptyMessage="Aucune matière première trouvée."
-          minChars={3}
+          minChars={0}
+          clearOnSelect
           size="md"
           className="w-full max-w-[500px]"
           hideSearchIcon
+          selectedValues={selectedMatieres.map(m => m.id)}
           renderItem={(option) => (
-            <div className="flex items-center">
-              <Check className={cn("mr-2 h-4 w-4", selectedMatieres.find(m => m.id === option.value) ? "opacity-100" : "opacity-0")} />
-              <span className="font-medium text-gray-700">{(option.data as MatierePremiere)?.code}</span>
-              <span className="text-gray-600 ml-2">- {(option.data as MatierePremiere)?.nom}</span>
-            </div>
+            <>
+              <span className="font-medium">{(option.data as MatierePremiere)?.code}</span>
+              <span className="ml-2">- {(option.data as MatierePremiere)?.nom}</span>
+            </>
           )}
           endAddon={
             searchTerm ? (
@@ -970,29 +1100,69 @@ export default function CoursMatieresPremieres() {
         />
       </div>
 
-      {/* Tags matières sélectionnées */}
-      {selectedMatieres.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6 pb-6 border-b border-[#D9D9D9]">
-          {selectedMatieres.map((matiere) => (
-            <TooltipProvider key={matiere.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 bg-white text-foreground px-3 py-1.5 rounded-full border border-neutral cursor-default">
-                    <span className="text-[14px] font-medium">{matiere.code} - {matiere.nom}</span>
-                    <button onClick={() => handleRemoveMatiere(matiere.id)} className="text-primary hover:text-primary/80">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div>Unité: {matiere.unite}</div>
-                  <div>Pays destination: {matiere.paysDestination}</div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
+      {/* Tags matières sélectionnées ou Empty State */}
+      {selectedMatieres.length === 0 ? (
+        <div className="py-8">
+          <p className="text-base text-foreground mb-1">Aucune matière première sélectionnée</p>
+          <p className="text-sm text-muted-foreground">
+            Utilisez la barre de recherche ci-dessus pour ajouter des matières premières et suivre leur évolution.
+          </p>
         </div>
-      )}
+      ) : (
+        <>
+        <div className="flex flex-wrap gap-2 mt-8 mb-6 pb-4 border-b border-[#D9D9D9]">
+          {selectedMatieres.map((matiere) => {
+            const alert = mpAlerts[matiere.id] || null;
+            const alertTooltip = alert ? formatAlertTooltip(alert) : "Créer une alerte";
+            return (
+              <TooltipProvider key={matiere.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 bg-white text-foreground px-3 py-1.5 rounded-full border border-neutral cursor-default">
+                      <span className="text-[14px] font-medium">{matiere.code} - {matiere.nom}</span>
+                      <AlertPopover
+                        mpId={matiere.id}
+                        mpLabel={`${matiere.code} - ${matiere.nom}`}
+                        alert={alert}
+                        open={openAlertPopover === matiere.id}
+                        onOpenChange={(open) => setOpenAlertPopover(open ? matiere.id : null)}
+                        onSave={(config) => {
+                          if (alert) {
+                            handleAlertUpdate(matiere.id, config);
+                          } else {
+                            handleAlertCreate(matiere.id, config);
+                          }
+                        }}
+                        onDelete={() => handleAlertDelete(matiere.id)}
+                        onToggleActive={(active) => handleAlertToggle(matiere.id, active)}
+                        defaultUnit={matiere.unite ? `€/${matiere.unite}` : "€/t"}
+                      >
+                        <button
+                          type="button"
+                          className={cn(
+                            "p-0.5 rounded-full transition-all duration-150",
+                            "hover:scale-110 hover:bg-gray-100",
+                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                          )}
+                          title={alertTooltip}
+                        >
+                          <AlertIcon alert={alert} />
+                        </button>
+                      </AlertPopover>
+                      <button onClick={() => handleRequestRemoveMatiere(matiere)} className="text-primary hover:text-primary/80">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div>Unité: {matiere.unite}</div>
+                    <div>Pays destination: {matiere.paysDestination}</div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
+        </div>
 
       {/* Section Evolution de cours */}
       <div className="mb-12">
@@ -1000,78 +1170,81 @@ export default function CoursMatieresPremieres() {
           <div className="flex items-center justify-between gap-3 mb-4">
             <h2 className="text-[20px] font-medium text-gray-900">Evolution de cours</h2>
             <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="base100-evolution">Base 100</Label>
-              <Switch id="base100-evolution" checked={base100} onCheckedChange={setBase100} />
-            </div>
-            <Select value={periodeGraphique} onValueChange={(v: "mois" | "semaine" | "jour") => setPeriodeGraphique(v)}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mois" className="py-3">Mois</SelectItem>
-                <SelectItem value="semaine" className="py-3">Semaine</SelectItem>
-                <SelectItem value="jour" className="py-3">Jour</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="ghost" size="icon" className="p-0">
-              <Download className="text-[#0970E6]" width={24} height={24} />
-            </Button>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="base100-evolution">Base 100</Label>
+                <Switch id="base100-evolution" checked={base100} onCheckedChange={setBase100} />
+              </div>
+              <SelectV2 value={periodeGraphique} onValueChange={(v: "mois" | "semaine" | "jour") => setPeriodeGraphique(v)}>
+                <SelectTriggerV2 size="sm" width="auto">
+                  <SelectValueV2 />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="mois">Mois</SelectItemV2>
+                  <SelectItemV2 value="semaine">Semaine</SelectItemV2>
+                  <SelectItemV2 value="jour">Jour</SelectItemV2>
+                </SelectContentV2>
+              </SelectV2>
+              <button
+                type="button"
+                className="p-0 bg-transparent border-none cursor-pointer"
+              >
+                <Download className="text-primary hover:text-primary-hover active:text-primary-pressed" width={24} height={24} />
+              </button>
             </div>
           </div>
 
           {/* Légendes centrées */}
           <div className="flex justify-center items-center gap-6 mb-2">
-          <div className="flex flex-wrap gap-4 justify-center items-center">
-            {selectedMatieres.map((matiere, index) => (
-              <div
-                key={matiere.id}
-                className="flex items-center gap-2 cursor-pointer"
-                style={{ opacity: legendOpacityEvolution[matiere.code] === false ? 0.4 : 1 }}
-                onClick={() => toggleMatiere(matiere.code)}
-              >
-                <CurveIcon color={matiereColors[index % matiereColors.length]} className="w-[30px] h-[14px]" />
-                <span className="text-sm select-none">{matiere.code} - {matiere.nom}</span>
-              </div>
-            ))}
+            <div className="flex flex-wrap gap-4 justify-center items-center">
+              {selectedMatieres.map((matiere, index) => (
+                <div
+                  key={matiere.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                  style={{ opacity: legendOpacityEvolution[matiere.code] === false ? 0.4 : 1 }}
+                  onClick={() => toggleMatiere(matiere.code)}
+                >
+                  <CurveIcon color={matiereColors[index % matiereColors.length]} className="w-[30px] h-[14px]" />
+                  <span className="text-sm select-none">{matiere.code} - {matiere.nom}</span>
+                </div>
+              ))}
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-2" onClick={unselectAllMatieres}>
+                    <RotateCcw className="w-4 h-4 text-[#0970E6]" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Tout désélectionner</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2" onClick={unselectAllMatieres}>
-                  <RotateCcw className="w-4 h-4 text-[#0970E6]" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Tout désélectionner</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
 
-        {/* Graphique */}
-        <div className="overflow-hidden">
-        <ResponsiveContainer width="100%" height={400} style={{ paddingBottom: '20px' }}>
-          <LineChart data={getEvolutionData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <RechartsTooltip />
-            {selectedMatieres.map((matiere, index) => (
-              <Line
-                key={matiere.code}
-                type="monotone"
-                dataKey={matiere.code}
-                stroke={matiereColors[index % matiereColors.length]}
-                strokeWidth={2}
-                dot={false}
-                hide={legendOpacityEvolution[matiere.code] === false}
-              />
-            ))}
-            <Brush dataKey="date" height={30} stroke="#0970E6" fill="#FFFFFF" />
-          </LineChart>
-        </ResponsiveContainer>
-        </div>
+          {/* Graphique */}
+          <div className="overflow-hidden">
+            <ResponsiveContainer width="100%" height={500} style={{ paddingBottom: '20px' }}>
+              <LineChart data={getEvolutionData()} margin={{ left: -30, right: 10, top: 5, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <RechartsTooltip />
+                {selectedMatieres.map((matiere, index) => (
+                  <Line
+                    key={matiere.code}
+                    type="monotone"
+                    dataKey={matiere.code}
+                    stroke={matiereColors[index % matiereColors.length]}
+                    strokeWidth={2}
+                    dot={false}
+                    hide={legendOpacityEvolution[matiere.code] === false}
+                  />
+                ))}
+                <Brush dataKey="date" height={30} stroke="#0970E6" fill="#FFFFFF" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
@@ -1264,21 +1437,24 @@ export default function CoursMatieresPremieres() {
                 <Label htmlFor="base100-annuel">Base 100</Label>
                 <Switch id="base100-annuel" checked={base100Annuel} onCheckedChange={setBase100Annuel} />
               </div>
-              <Select value={matiereSelectionneeAnnuelle} onValueChange={setMatiereSelectionneeAnnuelle}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
+              <SelectV2 value={matiereSelectionneeAnnuelle} onValueChange={setMatiereSelectionneeAnnuelle}>
+                <SelectTriggerV2 size="sm" width="auto">
+                  <SelectValueV2 />
+                </SelectTriggerV2>
+                <SelectContentV2>
                   {selectedMatieres.map((matiere) => (
-                    <SelectItem key={matiere.code} value={matiere.code} className="py-3">
+                    <SelectItemV2 key={matiere.code} value={matiere.code}>
                       {matiere.code} - {matiere.nom}
-                    </SelectItem>
+                    </SelectItemV2>
                   ))}
-                </SelectContent>
-              </Select>
-              <Button variant="ghost" size="icon" className="p-0">
-                <Download className="text-[#0970E6]" width={24} height={24} />
-              </Button>
+                </SelectContentV2>
+              </SelectV2>
+              <button
+                type="button"
+                className="p-0 bg-transparent border-none cursor-pointer"
+              >
+                <Download className="text-primary hover:text-primary-hover active:text-primary-pressed" width={24} height={24} />
+              </button>
             </div>
           </div>
 
@@ -1313,7 +1489,7 @@ export default function CoursMatieresPremieres() {
 
         {/* Graphique annuel */}
         <div className="overflow-hidden">
-        <ResponsiveContainer width="100%" height={400} style={{ paddingBottom: '20px' }}>
+        <ResponsiveContainer width="100%" height={500} style={{ paddingBottom: '20px' }}>
           <LineChart data={base100Annuel ? annualData.map((item, index) => {
             if (index === 0) return item;
             const newItem: any = { mois: item.mois };
@@ -1351,6 +1527,33 @@ export default function CoursMatieresPremieres() {
         </div>
         </div>
       </div>
+      </>
+      )}
+
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog
+        open={deleteConfirmation.open}
+        onOpenChange={(open) => !open && setDeleteConfirmation({ open: false, matiere: null, hasAlert: false })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Retirer {deleteConfirmation.matiere?.code} - {deleteConfirmation.matiere?.nom} ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirmation.hasAlert
+                ? "Cette matière première a une alerte configurée. En la retirant, l'alerte sera également supprimée."
+                : "Cette matière première sera retirée de votre sélection."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRemoveMatiere}>
+              Retirer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
