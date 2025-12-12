@@ -10,7 +10,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { AlertNotificationCard } from "./alert-notification-card";
 import type { TriggeredAlert } from "@/types/mp-alerts";
 import { cn } from "@/lib/utils";
@@ -21,7 +20,7 @@ interface AlertsSheetProps {
   alerts: TriggeredAlert[];
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
-  onViewCourse?: (mpId: string) => void;
+  onViewCourse?: (mpCode: string) => void;
 }
 
 // Grouper les alertes par période
@@ -79,7 +78,7 @@ function AlertGroup({
   title: string;
   alerts: TriggeredAlert[];
   onMarkAsRead: (id: string) => void;
-  onViewCourse?: (mpId: string) => void;
+  onViewCourse?: (mpCode: string) => void;
 }) {
   if (alerts.length === 0) return null;
 
@@ -193,24 +192,6 @@ export function AlertsSheet({
           )}
         </div>
 
-        {/* Footer */}
-        {!isEmpty && (
-          <>
-            <Separator />
-            <div className="px-4 py-3 shrink-0">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  // TODO: Navigation vers page historique complète
-                  console.log("Voir historique complet");
-                }}
-              >
-                Voir toutes les alertes (historique)
-              </Button>
-            </div>
-          </>
-        )}
       </SheetContent>
     </Sheet>
   );

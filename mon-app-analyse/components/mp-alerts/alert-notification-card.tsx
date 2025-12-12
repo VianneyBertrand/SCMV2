@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 interface AlertNotificationCardProps {
   alert: TriggeredAlert;
   onMarkAsRead?: (id: string) => void;
-  onViewCourse?: (mpId: string) => void;
+  onViewCourse?: (mpCode: string) => void;
 }
 
 function formatRelativeTime(date: Date): string {
@@ -77,7 +77,7 @@ export function AlertNotificationCard({
   const handleViewCourse = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onViewCourse) {
-      onViewCourse(alert.mpId);
+      onViewCourse(alert.mpCode);
     }
   };
 
