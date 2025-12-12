@@ -60,6 +60,8 @@ import { usePeriodStore } from "@/stores/periodStore";
 import type { MPAlert, MPAlertConfig } from "@/types/mp-alerts";
 import { AlertIcon, AlertPopover, AlertBell, AlertsSheet } from "@/components/mp-alerts";
 import { useTriggeredAlertsStore } from "@/stores/triggered-alerts-store";
+import { MPOrganizer } from "@/components/mp-organizer";
+import { useMPFoldersStore } from "@/stores/mp-folders-store";
 import { createAlert, formatAlertTooltip } from "@/lib/alert-utils";
 import {
   AlertDialog,
@@ -505,6 +507,15 @@ export default function CoursMatieresPremieres() {
   const markAsRead = useTriggeredAlertsStore((state) => state.markAsRead);
   const markAllAsRead = useTriggeredAlertsStore((state) => state.markAllAsRead);
 
+  // Store pour la visibilité des MP
+  const mpVisibility = useMPFoldersStore((state) => state.mpVisibility);
+  const isMPVisible = useMPFoldersStore((state) => state.isMPVisible);
+
+  // MP visibles (filtrées par le store de visibilité)
+  const visibleMatieres = useMemo(() => {
+    return selectedMatieres.filter((m) => mpVisibility[m.id] !== false);
+  }, [selectedMatieres, mpVisibility]);
+
   // Handlers pour les alertes
   const handleAlertCreate = useCallback((mpId: string, config: MPAlertConfig) => {
     const newAlert = createAlert(mpId, config);
@@ -585,16 +596,16 @@ export default function CoursMatieresPremieres() {
       }
     })();
 
-    // Appliquer Base 100 si activé
+    // Appliquer Base 100 si activé (utilise visibleMatieres)
     if (base100 && data.length > 0) {
       const firstValues: Record<string, number> = {};
-      selectedMatieres.forEach((matiere) => {
+      visibleMatieres.forEach((matiere) => {
         firstValues[matiere.code] = data[0][matiere.code as keyof typeof data[0]] as number || 100;
       });
 
       return data.map((item) => {
         const newItem: any = { date: item.date };
-        selectedMatieres.forEach((matiere) => {
+        visibleMatieres.forEach((matiere) => {
           const value = item[matiere.code as keyof typeof item] as number;
           newItem[matiere.code] = (value / firstValues[matiere.code]) * 100;
         });
@@ -723,21 +734,21 @@ export default function CoursMatieresPremieres() {
 
   const unselectAllMatieres = useCallback(() => {
     const allFalse: Record<string, boolean> = {};
-    selectedMatieres.forEach(m => {
+    visibleMatieres.forEach(m => {
       allFalse[m.code] = false;
     });
     setLegendOpacityEvolution(allFalse);
-  }, [selectedMatieres]);
+  }, [visibleMatieres]);
 
-  // S'assurer que la matière sélectionnée pour le graphique annuel est valide
+  // S'assurer que la matière sélectionnée pour le graphique annuel est valide (parmi les visibles)
   useEffect(() => {
-    if (selectedMatieres.length > 0) {
-      const matiereExiste = selectedMatieres.find(m => m.code === matiereSelectionneeAnnuelle);
+    if (visibleMatieres.length > 0) {
+      const matiereExiste = visibleMatieres.find(m => m.code === matiereSelectionneeAnnuelle);
       if (!matiereExiste) {
-        setMatiereSelectionneeAnnuelle(selectedMatieres[0].code);
+        setMatiereSelectionneeAnnuelle(visibleMatieres[0].code);
       }
     }
-  }, [selectedMatieres, matiereSelectionneeAnnuelle]);
+  }, [visibleMatieres, matiereSelectionneeAnnuelle]);
 
   // Sauvegarder l'état de la page à chaque changement
   useEffect(() => {
@@ -815,11 +826,11 @@ export default function CoursMatieresPremieres() {
     return Array.from(uniqueValues).sort();
   };
 
-  // Fonction pour trier les matières premières
+  // Fonction pour trier les matières premières (utilise visibleMatieres)
   const getSortedMatieres = () => {
-    if (!sortConfig) return selectedMatieres;
+    if (!sortConfig) return visibleMatieres;
 
-    const sorted = [...selectedMatieres].sort((a, b) => {
+    const sorted = [...visibleMatieres].sort((a, b) => {
       const { key, direction } = sortConfig;
 
       let aValue: any = a[key as keyof MatierePremiere];
@@ -1135,7 +1146,7 @@ export default function CoursMatieresPremieres() {
         />
       </div>
 
-      {/* Tags matières sélectionnées ou Empty State */}
+      {/* Tags matières sélectionnées avec organisation en dossiers */}
       {selectedMatieres.length === 0 ? (
         <div className="py-8">
           <p className="text-base text-foreground mb-1">Aucune matière première sélectionnée</p>
@@ -1145,23 +1156,25 @@ export default function CoursMatieresPremieres() {
         </div>
       ) : (
         <>
-        <div className="flex flex-wrap gap-2 mt-8 mb-6 pb-4 border-b border-[#D9D9D9]">
-          {selectedMatieres.map((matiere) => {
-            const alert = mpAlerts[matiere.id] || null;
-            const alertTooltip = alert ? formatAlertTooltip(alert) : "Créer une alerte";
-            return (
-              <div key={matiere.id} className="flex items-center gap-2 bg-white text-foreground px-3 py-1.5 rounded-full border border-neutral cursor-default">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-[14px] font-medium">{matiere.code} - {matiere.nom}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div>Unité: {matiere.unite}</div>
-                      <div>Pays destination: {matiere.paysDestination}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+        <div className="mt-8 mb-6 pb-4 border-b border-[#D9D9D9]">
+          <MPOrganizer
+            selectedMPs={selectedMatieres.map((m) => ({
+              id: m.id,
+              code: m.code,
+              nom: m.nom,
+              unite: m.unite,
+              paysDestination: m.paysDestination,
+            }))}
+            onRemoveMP={(mpId) => {
+              const matiere = selectedMatieres.find((m) => m.id === mpId);
+              if (matiere) handleRequestRemoveMatiere(matiere);
+            }}
+            renderAlert={(mp) => {
+              const matiere = selectedMatieres.find((m) => m.id === mp.id);
+              if (!matiere) return null;
+              const alert = mpAlerts[matiere.id] || null;
+              const alertTooltip = alert ? formatAlertTooltip(alert) : "Créer une alerte";
+              return (
                 <TooltipProvider>
                   <Tooltip open={openAlertPopover === matiere.id || alertTooltipDisabled === matiere.id ? false : undefined}>
                     <AlertPopover
@@ -1201,12 +1214,9 @@ export default function CoursMatieresPremieres() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <button onClick={() => handleRequestRemoveMatiere(matiere)} className="text-primary hover:text-primary/80">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            );
-          })}
+              );
+            }}
+          />
         </div>
 
       {/* Section Evolution de cours */}
@@ -1241,7 +1251,7 @@ export default function CoursMatieresPremieres() {
           {/* Légendes centrées */}
           <div className="flex justify-center items-center gap-6 mb-2">
             <div className="flex flex-wrap gap-4 justify-center items-center">
-              {selectedMatieres.map((matiere, index) => (
+              {visibleMatieres.map((matiere, index) => (
                 <div
                   key={matiere.id}
                   className="flex items-center gap-2 cursor-pointer"
@@ -1275,7 +1285,7 @@ export default function CoursMatieresPremieres() {
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <RechartsTooltip />
-                {selectedMatieres.map((matiere, index) => (
+                {visibleMatieres.map((matiere, index) => (
                   <Line
                     key={matiere.code}
                     type="monotone"
@@ -1421,9 +1431,9 @@ export default function CoursMatieresPremieres() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {selectedMatieres.length === 0 ? (
+              {visibleMatieres.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500">Aucune matière première sélectionnée</TableCell>
+                  <TableCell colSpan={8} className="text-center text-gray-500">Aucune matière première visible</TableCell>
                 </TableRow>
               ) : (
                 getSortedMatieres().map((matiere) => (
@@ -1487,7 +1497,7 @@ export default function CoursMatieresPremieres() {
                   <SelectValueV2 />
                 </SelectTriggerV2>
                 <SelectContentV2>
-                  {selectedMatieres.map((matiere) => (
+                  {visibleMatieres.map((matiere) => (
                     <SelectItemV2 key={matiere.code} value={matiere.code}>
                       {matiere.code} - {matiere.nom}
                     </SelectItemV2>
