@@ -897,24 +897,6 @@ export default function CoursMatieresPremieres() {
           />
         </InlineField>
 
-        {/* Pays destination */}
-        <InlineField label="Pays destination">
-          <SelectV2 value={paysDestination} onValueChange={setPaysDestination}>
-            <SelectTriggerV2 size="sm">
-              <SelectValueV2 placeholder="tous" />
-            </SelectTriggerV2>
-            <SelectContentV2>
-              <SelectItemV2 value="tous">tous</SelectItemV2>
-              <SelectItemV2 value="France">France</SelectItemV2>
-              <SelectItemV2 value="Espagne">Espagne</SelectItemV2>
-              <SelectItemV2 value="Belgique">Belgique</SelectItemV2>
-              <SelectItemV2 value="Roumanie">Roumanie</SelectItemV2>
-              <SelectItemV2 value="Pologne">Pologne</SelectItemV2>
-              <SelectItemV2 value="Italie">Italie</SelectItemV2>
-            </SelectContentV2>
-          </SelectV2>
-        </InlineField>
-
         {/* Unité */}
         <InlineField label="Unité">
           <SelectV2 value={unite} onValueChange={setUnite}>
@@ -1091,11 +1073,29 @@ export default function CoursMatieresPremieres() {
               </SelectV2>
             </InlineField>
 
+            {/* Pays destination */}
+            <InlineField label="Pays destination">
+              <SelectV2 value={paysDestination} onValueChange={setPaysDestination}>
+                <SelectTriggerV2 size="sm">
+                  <SelectValueV2 placeholder="tous" />
+                </SelectTriggerV2>
+                <SelectContentV2>
+                  <SelectItemV2 value="tous">tous</SelectItemV2>
+                  <SelectItemV2 value="France">France</SelectItemV2>
+                  <SelectItemV2 value="Espagne">Espagne</SelectItemV2>
+                  <SelectItemV2 value="Belgique">Belgique</SelectItemV2>
+                  <SelectItemV2 value="Roumanie">Roumanie</SelectItemV2>
+                  <SelectItemV2 value="Pologne">Pologne</SelectItemV2>
+                  <SelectItemV2 value="Italie">Italie</SelectItemV2>
+                </SelectContentV2>
+              </SelectV2>
+            </InlineField>
+
             {/* Bouton Réinitialiser */}
             <ButtonV2
               variant="outline"
-              onClick={() => { setCategorie("tous"); setSousCategorie("tous"); }}
-              className={(categorie !== "tous" || sousCategorie !== "tous") ? "" : "invisible"}
+              onClick={() => { setCategorie("tous"); setSousCategorie("tous"); setPaysDestination("tous"); }}
+              className={(categorie !== "tous" || sousCategorie !== "tous" || paysDestination !== "tous") ? "" : "invisible"}
             >
               Réinitialiser
             </ButtonV2>
