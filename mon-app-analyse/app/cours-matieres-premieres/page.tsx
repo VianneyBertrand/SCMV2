@@ -1197,7 +1197,7 @@ export default function CoursMatieresPremieres() {
                       }}
                       onDelete={() => handleAlertDelete(matiere.id)}
                       onToggleActive={(active) => handleAlertToggle(matiere.id, active)}
-                      defaultUnit={matiere.unite ? `€/${matiere.unite}` : "€/t"}
+                      defaultUnit="€/UVC"
                     >
                       <TooltipTrigger asChild>
                         <button
