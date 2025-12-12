@@ -58,7 +58,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/componentsv2/ui/tabs";
 import { usePeriodStore } from "@/stores/periodStore";
 import type { MPAlert, MPAlertConfig } from "@/types/mp-alerts";
-import { AlertIcon, AlertPopover } from "@/components/mp-alerts";
+import { AlertIcon, AlertPopover, AlertBell, AlertsSheet } from "@/components/mp-alerts";
+import { useTriggeredAlertsStore } from "@/stores/triggered-alerts-store";
 import { createAlert, formatAlertTooltip } from "@/lib/alert-utils";
 import {
   AlertDialog,
@@ -497,6 +498,13 @@ export default function CoursMatieresPremieres() {
     hasAlert: boolean;
   }>({ open: false, matiere: null, hasAlert: false });
 
+  // État pour le panneau des alertes déclenchées
+  const [alertsSheetOpen, setAlertsSheetOpen] = useState(false);
+  const triggeredAlerts = useTriggeredAlertsStore((state) => state.alerts);
+  const unreadCount = useTriggeredAlertsStore((state) => state.unreadCount());
+  const markAsRead = useTriggeredAlertsStore((state) => state.markAsRead);
+  const markAllAsRead = useTriggeredAlertsStore((state) => state.markAllAsRead);
+
   // Handlers pour les alertes
   const handleAlertCreate = useCallback((mpId: string, config: MPAlertConfig) => {
     const newAlert = createAlert(mpId, config);
@@ -843,10 +851,23 @@ export default function CoursMatieresPremieres() {
 
   return (
     <main className="w-full px-6 py-4">
-      {/* Titre */}
-      <div className="mb-8">
+      {/* Titre avec bouton alertes */}
+      <div className="mb-8 flex items-center justify-between">
         <h1 className="text-[40px] font-bold">Cours des matières premières</h1>
+        <AlertBell
+          unreadCount={unreadCount}
+          onClick={() => setAlertsSheetOpen(true)}
+        />
       </div>
+
+      {/* Sheet des alertes déclenchées */}
+      <AlertsSheet
+        open={alertsSheetOpen}
+        onOpenChange={setAlertsSheetOpen}
+        alerts={triggeredAlerts}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+      />
 
       {/* FILTRES - Ligne 1 : Période, Pays */}
       <div className="mb-4 flex flex-wrap gap-x-2 gap-y-4">

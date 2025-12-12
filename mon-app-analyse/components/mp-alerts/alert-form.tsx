@@ -144,7 +144,7 @@ export function AlertForm({
               className="w-32"
             />
             <span className="text-base text-muted-foreground">par</span>
-            <Select value={period} onValueChange={(v) => setPeriod(v as AlertPeriod)}>
+            <Select value={period} onValueChange={(v: string) => setPeriod(v as AlertPeriod)}>
               <SelectTrigger size="sm" width="auto">
                 <SelectValue />
               </SelectTrigger>
@@ -197,7 +197,7 @@ export function AlertForm({
               />
               <Select
                 value={direction}
-                onValueChange={(v) => setDirection(v as PriceDirection)}
+                onValueChange={(v: string) => setDirection(v as PriceDirection)}
               >
                 <SelectTrigger size="sm" width="auto">
                   <SelectValue />

@@ -34,3 +34,40 @@ export interface MPAlert {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// ========================================
+// Types pour les alertes déclenchées
+// ========================================
+
+// Détail du déclenchement pour une alerte variation
+export interface VariationTriggerDetail {
+  type: "variation";
+  configuredThreshold: number; // seuil configuré (ex: 5%)
+  actualVariation: number; // variation réelle (ex: 7.2%)
+  period: AlertPeriod;
+}
+
+// Détail du déclenchement pour une alerte seuil de prix
+export interface PriceThresholdTriggerDetail {
+  type: "price_threshold";
+  configuredThreshold: number; // seuil configuré (ex: 850)
+  actualPrice: number; // prix réel (ex: 892)
+  direction: PriceDirection;
+  unit: string;
+}
+
+// Union des détails de déclenchement
+export type TriggerDetail = VariationTriggerDetail | PriceThresholdTriggerDetail;
+
+// Alerte déclenchée (notification)
+export interface TriggeredAlert {
+  id: string;
+  alertId: string; // référence à l'alerte config (MPAlert.id)
+  mpId: string;
+  mpCode: string;
+  mpLabel: string;
+  triggeredAt: Date;
+  trigger: TriggerDetail;
+  isRead: boolean;
+  readAt?: Date;
+}
