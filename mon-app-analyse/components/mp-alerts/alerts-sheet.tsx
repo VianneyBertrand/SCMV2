@@ -20,7 +20,6 @@ interface AlertsSheetProps {
   alerts: TriggeredAlert[];
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
-  onViewCourse?: (mpCode: string) => void;
 }
 
 // Grouper les alertes par période
@@ -73,12 +72,10 @@ function AlertGroup({
   title,
   alerts,
   onMarkAsRead,
-  onViewCourse,
 }: {
   title: string;
   alerts: TriggeredAlert[];
   onMarkAsRead: (id: string) => void;
-  onViewCourse?: (mpCode: string) => void;
 }) {
   if (alerts.length === 0) return null;
 
@@ -93,7 +90,6 @@ function AlertGroup({
             key={alert.id}
             alert={alert}
             onMarkAsRead={onMarkAsRead}
-            onViewCourse={onViewCourse}
           />
         ))}
       </div>
@@ -107,7 +103,6 @@ export function AlertsSheet({
   alerts,
   onMarkAsRead,
   onMarkAllAsRead,
-  onViewCourse,
 }: AlertsSheetProps) {
   const groups = groupAlertsByPeriod(alerts);
   const hasUnread = alerts.some((a) => !a.isRead);
@@ -168,25 +163,21 @@ export function AlertsSheet({
                 title="Aujourd'hui"
                 alerts={groups.today}
                 onMarkAsRead={onMarkAsRead}
-                onViewCourse={onViewCourse}
               />
               <AlertGroup
                 title="Hier"
                 alerts={groups.yesterday}
                 onMarkAsRead={onMarkAsRead}
-                onViewCourse={onViewCourse}
               />
               <AlertGroup
                 title="Cette semaine"
                 alerts={groups.thisWeek}
                 onMarkAsRead={onMarkAsRead}
-                onViewCourse={onViewCourse}
               />
               <AlertGroup
                 title="Plus ancien"
                 alerts={groups.older}
                 onMarkAsRead={onMarkAsRead}
-                onViewCourse={onViewCourse}
               />
             </>
           )}

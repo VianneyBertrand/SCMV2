@@ -505,18 +505,6 @@ export default function CoursMatieresPremieres() {
   const markAsRead = useTriggeredAlertsStore((state) => state.markAsRead);
   const markAllAsRead = useTriggeredAlertsStore((state) => state.markAllAsRead);
 
-  // Handler pour "Voir le cours" depuis une alerte déclenchée
-  const handleViewCourseFromAlert = useCallback((mpCode: string) => {
-    // Trouver la MP par son code
-    const matiere = matieresPremieres.find((m) => m.code === mpCode);
-    if (matiere && !selectedMatieres.find((m) => m.id === matiere.id)) {
-      // Ajouter la MP aux sélectionnées si elle n'y est pas déjà
-      setSelectedMatieres((prev) => [...prev, matiere]);
-    }
-    // Fermer le sheet
-    setAlertsSheetOpen(false);
-  }, [selectedMatieres]);
-
   // Handlers pour les alertes
   const handleAlertCreate = useCallback((mpId: string, config: MPAlertConfig) => {
     const newAlert = createAlert(mpId, config);
@@ -879,7 +867,6 @@ export default function CoursMatieresPremieres() {
         alerts={triggeredAlerts}
         onMarkAsRead={markAsRead}
         onMarkAllAsRead={markAllAsRead}
-        onViewCourse={handleViewCourseFromAlert}
       />
 
       {/* FILTRES - Ligne 1 : Période, Pays */}

@@ -1,15 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { TrendingUp, TrendingDown, ExternalLink } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TriggeredAlert } from "@/types/mp-alerts";
-import { Button } from "@/components/ui/button";
 
 interface AlertNotificationCardProps {
   alert: TriggeredAlert;
   onMarkAsRead?: (id: string) => void;
-  onViewCourse?: (mpCode: string) => void;
 }
 
 function formatRelativeTime(date: Date): string {
@@ -63,7 +61,6 @@ function formatTriggerSummary(alert: TriggeredAlert): {
 export function AlertNotificationCard({
   alert,
   onMarkAsRead,
-  onViewCourse,
 }: AlertNotificationCardProps) {
   const { title, subtitle, isNegative } = formatTriggerSummary(alert);
   const timeAgo = formatRelativeTime(alert.triggeredAt);
@@ -71,13 +68,6 @@ export function AlertNotificationCard({
   const handleClick = () => {
     if (!alert.isRead && onMarkAsRead) {
       onMarkAsRead(alert.id);
-    }
-  };
-
-  const handleViewCourse = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onViewCourse) {
-      onViewCourse(alert.mpCode);
     }
   };
 
@@ -139,18 +129,7 @@ export function AlertNotificationCard({
           </div>
 
           {/* Subtitle */}
-          <p className="text-xs text-gray-500 mb-3">{subtitle}</p>
-
-          {/* Action button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleViewCourse}
-            className="h-7 text-xs gap-1.5"
-          >
-            <ExternalLink className="w-3 h-3" />
-            Voir le cours
-          </Button>
+          <p className="text-xs text-gray-500">{subtitle}</p>
         </div>
       </div>
     </div>
